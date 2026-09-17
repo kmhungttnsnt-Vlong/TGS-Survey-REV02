@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TGS Survey REV02</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- ========================= -->
+    <!-- HEADER -->
+    <!-- ========================= -->
+    <header class="topbar">
+        <h1>TGS PLATFORM</h1>
+        <p>Survey Web REV02</p>
+    </header>
+
+    <main>
+
+        <!-- ========================= -->
+        <!-- MÀN HÌNH CHUẨN BỊ -->
+        <!-- ========================= -->
+        <section id="setupScreen" class="card">
+
+            <h2>📋 Chuẩn bị khảo sát</h2>
+
+            <label>Tên công trình</label>
+            <input
+                id="projectName"
+                type="text"
+                placeholder="Ví dụ: Trạm cấp nước Đức Mỹ">
+
+            <div class="divider"></div>
+
+            <div class="row between center">
+                <h3>Hạng mục</h3>
+
+                <button id="addItemBtn" class="btn blue">
+                    + Thêm
+                </button>
+            </div>
+
+            <div id="itemContainer"></div>
+
+            <div class="divider"></div>
+
+            <button id="startSurveyBtn" class="btn green full">
+                ▶ BẮT ĐẦU KHẢO SÁT
+            </button>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- CAMERA SESSION -->
+        <!-- ========================= -->
+        <section id="surveyScreen" class="card hidden">
+
+            <div class="row between center">
+                <h2>🎥 Camera hiện trường</h2>
+                <span id="gpsStatus" class="gps">GPS...</span>
+            </div>
+
+            <div class="currentInfo">
+
+                <div>
+                    <small>Hạng mục</small>
+                    <h3 id="currentItem">-</h3>
+                </div>
+
+                <div>
+                    <small>Bộ phận</small>
+                    <h3 id="currentPart">-</h3>
+                </div>
+
+            </div>
+
+            <div class="cameraBox">
+
+                <video
+                    id="camera"
+                    autoplay
+                    muted
+                    playsinline>
+                </video>
+
+            </div>
+
+            <div class="recPanel">
+
+                <div id="recDot" class="dot"></div>
+
+                <span>REC</span>
+
+                <span id="timer">00:00</span>
+
+                <span id="recordState" class="state">
+                    READY
+                </span>
+
+            </div>
+
+            <div class="cameraToolbar">
+
+                <button id="captureBtn" class="btn blue">
+                    📷 Ảnh
+                </button>
+
+                <button id="pauseBtn" class="btn orange">
+                    ⏸ Tạm dừng
+                </button>
+
+                <button id="resumeBtn" class="btn green hidden">
+                    ▶ Tiếp tục
+                </button>
+
+            </div>
+
+            <div class="divider"></div>
+
+            <button id="nextPartBtn" class="btn gray full">
+                ➜ Chuyển Bộ phận
+            </button>
+
+            <button id="finishBtn" class="btn red full">
+                ✓ HOÀN THÀNH KHẢO SÁT
+            </button>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- TIMELINE -->
+        <!-- ========================= -->
+        <section id="timelineScreen" class="card hidden">
+
+            <div class="row between center">
+
+                <h2>🖼 Timeline hiện trường</h2>
+
+                <span id="photoCount">
+                    0 ảnh
+                </span>
+
+            </div>
+
+            <div id="timeline"></div>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- KHẢO SÁT TẠM DỪNG -->
+        <!-- ========================= -->
+        <section id="resumeCard" class="card hidden">
+
+            <h2>💾 Khảo sát đang tạm dừng</h2>
+
+            <p>
+                Dữ liệu đã được lưu trong bộ nhớ thiết bị.
+            </p>
+
+            <button id="resumeSurveyBtn" class="btn green full">
+                Tiếp tục khảo sát
+            </button>
+
+            <button id="newSurveyBtn" class="btn gray full">
+                Tạo khảo sát mới
+            </button>
+
+        </section>
+
+        <!-- ========================= -->
+        <!-- HỒ SƠ -->
+        <!-- ========================= -->
+        <section id="archiveScreen" class="card hidden">
+
+            <h2>📦 Hồ sơ khảo sát</h2>
+
+            <div id="archiveList"></div>
+
+        </section>
+
+    </main>
+
+    <canvas id="captureCanvas" class="hidden"></canvas>
+
+    <script src="db.js"></script>
+    <script src="app.js"></script>
+
+</body>
+</html>
