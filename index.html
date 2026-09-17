@@ -2,191 +2,232 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TGS Survey REV02</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TGS Survey REV03</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
+<header class="topbar">
+    <h1>TGS PLATFORM</h1>
+    <span>Survey REV03</span>
+</header>
+
+<main class="container">
+
     <!-- ========================= -->
-    <!-- HEADER -->
+    <!-- THÔNG TIN CÔNG TRÌNH -->
     <!-- ========================= -->
-    <header class="topbar">
-        <h1>TGS PLATFORM</h1>
-        <p>Survey Web REV02</p>
-    </header>
 
-    <main>
+    <section class="card">
 
-        <!-- ========================= -->
-        <!-- MÀN HÌNH CHUẨN BỊ -->
-        <!-- ========================= -->
-        <section id="setupScreen" class="card">
+        <h2>📋 Khảo sát hiện trạng</h2>
 
-            <h2>📋 Chuẩn bị khảo sát</h2>
+        <label>Công trình</label>
+        <input id="projectName"
+               type="text"
+               placeholder="Nhập tên công trình">
 
-            <label>Tên công trình</label>
-            <input
-                id="projectName"
-                type="text"
-                placeholder="Ví dụ: Trạm cấp nước Đức Mỹ">
+        <label>Địa điểm</label>
+        <input id="location"
+               type="text"
+               placeholder="Xã / Huyện">
 
-            <div class="divider"></div>
+        <label>Kỹ sư khảo sát</label>
+        <input id="engineer"
+               type="text"
+               placeholder="Họ tên kỹ sư">
 
-            <div class="row between center">
-                <h3>Hạng mục</h3>
+    </section>
 
-                <button id="addItemBtn" class="btn blue">
-                    + Thêm
-                </button>
+    <!-- ========================= -->
+    <!-- HẠNG MỤC -->
+    <!-- ========================= -->
+
+    <section class="card">
+
+        <div class="row-between">
+            <h2>🏗️ Hạng mục khảo sát</h2>
+
+            <button id="addCategory" class="btn-green">
+                + Hạng mục
+            </button>
+        </div>
+
+        <div id="categoryContainer">
+
+            <!-- Hạng mục sẽ sinh bằng JS -->
+
+        </div>
+
+    </section>
+
+    <!-- ========================= -->
+    <!-- GPS -->
+    <!-- ========================= -->
+
+    <section class="card gps-card">
+
+        <div class="gps-info">
+
+            <div>
+                <strong>📍 GPS</strong>
+                <p id="gpsStatus">Chưa lấy vị trí</p>
             </div>
 
-            <div id="itemContainer"></div>
+            <div class="rec-status">
 
-            <div class="divider"></div>
+                <span id="recDot"></span>
+                <strong id="timer">00:00</strong>
 
-            <button id="startSurveyBtn" class="btn green full">
-                ▶ BẮT ĐẦU KHẢO SÁT
+            </div>
+
+        </div>
+
+        <button id="btnGPS" class="btn-primary">
+            Lấy GPS
+        </button>
+
+    </section>
+
+    <!-- ========================= -->
+    <!-- CAMERA -->
+    <!-- ========================= -->
+
+    <section class="camera-panel" id="cameraPanel">
+
+        <div class="camera-header">
+
+            <div>
+                <strong id="cameraTitle">
+                    Chưa bắt đầu khảo sát
+                </strong>
+
+                <small id="cameraSubtitle">
+                    Hãy chọn Hạng mục và Bộ phận
+                </small>
+            </div>
+
+            <button id="btnCloseCamera"
+                    class="icon-btn hidden">
+                ✕
             </button>
 
-        </section>
+        </div>
 
-        <!-- ========================= -->
-        <!-- CAMERA SESSION -->
-        <!-- ========================= -->
-        <section id="surveyScreen" class="card hidden">
+        <video id="preview"
+               autoplay
+               muted
+               playsinline>
+        </video>
 
-            <div class="row between center">
-                <h2>🎥 Camera hiện trường</h2>
-                <span id="gpsStatus" class="gps">GPS...</span>
-            </div>
+        <!-- Zoom -->
 
-            <div class="currentInfo">
+        <div class="zoom-bar hidden" id="zoomBar">
 
-                <div>
-                    <small>Hạng mục</small>
-                    <h3 id="currentItem">-</h3>
-                </div>
-
-                <div>
-                    <small>Bộ phận</small>
-                    <h3 id="currentPart">-</h3>
-                </div>
-
-            </div>
-
-            <div class="cameraBox">
-
-                <video
-                    id="camera"
-                    autoplay
-                    muted
-                    playsinline>
-                </video>
-
-            </div>
-
-            <div class="recPanel">
-
-                <div id="recDot" class="dot"></div>
-
-                <span>REC</span>
-
-                <span id="timer">00:00</span>
-
-                <span id="recordState" class="state">
-                    READY
-                </span>
-
-            </div>
-
-            <div class="cameraToolbar">
-
-                <button id="captureBtn" class="btn blue">
-                    📷 Ảnh
-                </button>
-
-                <button id="pauseBtn" class="btn orange">
-                    ⏸ Tạm dừng
-                </button>
-
-                <button id="resumeBtn" class="btn green hidden">
-                    ▶ Tiếp tục
-                </button>
-
-            </div>
-
-            <div class="divider"></div>
-
-            <button id="nextPartBtn" class="btn gray full">
-                ➜ Chuyển Bộ phận
+            <button class="zoom-btn" data-zoom="1">
+                1×
             </button>
 
-            <button id="finishBtn" class="btn red full">
-                ✓ HOÀN THÀNH KHẢO SÁT
+            <button class="zoom-btn" data-zoom="2">
+                2×
             </button>
 
-        </section>
+            <button class="zoom-btn" data-zoom="3">
+                3×
+            </button>
 
-        <!-- ========================= -->
-        <!-- TIMELINE -->
-        <!-- ========================= -->
-        <section id="timelineScreen" class="card hidden">
+        </div>
 
-            <div class="row between center">
+        <!-- Điều khiển -->
 
-                <h2>🖼 Timeline hiện trường</h2>
+        <div class="camera-controls">
 
-                <span id="photoCount">
-                    0 ảnh
-                </span>
+            <button id="btnStart" class="btn-primary">
+                Bắt đầu khảo sát
+            </button>
 
+            <button id="btnRecord"
+                    class="btn-red hidden">
+                REC
+            </button>
+
+            <button id="btnPause"
+                    class="btn-orange hidden">
+                Tạm dừng
+            </button>
+
+            <button id="btnPhoto"
+                    class="btn-blue hidden">
+                Chụp ảnh
+            </button>
+
+        </div>
+
+    </section>
+
+    <!-- ========================= -->
+    <!-- TIMELINE -->
+    <!-- ========================= -->
+
+    <section class="card">
+
+        <div class="row-between">
+
+            <h2>🖼️ Timeline hiện trường</h2>
+
+            <span id="timelineCount">
+                0 mục
+            </span>
+
+        </div>
+
+        <div id="timeline" class="timeline">
+
+            <div class="empty">
+                Chưa có dữ liệu hiện trường
             </div>
 
-            <div id="timeline"></div>
+        </div>
 
-        </section>
+    </section>
 
-        <!-- ========================= -->
-        <!-- KHẢO SÁT TẠM DỪNG -->
-        <!-- ========================= -->
-        <section id="resumeCard" class="card hidden">
+    <!-- ========================= -->
+    <!-- HOÀN THÀNH -->
+    <!-- ========================= -->
 
-            <h2>💾 Khảo sát đang tạm dừng</h2>
+    <section class="card">
 
-            <p>
-                Dữ liệu đã được lưu trong bộ nhớ thiết bị.
-            </p>
+        <h2>📦 Hoàn thành khảo sát</h2>
 
-            <button id="resumeSurveyBtn" class="btn green full">
-                Tiếp tục khảo sát
-            </button>
+        <button id="btnFinish"
+                class="btn-success">
+            Hoàn thành khảo sát
+        </button>
 
-            <button id="newSurveyBtn" class="btn gray full">
-                Tạo khảo sát mới
-            </button>
+        <button id="btnExport"
+                class="btn-dark">
+            Xuất JSON
+        </button>
 
-        </section>
+        <p id="saveStatus" class="save-status">
+            Chưa lưu
+        </p>
 
-        <!-- ========================= -->
-        <!-- HỒ SƠ -->
-        <!-- ========================= -->
-        <section id="archiveScreen" class="card hidden">
+    </section>
 
-            <h2>📦 Hồ sơ khảo sát</h2>
+</main>
 
-            <div id="archiveList"></div>
+<!-- Toast -->
 
-        </section>
+<div id="toast" class="toast hidden">
+    Đã lưu
+</div>
 
-    </main>
-
-    <canvas id="captureCanvas" class="hidden"></canvas>
-
-    <script src="db.js"></script>
-    <script src="app.js"></script>
+<script src="db.js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
