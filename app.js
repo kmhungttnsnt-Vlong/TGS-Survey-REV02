@@ -1,40 +1,37 @@
 // ======================================================
 // TGS Platform Genesis 2.0
-// REV03-004A (Hotfix)
-// Application Controller
+// REV03-004B
+// UI First + Async Database
 // ======================================================
 
 let currentProject = null;
-
-const SCREENS = {
-  splash: "screenSplash",
-  project: "screenProject",
-  home: "screenSurveyHome",
-  point: "screenPoint",
-  linear: "screenLinear"
-};
+let dbReady = false;
 
 const $ = (id) => document.getElementById(id);
 
-function showScreen(name) {
-  Object.values(SCREENS).forEach((id) => {
-    $(id).classList.remove("active");
-  });
+const screens = [
+  "screenSplash",
+  "screenProject",
+  "screenSurveyHome",
+  "screenPoint",
+  "screenLinear"
+];
 
-  $(SCREENS[name]).classList.add("active");
+function show(id){
+  screens.forEach(s => $(s).classList.remove("active"));
+  $(id).classList.add("active");
 }
 
-function updateProjectUI() {
-  if (!currentProject) return;
+function updateHome(){
+
+  if(!currentProject) return;
 
   $("projectTitle").textContent =
-    `${currentProject.projectName} (${currentProject.projectCode})`;
+    currentProject.projectName + " (" + currentProject.projectCode + ")";
 
-  const recent = $("recentSurvey");
+  $("recentSurvey").classList.remove("empty");
 
-  recent.classList.remove("empty");
-
-  recent.innerHTML = `
+  $("recentSurvey").innerHTML = `
     <div style="padding:8px 0">
       <strong>${currentProject.projectName}</strong><br>
       <small>${currentProject.location || "Chưa có địa điểm"}</small>
@@ -42,87 +39,89 @@ function updateProjectUI() {
 }
 
 // ======================================================
-// Boot
+// Khởi động
 // ======================================================
 
-window.addEventListener("DOMContentLoaded", async () => {
+window.onload = function(){
 
-  await DB.initDatabase();
+  show("screenSplash");
 
-  showScreen("splash");
+  // Khởi tạo DB nền
+  DB.initDatabase()
+    .then(async ()=>{
+      dbReady = true;
+      currentProject = await DB.getLatestProject();
+    })
+    .catch(err=>{
+      console.error(err);
+      alert("Không thể khởi tạo bộ nhớ Offline.");
+    });
 
   // Splash
-  $("btnStart").addEventListener("click", async () => {
+  $("btnStart").onclick = function(){
 
-    const latest = await DB.getLatestProject();
-
-    if (latest) {
-      currentProject = latest;
-      updateProjectUI();
-      showScreen("home");
-    } else {
-      showScreen("project");
+    if(currentProject){
+      updateHome();
+      show("screenSurveyHome");
+    }else{
+      show("screenProject");
     }
 
-  });
+  };
 
-  // Create Project
-  $("btnCreateProject").addEventListener("click", async () => {
+  // Tạo công trình
+  $("btnCreateProject").onclick = async function(){
+
+    if(!dbReady){
+      alert("Hệ thống đang khởi tạo, vui lòng thử lại.");
+      return;
+    }
 
     const name = $("projectName").value.trim();
     const code = $("projectCode").value.trim();
-    const location = $("projectLocation").value.trim();
-    const org = $("organization").value.trim();
 
-    if (name === "" || code === "") {
-      alert("Vui lòng nhập Tên và Mã công trình.");
+    if(name==="" || code===""){
+      alert("Nhập Tên và Mã công trình.");
       return;
     }
 
     currentProject = await DB.createProject({
-      projectName: name,
-      projectCode: code,
-      location,
-      organization: org
+      projectName:name,
+      projectCode:code,
+      location:$("projectLocation").value.trim(),
+      organization:$("organization").value.trim()
     });
 
-    updateProjectUI();
+    updateHome();
+    show("screenSurveyHome");
 
-    showScreen("home");
+  };
 
-  });
-
-  // Survey Point
-  $("btnPoint").addEventListener("click", async () => {
+  // Chọn khảo sát
+  $("btnPoint").onclick = async function(){
 
     currentProject.surveyMode = "POINT";
 
-    await DB.updateProject(currentProject);
+    if(dbReady) await DB.updateProject(currentProject);
 
-    showScreen("point");
+    show("screenPoint");
 
-  });
+  };
 
-  // Survey Linear
-  $("btnLinear").addEventListener("click", async () => {
+  $("btnLinear").onclick = async function(){
 
     currentProject.surveyMode = "LINEAR";
 
-    await DB.updateProject(currentProject);
+    if(dbReady) await DB.updateProject(currentProject);
 
-    showScreen("linear");
+    show("screenLinear");
 
-  });
+  };
 
-  // Back
-  document.querySelectorAll(".back-btn").forEach((btn) => {
+  document.querySelectorAll(".back-btn").forEach(btn=>{
 
-    btn.addEventListener("click", () => {
-
-      showScreen("home");
-
-    });
+    btn.onclick = ()=>show("screenSurveyHome");
 
   });
 
-});
+};
