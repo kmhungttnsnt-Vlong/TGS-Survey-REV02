@@ -1,7 +1,7 @@
 // ======================================================
 // TGS Platform Genesis 2.0
-// REV03 - IndexedDB Engine
-// File: db.js
+// REV03-003A
+// IndexedDB Stable Engine
 // ======================================================
 
 const DB_NAME = "TGS_SURVEY_DB";
@@ -10,209 +10,137 @@ const DB_VERSION = 1;
 let db = null;
 
 const STORES = {
-  PROJECTS: "projects",
-  SURVEYS: "surveys",
-  TIMELINE: "timeline",
-  PHOTOS: "photos",
-  SEGMENTS: "segments",
-  SYNC: "syncQueue"
+  PROJECTS: "projects"
 };
 
-// =============================
-// Initialize Database
-// =============================
-async function initDatabase(){
-  return new Promise((resolve,reject)=>{
+// ------------------------------------------------------
+// INIT
+// ------------------------------------------------------
 
-    const request = indexedDB.open(DB_NAME,DB_VERSION);
+function initDatabase() {
+  return new Promise((resolve, reject) => {
 
-    request.onerror = ()=>reject(request.error);
+    if (db) {
+      resolve(db);
+      return;
+    }
 
-    request.onsuccess = ()=>{
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onerror = () => reject(request.error);
+
+    request.onupgradeneeded = (e) => {
+
+      const database = e.target.result;
+
+      if (!database.objectStoreNames.contains(STORES.PROJECTS)) {
+
+        const store = database.createObjectStore(STORES.PROJECTS, {
+          keyPath: "projectId"
+        });
+
+        store.createIndex("createdAt", "createdAt");
+
+      }
+
+    };
+
+    request.onsuccess = () => {
       db = request.result;
       resolve(db);
     };
 
-    request.onupgradeneeded = (event)=>{
+  });
+}
 
-      const database = event.target.result;
+// ------------------------------------------------------
+// PROJECT
+// ------------------------------------------------------
 
-      if(!database.objectStoreNames.contains(STORES.PROJECTS)){
-        const store = database.createObjectStore(STORES.PROJECTS,{ keyPath:"projectId" });
-        store.createIndex("createdAt","createdAt");
+async function createProject(data) {
+
+  await initDatabase();
+
+  const project = {
+    projectId: crypto.randomUUID(),
+    projectCode: data.projectCode,
+    projectName: data.projectName,
+    location: data.location,
+    organization: data.organization,
+    surveyMode: null,
+    createdAt: new Date().toISOString()
+  };
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction("projects", "readwrite");
+
+    tx.objectStore("projects").add(project);
+
+    tx.oncomplete = () => resolve(project);
+
+    tx.onerror = () => reject(tx.error);
+
+  });
+
+}
+
+async function updateProject(project) {
+
+  await initDatabase();
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction("projects", "readwrite");
+
+    tx.objectStore("projects").put(project);
+
+    tx.oncomplete = () => resolve(true);
+
+    tx.onerror = () => reject(tx.error);
+
+  });
+
+}
+
+async function getLatestProject() {
+
+  await initDatabase();
+
+  return new Promise((resolve, reject) => {
+
+    const tx = db.transaction("projects", "readonly");
+
+    const req = tx.objectStore("projects").getAll();
+
+    req.onsuccess = () => {
+
+      const list = req.result;
+
+      if (list.length === 0) {
+        resolve(null);
+        return;
       }
 
-      if(!database.objectStoreNames.contains(STORES.SURVEYS)){
-        const store = database.createObjectStore(STORES.SURVEYS,{ keyPath:"surveyId" });
-        store.createIndex("projectId","projectId");
-      }
+      list.sort((a, b) =>
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
 
-      if(!database.objectStoreNames.contains(STORES.TIMELINE)){
-        const store = database.createObjectStore(STORES.TIMELINE,{ keyPath:"timelineId" });
-        store.createIndex("surveyId","surveyId");
-      }
-
-      if(!database.objectStoreNames.contains(STORES.PHOTOS)){
-        const store = database.createObjectStore(STORES.PHOTOS,{ keyPath:"photoId" });
-        store.createIndex("surveyId","surveyId");
-      }
-
-      if(!database.objectStoreNames.contains(STORES.SEGMENTS)){
-        const store = database.createObjectStore(STORES.SEGMENTS,{ keyPath:"segmentId" });
-        store.createIndex("surveyId","surveyId");
-      }
-
-      if(!database.objectStoreNames.contains(STORES.SYNC)){
-        const store = database.createObjectStore(STORES.SYNC,{ keyPath:"syncId" });
-        store.createIndex("status","status");
-      }
+      resolve(list[0]);
 
     };
 
-  });
-}
-
-// =============================
-// Generic CRUD
-// =============================
-
-function getStore(storeName,mode="readonly"){
-  const tx = db.transaction(storeName,mode);
-  return tx.objectStore(storeName);
-}
-
-async function save(storeName,data){
-  return new Promise((resolve,reject)=>{
-
-    const request = getStore(storeName,"readwrite").put(data);
-
-    request.onsuccess = ()=>resolve(true);
-    request.onerror = ()=>reject(request.error);
+    req.onerror = () => reject(req.error);
 
   });
+
 }
 
-async function remove(storeName,key){
-  return new Promise((resolve,reject)=>{
+// ------------------------------------------------------
 
-    const request = getStore(storeName,"readwrite").delete(key);
-
-    request.onsuccess = ()=>resolve(true);
-    request.onerror = ()=>reject(request.error);
-
-  });
-}
-
-async function get(storeName,key){
-  return new Promise((resolve,reject)=>{
-
-    const request = getStore(storeName).get(key);
-
-    request.onsuccess = ()=>resolve(request.result);
-    request.onerror = ()=>reject(request.error);
-
-  });
-}
-
-async function getAll(storeName){
-  return new Promise((resolve,reject)=>{
-
-    const request = getStore(storeName).getAll();
-
-    request.onsuccess = ()=>resolve(request.result || []);
-    request.onerror = ()=>reject(request.error);
-
-  });
-}
-
-// =============================
-// Project Repository
-// =============================
-
-async function createProject(project){
-
-  const data={
-    projectId: crypto.randomUUID(),
-    projectCode: project.projectCode,
-    projectName: project.projectName,
-    location: project.location,
-    organization: project.organization,
-    surveyMode: null,
-    createdAt: new Date().toISOString(),
-    status:"ACTIVE"
-  };
-
-  await save(STORES.PROJECTS,data);
-
-  return data;
-}
-
-async function updateProject(project){
-  await save(STORES.PROJECTS,project);
-}
-
-async function getLatestProject(){
-
-  const list = await getAll(STORES.PROJECTS);
-
-  if(list.length===0) return null;
-
-  list.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-
-  return list[0];
-}
-
-// =============================
-// Sync Queue
-// =============================
-
-async function addSyncItem(type,payload){
-
-  const item={
-    syncId: crypto.randomUUID(),
-    type,
-    payload,
-    status:"PENDING",
-    createdAt:new Date().toISOString()
-  };
-
-  await save(STORES.SYNC,item);
-
-  return item;
-}
-
-// =============================
-// Export Database Snapshot
-// =============================
-
-async function exportDatabase(){
-
-  return {
-    projects: await getAll(STORES.PROJECTS),
-    surveys: await getAll(STORES.SURVEYS),
-    timeline: await getAll(STORES.TIMELINE),
-    photos: await getAll(STORES.PHOTOS),
-    segments: await getAll(STORES.SEGMENTS),
-    syncQueue: await getAll(STORES.SYNC)
-  };
-}
-
-// =============================
-// Boot
-// =============================
-
-window.DB={
+window.DB = {
   initDatabase,
   createProject,
   updateProject,
-  getLatestProject,
-  addSyncItem,
-  exportDatabase,
-  save,
-  get,
-  getAll,
-  remove,
-  STORES
+  getLatestProject
 };
-
-initDatabase();
