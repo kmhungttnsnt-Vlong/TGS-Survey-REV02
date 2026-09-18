@@ -1,180 +1,151 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>TGS Platform Survey REV03</title>
-
   <meta name="theme-color" content="#1565C0"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-
-  <link rel="manifest" href="manifest.json"/>
   <link rel="stylesheet" href="style.css"/>
 </head>
-
 <body>
-
 <div id="app">
 
-  <!-- Splash -->
-  <section id="screenSplash" class="screen active">
+<!-- Splash -->
+<section id="screenSplash" class="screen active">
+  <div class="splash-logo">
+    <div class="logo-circle">TGS</div>
+    <h1>TGS Platform</h1>
+    <p>Genesis 2.0</p>
+  </div>
+  <button id="btnStart" class="primary-btn">Bắt đầu</button>
+</section>
 
-    <div class="splash-logo">
+<!-- Project -->
+<section id="screenProject" class="screen">
+  <header class="topbar"><h2>Tạo hồ sơ công trình</h2></header>
+  <div class="form-card">
+    <label>Tên công trình</label>
+    <input id="projectName" type="text" placeholder="VD: Tuyến ống D110"/>
 
-      <div class="logo-circle">TGS</div>
+    <label>Mã công trình</label>
+    <input id="projectCode" type="text" placeholder="TGS-001"/>
 
-      <h1>TGS Platform</h1>
+    <label>Địa điểm</label>
+    <input id="projectLocation" type="text" placeholder="Xã / Huyện / Tỉnh"/>
 
-      <p>Genesis 2.0</p>
+    <label>Đơn vị khảo sát</label>
+    <input id="organization" type="text" placeholder="Công ty khảo sát"/>
 
+    <button id="btnCreateProject" class="primary-btn">Tiếp tục</button>
+  </div>
+</section>
+
+<!-- Survey Home -->
+<section id="screenSurveyHome" class="screen">
+  <header class="topbar">
+    <div>
+      <h2>Khảo sát hiện trạng</h2>
+      <small id="projectTitle">Công trình</small>
     </div>
+  </header>
 
-    <button id="btnStart" class="primary-btn">
-      Bắt đầu
+  <div class="hero-card">
+    <h3>Chọn mô hình khảo sát</h3>
+    <p>Một công trình có thể khảo sát theo điểm hoặc theo tuyến.</p>
+  </div>
+
+  <div class="survey-grid">
+    <button id="btnPoint" class="survey-card point">
+      <div class="icon">📍</div>
+      <h3>Khảo sát điểm</h3>
+      <p>Trạm • Nhà máy • Thiết bị</p>
     </button>
 
-  </section>
+    <button id="btnLinear" class="survey-card linear">
+      <div class="icon">🛰️</div>
+      <h3>Khảo sát tuyến</h3>
+      <p>Đường ống • Cáp • Kênh</p>
+    </button>
+  </div>
 
+  <div class="recent-card">
+    <h4>Khảo sát gần đây</h4>
+    <div id="recentSurvey" class="empty">Chưa có hồ sơ khảo sát</div>
+  </div>
+</section>
 
-  <!-- Project Form -->
-  <section id="screenProject" class="screen">
+<!-- Point Placeholder -->
+<section id="screenPoint" class="screen">
+  <header class="topbar">
+    <button class="back-btn">←</button>
+    <h2>Khảo sát điểm</h2>
+  </header>
 
-    <header class="topbar">
-      <h2>Tạo hồ sơ công trình</h2>
-      <span>REV03</span>
-    </header>
+  <div class="coming-card">
+    <h3>TGS02-POINT</h3>
+    <p>Workflow Camera Survey sẽ triển khai ở Sprint POINT.</p>
+  </div>
+</section>
 
-    <div class="form-card">
+<!-- LINEAR REV01 -->
+<section id="screenLinear" class="screen">
 
-      <label>Tên công trình</label>
-      <input id="projectName" type="text"
-             placeholder="VD: Trạm cấp nước Bình An"/>
-
-      <label>Mã công trình</label>
-      <input id="projectCode" type="text"
-             placeholder="TGS-001"/>
-
-      <label>Địa điểm</label>
-      <input id="projectLocation" type="text"
-             placeholder="Xã / Huyện / Tỉnh"/>
-
-      <label>Đơn vị khảo sát</label>
-      <input id="organization" type="text"
-             placeholder="Công ty..."/>
-
-      <button id="btnCreateProject" class="primary-btn">
-        Tiếp tục
-      </button>
-
-    </div>
-
-  </section>
-
-
-  <!-- Survey Home -->
-  <section id="screenSurveyHome" class="screen">
-
-    <header class="topbar">
-      <div>
-        <h2>Khảo sát hiện trạng</h2>
-        <small id="projectTitle">Tên công trình</small>
-      </div>
-    </header>
-
-    <div class="hero-card">
-
-      <h3>Chọn mô hình khảo sát</h3>
-
-      <p>
-        Một công trình có thể khảo sát theo điểm hoặc theo tuyến.
-      </p>
-
-    </div>
-
-    <div class="survey-grid">
-
-      <button id="btnPoint" class="survey-card point">
-
-        <div class="icon">📍</div>
-
-        <h3>Khảo sát điểm</h3>
-
-        <p>Nhà máy • Trạm • Thiết bị</p>
-
-      </button>
-
-      <button id="btnLinear" class="survey-card linear">
-
-        <div class="icon">🛰</div>
-
-        <h3>Khảo sát tuyến</h3>
-
-        <p>Đường ống • Cáp • Kênh</p>
-
-      </button>
-
-    </div>
-
-    <div class="recent-card">
-
-      <h4>Khảo sát gần đây</h4>
-
-      <div id="recentSurvey" class="empty">
-        Chưa có hồ sơ khảo sát
-      </div>
-
-    </div>
-
-  </section>
-
-
-  <!-- Placeholder Point -->
-  <section id="screenPoint" class="screen">
-
-    <header class="topbar">
-      <button class="back-btn" data-back="home">←</button>
-      <h2>Khảo sát điểm</h2>
-    </header>
-
-    <div class="coming-card">
-
-      <h3>TGS02-POINT</h3>
-
-      <p>
-        Workflow khảo sát điểm sẽ triển khai ở REV03-POINT.
-      </p>
-
-    </div>
-
-  </section>
-
-
-  <!-- Placeholder Linear -->
-  <section id="screenLinear" class="screen">
-
-    <header class="topbar">
-      <button class="back-btn" data-back="home">←</button>
+  <header class="topbar">
+    <button class="back-btn">←</button>
+    <div>
       <h2>Khảo sát tuyến</h2>
-    </header>
+      <small id="linearProject">Tuyến D110</small>
+    </div>
+  </header>
 
-    <div class="coming-card">
+  <div class="hero-card">
+    <h3>Đoạn khảo sát Km0+000</h3>
+    <p>GPS • VN2000 • Offline First</p>
+  </div>
 
-      <h3>TGS02-LINEAR</h3>
+  <div class="coming-card">
+    <div style="font-size:60px;margin-bottom:10px">🛰️</div>
+    <h3>Bản đồ sẽ triển khai ở REV02</h3>
+    <p>Leaflet + OpenStreetMap + Thiết bị trắc địa SVG</p>
+  </div>
 
-      <p>
-        Workflow khảo sát tuyến sẽ triển khai ở REV03-LINEAR.
-      </p>
+  <div class="recent-card">
+    <h4>Thông số hiện trường</h4>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+
+      <div style="background:#F8FAFC;padding:14px;border-radius:14px">
+        <small>GPS</small>
+        <h3>± -- m</h3>
+      </div>
+
+      <div style="background:#F8FAFC;padding:14px;border-radius:14px">
+        <small>VN2000</small>
+        <h3>X / Y</h3>
+      </div>
+
+      <div style="background:#F8FAFC;padding:14px;border-radius:14px">
+        <small>Điểm</small>
+        <h3>D001</h3>
+      </div>
+
+      <div style="background:#F8FAFC;padding:14px;border-radius:14px">
+        <small>Chiều dài</small>
+        <h3>0.000 km</h3>
+      </div>
 
     </div>
 
-  </section>
+    <button class="primary-btn" style="margin-top:18px;background:#16A34A">
+      Lấy GPS đầu tiên
+    </button>
+  </div>
+
+</section>
 
 </div>
 
 <script src="db.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>
