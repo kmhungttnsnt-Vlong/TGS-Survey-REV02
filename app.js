@@ -1,17 +1,20 @@
-// ======================================================
-// TGS Platform Genesis 2.0
-// REV03-006B
-// SPA + Leaflet Controller
-// ======================================================
+/* ==========================================================
+   TGS Platform Genesis 2.0
+   TGS02-WEB-LINEAR-004
+   app.js
+   REV01
+========================================================== */
 
 let currentProject = null;
 let dbReady = false;
-let map = null;
-let marker = null;
 
 const $ = (id) => document.getElementById(id);
 
-const SCREENS = [
+/* ==========================================================
+   SCREEN MANAGER
+========================================================== */
+
+const screens = [
   "screenSplash",
   "screenProject",
   "screenSurveyHome",
@@ -19,156 +22,189 @@ const SCREENS = [
   "screenLinear"
 ];
 
-function show(screenId){
+function show(screenId) {
 
-  SCREENS.forEach(id=>{
-    $(id).classList.remove("active");
+  screens.forEach(id => {
+    const el = $(id);
+    if (el) el.classList.remove("active");
   });
 
   $(screenId).classList.add("active");
 
-  // Leaflet phải invalidate sau khi màn hình hiển thị
-  if(screenId==="screenLinear"){
-    setTimeout(()=>{
-      initMap();
-      map.invalidateSize(true);
-    },250);
+  if (screenId === "screenLinear") {
+    setTimeout(() => {
+      MapEngine.initialize();
+    }, 250);
   }
-
 }
 
-function updateHome(){
+/* ==========================================================
+   MAP ENGINE
+========================================================== */
 
-  if(!currentProject) return;
+const MapEngine = {
+
+  map: null,
+  marker: null,
+
+  defaultLocation: [10.762622, 106.660172],
+
+  initialize() {
+
+    if (this.map) {
+      this.map.invalidateSize();
+      return;
+    }
+
+    this.map = L.map("map", {
+      zoomControl: false
+    }).setView(this.defaultLocation, 18);
+
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 22,
+        attribution: "© OpenStreetMap"
+      }
+    ).addTo(this.map);
+
+    this.marker = L.marker(this.defaultLocation)
+      .addTo(this.map)
+      .bindPopup("D001 - Điểm đầu tuyến");
+
+    this.marker.openPopup();
+
+  },
+
+  zoomIn() {
+    if (this.map) this.map.zoomIn();
+  },
+
+  zoomOut() {
+    if (this.map) this.map.zoomOut();
+  },
+
+  locateDefault() {
+    if (!this.map) return;
+
+    this.map.flyTo(this.defaultLocation, 19, {
+      duration: 1.2
+    });
+  }
+
+};
+
+/* ==========================================================
+   PROJECT
+========================================================== */
+
+function updateHome() {
+
+  if (!currentProject) return;
 
   $("projectTitle").textContent =
-    `${currentProject.projectName} (${currentProject.projectCode})`;
+    currentProject.projectName;
 
   $("linearProject").textContent =
     currentProject.projectName;
 
-  $("recentSurvey").classList.remove("empty");
+}
 
-  $("recentSurvey").innerHTML = `
-    <div style="padding:8px 0">
-      <strong>${currentProject.projectName}</strong><br>
-      <small>${currentProject.location || "Chưa có địa điểm"}</small>
-    </div>
-  `;
+async function createProject() {
+
+  if (!dbReady) {
+    alert("Offline Database chưa sẵn sàng.");
+    return;
+  }
+
+  const projectName = $("projectName").value.trim();
+  const projectCode = $("projectCode").value.trim();
+
+  if (projectName === "" || projectCode === "") {
+    alert("Vui lòng nhập Tên và Mã công trình.");
+    return;
+  }
+
+  currentProject = await DB.createProject({
+    projectName,
+    projectCode,
+    location: $("projectLocation").value.trim(),
+    organization: $("organization").value.trim()
+  });
+
+  updateHome();
+
+  show("screenSurveyHome");
 
 }
 
-// ======================================================
-// Leaflet
-// ======================================================
+/* ==========================================================
+   BUTTONS
+========================================================== */
 
-function initMap(){
+function bindButtons() {
 
-  if(map) return;
+  $("btnStart").onclick = () => {
 
-  const center=[10.762622,106.660172];
-
-  map=L.map("map",{
-    zoomControl:false,
-    preferCanvas:true
-  }).setView(center,18);
-
-  L.tileLayer(
-    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    {
-      maxZoom:22,
-      attribution:"© OpenStreetMap"
-    }
-  ).addTo(map);
-
-  marker=L.marker(center).addTo(map);
-
-  marker.bindPopup("D001 - Điểm đầu tuyến");
-
-}
-
-// ======================================================
-// Boot
-// ======================================================
-
-window.onload=function(){
-
-  show("screenSplash");
-
-  DB.initDatabase()
-    .then(async()=>{
-      dbReady=true;
-      currentProject=await DB.getLatestProject();
-    })
-    .catch(console.error);
-
-  // Splash
-  $("btnStart").onclick=()=>{
-
-    if(currentProject){
+    if (currentProject) {
       updateHome();
       show("screenSurveyHome");
-    }else{
+    } else {
       show("screenProject");
     }
 
   };
 
-  // Create project
-  $("btnCreateProject").onclick=async()=>{
+  $("btnCreateProject").onclick = createProject;
 
-    if(!dbReady){
-      alert("Offline DB đang khởi tạo...");
-      return;
-    }
-
-    const name=$("projectName").value.trim();
-    const code=$("projectCode").value.trim();
-
-    if(name===""||code===""){
-      alert("Nhập Tên và Mã công trình.");
-      return;
-    }
-
-    currentProject=await DB.createProject({
-      projectName:name,
-      projectCode:code,
-      location:$("projectLocation").value.trim(),
-      organization:$("organization").value.trim()
-    });
-
-    updateHome();
-
-    show("screenSurveyHome");
-
-  };
-
-  // Point
-  $("btnPoint").onclick=async()=>{
-
-    currentProject.surveyMode="POINT";
-
-    if(dbReady) await DB.updateProject(currentProject);
-
+  $("btnPoint").onclick = () => {
     show("screenPoint");
-
   };
 
-  // Linear
-  $("btnLinear").onclick=async()=>{
-
-    currentProject.surveyMode="LINEAR";
-
-    if(dbReady) await DB.updateProject(currentProject);
-
+  $("btnLinear").onclick = () => {
     show("screenLinear");
-
   };
 
-  document.querySelectorAll(".back-btn").forEach(btn=>{
-
-    btn.onclick=()=>show("screenSurveyHome");
-
+  document.querySelectorAll(".back-btn").forEach(btn => {
+    btn.onclick = () => show("screenSurveyHome");
   });
 
-};
+  $("btnZoomIn").onclick = () => MapEngine.zoomIn();
+
+  $("btnZoomOut").onclick = () => MapEngine.zoomOut();
+
+  $("btnLocate").onclick = () => MapEngine.locateDefault();
+
+  $("btnFirstGPS").onclick = () => {
+    alert("REV05 sẽ lấy GPS thật của thiết bị.");
+  };
+
+}
+
+/* ==========================================================
+   BOOT
+========================================================== */
+
+window.addEventListener("load", async () => {
+
+  show("screenSplash");
+
+  bindButtons();
+
+  try {
+
+    await DB.initDatabase();
+
+    dbReady = true;
+
+    currentProject = await DB.getLatestProject();
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert("Không thể khởi tạo bộ nhớ Offline.");
+
+  }
+
+});
