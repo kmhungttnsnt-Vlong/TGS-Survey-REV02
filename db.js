@@ -5,7 +5,7 @@
 // ======================================================
 
 const DB_NAME = "TGS_SURVEY_DB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let db = null;
 
