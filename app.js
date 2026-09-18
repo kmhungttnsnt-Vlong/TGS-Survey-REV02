@@ -1,15 +1,17 @@
 // ======================================================
 // TGS Platform Genesis 2.0
-// REV03-004B
-// UI First + Async Database
+// REV03-006B
+// SPA + Leaflet Controller
 // ======================================================
 
 let currentProject = null;
 let dbReady = false;
+let map = null;
+let marker = null;
 
 const $ = (id) => document.getElementById(id);
 
-const screens = [
+const SCREENS = [
   "screenSplash",
   "screenProject",
   "screenSurveyHome",
@@ -17,9 +19,22 @@ const screens = [
   "screenLinear"
 ];
 
-function show(id){
-  screens.forEach(s => $(s).classList.remove("active"));
-  $(id).classList.add("active");
+function show(screenId){
+
+  SCREENS.forEach(id=>{
+    $(id).classList.remove("active");
+  });
+
+  $(screenId).classList.add("active");
+
+  // Leaflet phải invalidate sau khi màn hình hiển thị
+  if(screenId==="screenLinear"){
+    setTimeout(()=>{
+      initMap();
+      map.invalidateSize(true);
+    },250);
+  }
+
 }
 
 function updateHome(){
@@ -27,7 +42,10 @@ function updateHome(){
   if(!currentProject) return;
 
   $("projectTitle").textContent =
-    currentProject.projectName + " (" + currentProject.projectCode + ")";
+    `${currentProject.projectName} (${currentProject.projectCode})`;
+
+  $("linearProject").textContent =
+    currentProject.projectName;
 
   $("recentSurvey").classList.remove("empty");
 
@@ -35,30 +53,57 @@ function updateHome(){
     <div style="padding:8px 0">
       <strong>${currentProject.projectName}</strong><br>
       <small>${currentProject.location || "Chưa có địa điểm"}</small>
-    </div>`;
+    </div>
+  `;
+
 }
 
 // ======================================================
-// Khởi động
+// Leaflet
 // ======================================================
 
-window.onload = function(){
+function initMap(){
+
+  if(map) return;
+
+  const center=[10.762622,106.660172];
+
+  map=L.map("map",{
+    zoomControl:false,
+    preferCanvas:true
+  }).setView(center,18);
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom:22,
+      attribution:"© OpenStreetMap"
+    }
+  ).addTo(map);
+
+  marker=L.marker(center).addTo(map);
+
+  marker.bindPopup("D001 - Điểm đầu tuyến");
+
+}
+
+// ======================================================
+// Boot
+// ======================================================
+
+window.onload=function(){
 
   show("screenSplash");
 
-  // Khởi tạo DB nền
   DB.initDatabase()
-    .then(async ()=>{
-      dbReady = true;
-      currentProject = await DB.getLatestProject();
+    .then(async()=>{
+      dbReady=true;
+      currentProject=await DB.getLatestProject();
     })
-    .catch(err=>{
-      console.error(err);
-      alert("Không thể khởi tạo bộ nhớ Offline.");
-    });
+    .catch(console.error);
 
   // Splash
-  $("btnStart").onclick = function(){
+  $("btnStart").onclick=()=>{
 
     if(currentProject){
       updateHome();
@@ -69,23 +114,23 @@ window.onload = function(){
 
   };
 
-  // Tạo công trình
-  $("btnCreateProject").onclick = async function(){
+  // Create project
+  $("btnCreateProject").onclick=async()=>{
 
     if(!dbReady){
-      alert("Hệ thống đang khởi tạo, vui lòng thử lại.");
+      alert("Offline DB đang khởi tạo...");
       return;
     }
 
-    const name = $("projectName").value.trim();
-    const code = $("projectCode").value.trim();
+    const name=$("projectName").value.trim();
+    const code=$("projectCode").value.trim();
 
-    if(name==="" || code===""){
+    if(name===""||code===""){
       alert("Nhập Tên và Mã công trình.");
       return;
     }
 
-    currentProject = await DB.createProject({
+    currentProject=await DB.createProject({
       projectName:name,
       projectCode:code,
       location:$("projectLocation").value.trim(),
@@ -93,14 +138,15 @@ window.onload = function(){
     });
 
     updateHome();
+
     show("screenSurveyHome");
 
   };
 
-  // Chọn khảo sát
-  $("btnPoint").onclick = async function(){
+  // Point
+  $("btnPoint").onclick=async()=>{
 
-    currentProject.surveyMode = "POINT";
+    currentProject.surveyMode="POINT";
 
     if(dbReady) await DB.updateProject(currentProject);
 
@@ -108,9 +154,10 @@ window.onload = function(){
 
   };
 
-  $("btnLinear").onclick = async function(){
+  // Linear
+  $("btnLinear").onclick=async()=>{
 
-    currentProject.surveyMode = "LINEAR";
+    currentProject.surveyMode="LINEAR";
 
     if(dbReady) await DB.updateProject(currentProject);
 
@@ -120,7 +167,7 @@ window.onload = function(){
 
   document.querySelectorAll(".back-btn").forEach(btn=>{
 
-    btn.onclick = ()=>show("screenSurveyHome");
+    btn.onclick=()=>show("screenSurveyHome");
 
   });
 
