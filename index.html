@@ -1,229 +1,176 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>TGS Survey REV03</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 
-    <link rel="stylesheet" href="style.css">
+  <title>TGS Platform Survey REV03</title>
+
+  <meta name="theme-color" content="#1565C0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 
 <body>
 
-<header class="topbar">
-    <h1>TGS PLATFORM</h1>
-    <span>Survey REV03</span>
-</header>
+<div id="app">
 
-<main class="container">
+  <!-- Splash -->
+  <section id="screenSplash" class="screen active">
 
-    <!-- ========================= -->
-    <!-- THÔNG TIN CÔNG TRÌNH -->
-    <!-- ========================= -->
+    <div class="splash-logo">
 
-    <section class="card">
+      <div class="logo-circle">TGS</div>
 
-        <h2>📋 Khảo sát hiện trạng</h2>
+      <h1>TGS Platform</h1>
 
-        <label>Công trình</label>
-        <input id="projectName"
-               type="text"
-               placeholder="Nhập tên công trình">
+      <p>Genesis 2.0</p>
 
-        <label>Địa điểm</label>
-        <input id="location"
-               type="text"
-               placeholder="Xã / Huyện">
+    </div>
 
-        <label>Kỹ sư khảo sát</label>
-        <input id="engineer"
-               type="text"
-               placeholder="Họ tên kỹ sư">
+    <button id="btnStart" class="primary-btn">
+      Bắt đầu
+    </button>
 
-    </section>
+  </section>
 
-    <!-- ========================= -->
-    <!-- HẠNG MỤC -->
-    <!-- ========================= -->
 
-    <section class="card">
+  <!-- Project Form -->
+  <section id="screenProject" class="screen">
 
-        <div class="row-between">
-            <h2>🏗️ Hạng mục khảo sát</h2>
+    <header class="topbar">
+      <h2>Tạo hồ sơ công trình</h2>
+      <span>REV03</span>
+    </header>
 
-            <button id="addCategory" class="btn-green">
-                + Hạng mục
-            </button>
-        </div>
+    <div class="form-card">
 
-        <div id="categoryContainer">
+      <label>Tên công trình</label>
+      <input id="projectName" type="text"
+             placeholder="VD: Trạm cấp nước Bình An"/>
 
-            <!-- Hạng mục sẽ sinh bằng JS -->
+      <label>Mã công trình</label>
+      <input id="projectCode" type="text"
+             placeholder="TGS-001"/>
 
-        </div>
+      <label>Địa điểm</label>
+      <input id="projectLocation" type="text"
+             placeholder="Xã / Huyện / Tỉnh"/>
 
-    </section>
+      <label>Đơn vị khảo sát</label>
+      <input id="organization" type="text"
+             placeholder="Công ty..."/>
 
-    <!-- ========================= -->
-    <!-- GPS -->
-    <!-- ========================= -->
+      <button id="btnCreateProject" class="primary-btn">
+        Tiếp tục
+      </button>
 
-    <section class="card gps-card">
+    </div>
 
-        <div class="gps-info">
+  </section>
 
-            <div>
-                <strong>📍 GPS</strong>
-                <p id="gpsStatus">Chưa lấy vị trí</p>
-            </div>
 
-            <div class="rec-status">
+  <!-- Survey Home -->
+  <section id="screenSurveyHome" class="screen">
 
-                <span id="recDot"></span>
-                <strong id="timer">00:00</strong>
+    <header class="topbar">
+      <div>
+        <h2>Khảo sát hiện trạng</h2>
+        <small id="projectTitle">Tên công trình</small>
+      </div>
+    </header>
 
-            </div>
+    <div class="hero-card">
 
-        </div>
+      <h3>Chọn mô hình khảo sát</h3>
 
-        <button id="btnGPS" class="btn-primary">
-            Lấy GPS
-        </button>
+      <p>
+        Một công trình có thể khảo sát theo điểm hoặc theo tuyến.
+      </p>
 
-    </section>
+    </div>
 
-    <!-- ========================= -->
-    <!-- CAMERA -->
-    <!-- ========================= -->
+    <div class="survey-grid">
 
-    <section class="camera-panel" id="cameraPanel">
+      <button id="btnPoint" class="survey-card point">
 
-        <div class="camera-header">
+        <div class="icon">📍</div>
 
-            <div>
-                <strong id="cameraTitle">
-                    Chưa bắt đầu khảo sát
-                </strong>
+        <h3>Khảo sát điểm</h3>
 
-                <small id="cameraSubtitle">
-                    Hãy chọn Hạng mục và Bộ phận
-                </small>
-            </div>
+        <p>Nhà máy • Trạm • Thiết bị</p>
 
-            <button id="btnCloseCamera"
-                    class="icon-btn hidden">
-                ✕
-            </button>
+      </button>
 
-        </div>
+      <button id="btnLinear" class="survey-card linear">
 
-        <video id="preview"
-               autoplay
-               muted
-               playsinline>
-        </video>
+        <div class="icon">🛰</div>
 
-        <!-- Zoom -->
+        <h3>Khảo sát tuyến</h3>
 
-        <div class="zoom-bar hidden" id="zoomBar">
+        <p>Đường ống • Cáp • Kênh</p>
 
-            <button class="zoom-btn" data-zoom="1">
-                1×
-            </button>
+      </button>
 
-            <button class="zoom-btn" data-zoom="2">
-                2×
-            </button>
+    </div>
 
-            <button class="zoom-btn" data-zoom="3">
-                3×
-            </button>
+    <div class="recent-card">
 
-        </div>
+      <h4>Khảo sát gần đây</h4>
 
-        <!-- Điều khiển -->
+      <div id="recentSurvey" class="empty">
+        Chưa có hồ sơ khảo sát
+      </div>
 
-        <div class="camera-controls">
+    </div>
 
-            <button id="btnStart" class="btn-primary">
-                Bắt đầu khảo sát
-            </button>
+  </section>
 
-            <button id="btnRecord"
-                    class="btn-red hidden">
-                REC
-            </button>
 
-            <button id="btnPause"
-                    class="btn-orange hidden">
-                Tạm dừng
-            </button>
+  <!-- Placeholder Point -->
+  <section id="screenPoint" class="screen">
 
-            <button id="btnPhoto"
-                    class="btn-blue hidden">
-                Chụp ảnh
-            </button>
+    <header class="topbar">
+      <button class="back-btn" data-back="home">←</button>
+      <h2>Khảo sát điểm</h2>
+    </header>
 
-        </div>
+    <div class="coming-card">
 
-    </section>
+      <h3>TGS02-POINT</h3>
 
-    <!-- ========================= -->
-    <!-- TIMELINE -->
-    <!-- ========================= -->
+      <p>
+        Workflow khảo sát điểm sẽ triển khai ở REV03-POINT.
+      </p>
 
-    <section class="card">
+    </div>
 
-        <div class="row-between">
+  </section>
 
-            <h2>🖼️ Timeline hiện trường</h2>
 
-            <span id="timelineCount">
-                0 mục
-            </span>
+  <!-- Placeholder Linear -->
+  <section id="screenLinear" class="screen">
 
-        </div>
+    <header class="topbar">
+      <button class="back-btn" data-back="home">←</button>
+      <h2>Khảo sát tuyến</h2>
+    </header>
 
-        <div id="timeline" class="timeline">
+    <div class="coming-card">
 
-            <div class="empty">
-                Chưa có dữ liệu hiện trường
-            </div>
+      <h3>TGS02-LINEAR</h3>
 
-        </div>
+      <p>
+        Workflow khảo sát tuyến sẽ triển khai ở REV03-LINEAR.
+      </p>
 
-    </section>
+    </div>
 
-    <!-- ========================= -->
-    <!-- HOÀN THÀNH -->
-    <!-- ========================= -->
+  </section>
 
-    <section class="card">
-
-        <h2>📦 Hoàn thành khảo sát</h2>
-
-        <button id="btnFinish"
-                class="btn-success">
-            Hoàn thành khảo sát
-        </button>
-
-        <button id="btnExport"
-                class="btn-dark">
-            Xuất JSON
-        </button>
-
-        <p id="saveStatus" class="save-status">
-            Chưa lưu
-        </p>
-
-    </section>
-
-</main>
-
-<!-- Toast -->
-
-<div id="toast" class="toast hidden">
-    Đã lưu
 </div>
 
 <script src="db.js"></script>
