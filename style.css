@@ -1,7 +1,7 @@
 /* =====================================================
    TGS Platform Genesis 2.0
    TGS02-WEB-LINEAR-004
-   REV05 - GIS LAYER CONTROL
+   REV06 - GIS LAYER PANEL FIX
    File: style.css
 
    Design direction:
@@ -11,6 +11,16 @@
    - ArcGIS Base Map
    - Google Map Provider prepared
    - TGS GIS Layers
+
+   REV06 FIX:
+   - Layer panel is no longer clipped by map card.
+   - Map keeps rounded corners.
+   - Full GIS layer list can be displayed.
+===================================================== */
+
+
+/* =====================================================
+   ROOT
 ===================================================== */
 
 :root{
@@ -593,6 +603,15 @@ input:focus{
 
 /* =====================================================
    LINEAR MAP CARD
+=====================================================
+
+   IMPORTANT REV06:
+
+   The card itself MUST allow the Layer Panel to extend
+   beyond the map area.
+
+   The actual map is clipped separately below.
+
 ===================================================== */
 
 .linear-map-card{
@@ -603,17 +622,24 @@ input:focus{
 
   border-radius:22px;
 
-  overflow:hidden;
+  overflow:visible;
 
   box-shadow:var(--shadow);
 
   margin-bottom:18px;
+
+  z-index:20;
 
 }
 
 
 /* =====================================================
    LEAFLET MAP
+=====================================================
+
+   Map keeps the rounded visual boundary even though the
+   parent card now uses overflow:visible.
+
 ===================================================== */
 
 #map{
@@ -623,6 +649,10 @@ input:focus{
   height:420px;
 
   background:#DCEBFF;
+
+  overflow:hidden;
+
+  border-radius:22px;
 
 }
 
@@ -668,7 +698,9 @@ input:focus{
 }
 
 
-/* Existing HTML uses gps-status */
+/* =====================================================
+   GPS STATUS
+===================================================== */
 
 .gps-status{
 
@@ -776,7 +808,7 @@ input:focus{
 
   right:12px;
 
-  z-index:1100;
+  z-index:2000;
 
 }
 
@@ -817,8 +849,6 @@ input:focus{
 }
 
 
-/* Remove native disclosure marker */
-
 .map-layer-control > summary::-webkit-details-marker{
 
   display:none;
@@ -858,12 +888,15 @@ input:focus{
   max-width:
     calc(100vw - 48px);
 
-  max-height:calc(100vh - 110px);
+  max-height:
+    min(520px, calc(100vh - 110px));
 
   overflow-y:auto;
 
+  overflow-x:hidden;
+
   background:
-    rgba(255,255,255,.97);
+    rgba(255,255,255,.98);
 
   border-radius:18px;
 
@@ -875,6 +908,38 @@ input:focus{
   backdrop-filter:blur(14px);
 
   -webkit-backdrop-filter:blur(14px);
+
+  overscroll-behavior:contain;
+
+  -webkit-overflow-scrolling:touch;
+
+}
+
+
+/* =====================================================
+   LAYER PANEL SCROLLBAR
+===================================================== */
+
+.map-layer-panel::-webkit-scrollbar{
+
+  width:6px;
+
+}
+
+
+.map-layer-panel::-webkit-scrollbar-track{
+
+  background:transparent;
+
+}
+
+
+.map-layer-panel::-webkit-scrollbar-thumb{
+
+  background:
+    rgba(100,116,139,.35);
+
+  border-radius:10px;
 
 }
 
@@ -956,7 +1021,9 @@ input:focus{
 }
 
 
-/* Radio / checkbox */
+/* =====================================================
+   RADIO / CHECKBOX
+===================================================== */
 
 .map-layer-option input{
 
@@ -979,7 +1046,9 @@ input:focus{
 }
 
 
-/* Main label text */
+/* =====================================================
+   LAYER TEXT
+===================================================== */
 
 .map-layer-option span{
 
@@ -990,7 +1059,9 @@ input:focus{
 }
 
 
-/* Status text */
+/* =====================================================
+   STATUS TEXT
+===================================================== */
 
 .map-layer-option small{
 
@@ -1007,7 +1078,9 @@ input:focus{
 }
 
 
-/* Disabled provider */
+/* =====================================================
+   DISABLED PROVIDER
+===================================================== */
 
 .map-layer-option:has(input:disabled){
 
@@ -1026,7 +1099,7 @@ input:focus{
 
 
 /* =====================================================
-   SELECTED / ACTIVE PROVIDER
+   SELECTED / ACTIVE
 ===================================================== */
 
 .map-layer-option:has(input:checked){
@@ -1046,7 +1119,7 @@ input:focus{
 
 
 /* =====================================================
-   LEAFLET UI ADJUSTMENT
+   LEAFLET UI
 ===================================================== */
 
 .leaflet-control-zoom{
@@ -1066,7 +1139,7 @@ input:focus{
 
 
 /* =====================================================
-   MAP POPUP
+   LEAFLET POPUP
 ===================================================== */
 
 .leaflet-popup-content-wrapper{
@@ -1150,13 +1223,16 @@ input:focus{
     max-width:
       calc(100vw - 40px);
 
+    max-height:
+      calc(100vh - 96px);
+
   }
 
 }
 
 
 /* =====================================================
-   ACCESSIBILITY / TOUCH
+   TOUCH DEVICE
 ===================================================== */
 
 @media (hover:none){
