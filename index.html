@@ -131,33 +131,5 @@
 <script src="db.js"></script>
 <script src="app.js"></script>
 
-<script>
-let map;
-
-function initLinearMap(){
-
-  if(map) return;
-
-  map=L.map('map',{zoomControl:false}).setView([10.762622,106.660172],17);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'© OpenStreetMap'
-  }).addTo(map);
-
-  L.marker([10.762622,106.660172]).addTo(map)
-    .bindPopup('Điểm bắt đầu D001');
-}
-
-const oldShow=window.show;
-
-window.show=function(id){
-  oldShow(id);
-
-  if(id==='screenLinear'){
-    setTimeout(initLinearMap,200);
-  }
-}
-</script>
-
 </body>
 </html>
