@@ -2,11 +2,12 @@
    TGS Platform Genesis 2.0
    TGS02-WEB-LINEAR-004
    app.js
-   REV03
+   REV04
 
-   GIS LAB FOUNDATION
+   GIS LAB - LAYER CONTROL
 
    Architecture:
+
    TGS GIS
       │
       ├── Map Engine
@@ -26,10 +27,20 @@
              ├── Water Station
              └── Customer Meter
 
+   REV04 PURPOSE:
+
+   1. Connect Base Map control.
+   2. Connect TGS GIS Layer control.
+   3. Create temporary GIS LAB demo objects.
+   4. Verify independent layer visibility.
+   5. Preserve existing Survey / Project behavior.
+
    IMPORTANT:
-   - Base map is independent from TGS GIS data.
-   - Survey data must survive base-map switching.
-   - Google provider is intentionally not activated yet.
+
+   - Demo GIS objects are TEST DATA ONLY.
+   - They are not real project GIS data.
+   - Google provider is intentionally not activated.
+   - GPS / VN2000 are not modified in this revision.
 ========================================================== */
 
 
@@ -38,6 +49,7 @@
 ========================================================== */
 
 let currentProject = null;
+
 let dbReady = false;
 
 const $ = (id) => document.getElementById(id);
@@ -50,6 +62,7 @@ const $ = (id) => document.getElementById(id);
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
+
   iconRetinaUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
 
@@ -58,6 +71,7 @@ L.Icon.Default.mergeOptions({
 
   shadowUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+
 });
 
 
@@ -66,11 +80,17 @@ L.Icon.Default.mergeOptions({
 ========================================================== */
 
 const screens = [
+
   "screenSplash",
+
   "screenProject",
+
   "screenSurveyHome",
+
   "screenPoint",
+
   "screenLinear"
+
 ];
 
 
@@ -81,7 +101,9 @@ function show(screenId) {
     const el = $(id);
 
     if (el) {
+
       el.classList.remove("active");
+
     }
 
   });
@@ -89,8 +111,11 @@ function show(screenId) {
 
   const target = $(screenId);
 
+
   if (target) {
+
     target.classList.add("active");
+
   }
 
 
@@ -109,16 +134,10 @@ function show(screenId) {
 
 /* ==========================================================
    MAP PROVIDERS
-==========================================================
-
-   Base Map Provider abstraction.
-
-   The Survey / GIS business logic must NOT depend directly
-   on ArcGIS or Google.
-
 ========================================================== */
 
 const MapProviders = {
+
 
   /* --------------------------------------------------------
      ARC GIS
@@ -131,6 +150,8 @@ const MapProviders = {
     name: "ArcGIS World Street Map",
 
     type: "tile",
+
+    enabled: true,
 
     url:
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
@@ -151,12 +172,12 @@ const MapProviders = {
      GOOGLE
   --------------------------------------------------------
 
-     Prepared provider definition only.
+     Prepared only.
 
-     Google Maps must be integrated through the official
-     Google Maps Platform mechanism.
+     Google Maps will be integrated through an official
+     Google Maps Platform mechanism in a later sprint.
 
-     DO NOT use Google tile URLs directly.
+     Direct Google tile URLs are intentionally NOT used.
 
   -------------------------------------------------------- */
 
@@ -173,7 +194,7 @@ const MapProviders = {
     status: "PLANNED",
 
     note:
-      "Google Maps integration will be activated through the official Google Maps Platform API. Direct Google tile URLs are intentionally not used."
+      "Google Maps integration will use the official Google Maps Platform mechanism."
 
   }
 
@@ -182,15 +203,14 @@ const MapProviders = {
 
 /* ==========================================================
    TGS GIS LAYER REGISTRY
-==========================================================
-
-   These are TGS-owned GIS layers.
-
-   They are deliberately independent from the base map.
-
 ========================================================== */
 
 const GISLayerRegistry = {
+
+
+  /* --------------------------------------------------------
+     SURVEY POINT
+  -------------------------------------------------------- */
 
   surveyPoint: {
 
@@ -207,6 +227,10 @@ const GISLayerRegistry = {
   },
 
 
+  /* --------------------------------------------------------
+     SURVEY ROUTE
+  -------------------------------------------------------- */
+
   surveyRoute: {
 
     id: "surveyRoute",
@@ -221,6 +245,10 @@ const GISLayerRegistry = {
 
   },
 
+
+  /* --------------------------------------------------------
+     PIPE
+  -------------------------------------------------------- */
 
   pipe: {
 
@@ -237,6 +265,10 @@ const GISLayerRegistry = {
   },
 
 
+  /* --------------------------------------------------------
+     VALVE
+  -------------------------------------------------------- */
+
   valve: {
 
     id: "valve",
@@ -251,6 +283,10 @@ const GISLayerRegistry = {
 
   },
 
+
+  /* --------------------------------------------------------
+     TEE
+  -------------------------------------------------------- */
 
   tee: {
 
@@ -267,6 +303,10 @@ const GISLayerRegistry = {
   },
 
 
+  /* --------------------------------------------------------
+     ELBOW
+  -------------------------------------------------------- */
+
   elbow: {
 
     id: "elbow",
@@ -282,6 +322,10 @@ const GISLayerRegistry = {
   },
 
 
+  /* --------------------------------------------------------
+     WATER STATION
+  -------------------------------------------------------- */
+
   waterStation: {
 
     id: "waterStation",
@@ -296,6 +340,10 @@ const GISLayerRegistry = {
 
   },
 
+
+  /* --------------------------------------------------------
+     CUSTOMER METER
+  -------------------------------------------------------- */
 
   customerMeter: {
 
@@ -315,10 +363,392 @@ const GISLayerRegistry = {
 
 
 /* ==========================================================
+   GIS LAB DEMO DATA
+==========================================================
+
+   IMPORTANT:
+
+   These coordinates are synthetic test geometry around
+   the existing D001 location.
+
+   They exist only to prove:
+
+   - layer visibility
+   - layer independence
+   - map interaction
+   - future GIS architecture
+
+   They are NOT real infrastructure data.
+
+========================================================== */
+
+const GISLabData = {
+
+
+  /* --------------------------------------------------------
+     PIPE
+  -------------------------------------------------------- */
+
+  pipe: [
+
+    [10.762250, 106.659800],
+
+    [10.762420, 106.660000],
+
+    [10.762622, 106.660172],
+
+    [10.762850, 106.660350],
+
+    [10.763080, 106.660550]
+
+  ],
+
+
+  /* --------------------------------------------------------
+     VALVE
+  -------------------------------------------------------- */
+
+  valve: [
+
+    [10.762622, 106.660172],
+
+    [10.762850, 106.660350]
+
+  ],
+
+
+  /* --------------------------------------------------------
+     TEE
+  -------------------------------------------------------- */
+
+  tee: [
+
+    [10.762850, 106.660350]
+
+  ],
+
+
+  /* --------------------------------------------------------
+     ELBOW
+  -------------------------------------------------------- */
+
+  elbow: [
+
+    [10.763080, 106.660550]
+
+  ],
+
+
+  /* --------------------------------------------------------
+     WATER STATION
+  -------------------------------------------------------- */
+
+  waterStation: [
+
+    [10.763350, 106.660800]
+
+  ],
+
+
+  /* --------------------------------------------------------
+     CUSTOMER METER
+  -------------------------------------------------------- */
+
+  customerMeter: [
+
+    [10.762200, 106.660600],
+
+    [10.762350, 106.660750],
+
+    [10.762500, 106.660900]
+
+  ]
+
+};
+
+
+/* ==========================================================
+   GIS LAB LAYER BUILDER
+========================================================== */
+
+const GISLabLayerBuilder = {
+
+
+  /* --------------------------------------------------------
+     PIPE
+  -------------------------------------------------------- */
+
+  createPipeLayer() {
+
+    return L.polyline(
+
+      GISLabData.pipe,
+
+      {
+
+        weight: 6,
+
+        opacity: 0.9
+
+      }
+
+    ).bindPopup(
+
+      "<strong>TGS GIS LAB</strong><br>Ống"
+
+    );
+
+  },
+
+
+  /* --------------------------------------------------------
+     VALVE
+  -------------------------------------------------------- */
+
+  createValveLayer() {
+
+    const group =
+      L.layerGroup();
+
+
+    GISLabData.valve.forEach(
+      (coordinate, index) => {
+
+        L.circleMarker(
+
+          coordinate,
+
+          {
+
+            radius: 8,
+
+            weight: 3,
+
+            fillOpacity: 0.9
+
+          }
+
+        )
+
+          .bindPopup(
+
+            "<strong>TGS GIS LAB</strong><br>" +
+            "Van V" +
+            String(index + 1).padStart(3, "0")
+
+          )
+
+          .addTo(group);
+
+      }
+    );
+
+
+    return group;
+
+  },
+
+
+  /* --------------------------------------------------------
+     TEE
+  -------------------------------------------------------- */
+
+  createTeeLayer() {
+
+    const group =
+      L.layerGroup();
+
+
+    GISLabData.tee.forEach(
+      (coordinate, index) => {
+
+        L.circleMarker(
+
+          coordinate,
+
+          {
+
+            radius: 10,
+
+            weight: 3,
+
+            fillOpacity: 0.9
+
+          }
+
+        )
+
+          .bindPopup(
+
+            "<strong>TGS GIS LAB</strong><br>" +
+            "Tê T" +
+            String(index + 1).padStart(3, "0")
+
+          )
+
+          .addTo(group);
+
+      }
+    );
+
+
+    return group;
+
+  },
+
+
+  /* --------------------------------------------------------
+     ELBOW
+  -------------------------------------------------------- */
+
+  createElbowLayer() {
+
+    const group =
+      L.layerGroup();
+
+
+    GISLabData.elbow.forEach(
+      (coordinate, index) => {
+
+        L.circleMarker(
+
+          coordinate,
+
+          {
+
+            radius: 9,
+
+            weight: 3,
+
+            fillOpacity: 0.9
+
+          }
+
+        )
+
+          .bindPopup(
+
+            "<strong>TGS GIS LAB</strong><br>" +
+            "Cút C" +
+            String(index + 1).padStart(3, "0")
+
+          )
+
+          .addTo(group);
+
+      }
+    );
+
+
+    return group;
+
+  },
+
+
+  /* --------------------------------------------------------
+     WATER STATION
+  -------------------------------------------------------- */
+
+  createWaterStationLayer() {
+
+    const group =
+      L.layerGroup();
+
+
+    GISLabData.waterStation.forEach(
+      (coordinate, index) => {
+
+        L.circleMarker(
+
+          coordinate,
+
+          {
+
+            radius: 13,
+
+            weight: 3,
+
+            fillOpacity: 0.9
+
+          }
+
+        )
+
+          .bindPopup(
+
+            "<strong>TGS GIS LAB</strong><br>" +
+            "Trạm cấp nước TS" +
+            String(index + 1).padStart(3, "0")
+
+          )
+
+          .addTo(group);
+
+      }
+    );
+
+
+    return group;
+
+  },
+
+
+  /* --------------------------------------------------------
+     CUSTOMER METER
+  -------------------------------------------------------- */
+
+  createCustomerMeterLayer() {
+
+    const group =
+      L.layerGroup();
+
+
+    GISLabData.customerMeter.forEach(
+      (coordinate, index) => {
+
+        L.circleMarker(
+
+          coordinate,
+
+          {
+
+            radius: 6,
+
+            weight: 2,
+
+            fillOpacity: 0.9
+
+          }
+
+        )
+
+          .bindPopup(
+
+            "<strong>TGS GIS LAB</strong><br>" +
+            "Đồng hồ KH KH" +
+            String(index + 1).padStart(3, "0")
+
+          )
+
+          .addTo(group);
+
+      }
+    );
+
+
+    return group;
+
+  }
+
+};
+
+
+/* ==========================================================
    MAP ENGINE
 ========================================================== */
 
 const MapEngine = {
+
 
   map: null,
 
@@ -329,8 +759,11 @@ const MapEngine = {
   activeProvider: "arcgis",
 
   defaultLocation: [
+
     10.762622,
+
     106.660172
+
   ],
 
 
@@ -348,94 +781,238 @@ const MapEngine = {
 
       }, 50);
 
+
       return;
 
     }
 
 
-    const mapElement = $("map");
+    const mapElement =
+      $("map");
+
 
     if (!mapElement) {
 
       console.error(
+
         "TGS GIS: #map element was not found."
+
       );
+
 
       return;
 
     }
 
 
-    this.map = L.map("map", {
+    /* ------------------------------------------------------
+       CREATE MAP
+    ------------------------------------------------------ */
 
-      zoomControl: false
+    this.map =
+      L.map(
 
-    }).setView(
+        "map",
 
-      this.defaultLocation,
+        {
 
-      18
+          zoomControl: false
 
-    );
+        }
+
+      ).setView(
+
+        this.defaultLocation,
+
+        18
+
+      );
 
 
     /* ------------------------------------------------------
        DEFAULT BASE MAP
-       ArcGIS
     ------------------------------------------------------ */
 
     this.setBaseMap("arcgis");
 
 
     /* ------------------------------------------------------
-       TGS SURVEY POINT
+       SURVEY POINT D001
     ------------------------------------------------------ */
 
-    this.marker = L.marker(
+    this.marker =
+      L.marker(
 
-      this.defaultLocation
+        this.defaultLocation
 
-    ).addTo(this.map);
+      ).addTo(
+
+        this.map
+
+      );
 
 
-    GISLayerRegistry.surveyPoint.layer =
+    GISLayerRegistry
+      .surveyPoint
+      .layer =
       this.marker;
 
 
     this.marker.bindPopup(
+
       "D001 - Điểm đầu tuyến"
+
     );
 
 
     this.marker.openPopup();
 
 
+    /* ------------------------------------------------------
+       CREATE GIS LAB LAYERS
+    ------------------------------------------------------ */
+
+    this.createGISLabLayers();
+
+
+    /* ------------------------------------------------------
+       APPLY INITIAL VISIBILITY
+    ------------------------------------------------------ */
+
+    this.applyAllGISLayerVisibility();
+
+
     console.log(
+
       "TGS GIS initialized:",
+
       {
+
         engine: "Leaflet",
-        provider: this.activeProvider,
-        layers: Object.keys(GISLayerRegistry)
+
+        provider:
+          this.activeProvider,
+
+        layers:
+          Object.keys(
+            GISLayerRegistry
+          )
+
       }
+
     );
 
   },
 
 
   /* --------------------------------------------------------
+     CREATE GIS LAB LAYERS
+  -------------------------------------------------------- */
+
+  createGISLabLayers() {
+
+    GISLayerRegistry
+      .pipe
+      .layer =
+      GISLabLayerBuilder
+        .createPipeLayer();
+
+
+    GISLayerRegistry
+      .valve
+      .layer =
+      GISLabLayerBuilder
+        .createValveLayer();
+
+
+    GISLayerRegistry
+      .tee
+      .layer =
+      GISLabLayerBuilder
+        .createTeeLayer();
+
+
+    GISLayerRegistry
+      .elbow
+      .layer =
+      GISLabLayerBuilder
+        .createElbowLayer();
+
+
+    GISLayerRegistry
+      .waterStation
+      .layer =
+      GISLabLayerBuilder
+        .createWaterStationLayer();
+
+
+    GISLayerRegistry
+      .customerMeter
+      .layer =
+      GISLabLayerBuilder
+        .createCustomerMeterLayer();
+
+  },
+
+
+  /* --------------------------------------------------------
+     APPLY ALL GIS LAYER VISIBILITY
+  -------------------------------------------------------- */
+
+  applyAllGISLayerVisibility() {
+
+    Object.keys(
+      GISLayerRegistry
+    ).forEach(layerId => {
+
+      const registry =
+        GISLayerRegistry[layerId];
+
+
+      if (!registry.layer) {
+
+        return;
+
+      }
+
+
+      if (registry.visible) {
+
+        if (
+          !this.map.hasLayer(
+            registry.layer
+          )
+        ) {
+
+          registry.layer.addTo(
+            this.map
+          );
+
+        }
+
+      } else {
+
+        if (
+          this.map.hasLayer(
+            registry.layer
+          )
+        ) {
+
+          this.map.removeLayer(
+            registry.layer
+          );
+
+        }
+
+      }
+
+    });
+
+  },
+
+
+  /* --------------------------------------------------------
      SET BASE MAP
-  --------------------------------------------------------
-
-     This method is intentionally isolated.
-
-     Later:
-
-       setBaseMap("arcgis")
-       setBaseMap("google-road")
-       setBaseMap("google-satellite")
-       setBaseMap("google-hybrid")
-       setBaseMap("google-terrain")
-
   -------------------------------------------------------- */
 
   setBaseMap(providerId) {
@@ -443,7 +1020,9 @@ const MapEngine = {
     if (!this.map) {
 
       console.warn(
+
         "TGS GIS: Map has not been initialized."
+
       );
 
       return false;
@@ -458,9 +1037,13 @@ const MapEngine = {
     if (!provider) {
 
       console.error(
+
         "TGS GIS: Unknown map provider:",
+
         providerId
+
       );
+
 
       return false;
 
@@ -470,8 +1053,11 @@ const MapEngine = {
     if (provider.enabled === false) {
 
       console.warn(
+
         `TGS GIS: Provider "${providerId}" is not active yet.`
+
       );
+
 
       return false;
 
@@ -485,7 +1071,9 @@ const MapEngine = {
     if (this.baseLayer) {
 
       this.map.removeLayer(
+
         this.baseLayer
+
       );
 
       this.baseLayer = null;
@@ -494,22 +1082,25 @@ const MapEngine = {
 
 
     /* ------------------------------------------------------
-       CREATE TILE PROVIDER
+       TILE PROVIDER
     ------------------------------------------------------ */
 
     if (provider.type === "tile") {
 
-      this.baseLayer = L.tileLayer(
+      this.baseLayer =
+        L.tileLayer(
 
-        provider.url,
+          provider.url,
 
-        provider.options
+          provider.options
 
-      );
+        );
 
 
       this.baseLayer.addTo(
+
         this.map
+
       );
 
 
@@ -518,8 +1109,11 @@ const MapEngine = {
 
 
       console.log(
+
         "TGS GIS Base Map:",
+
         provider.name
+
       );
 
 
@@ -529,8 +1123,11 @@ const MapEngine = {
 
 
     console.warn(
-      "TGS GIS: Provider type is not implemented:",
+
+      "TGS GIS: Provider type not implemented:",
+
       provider.type
+
     );
 
 
@@ -540,7 +1137,7 @@ const MapEngine = {
 
 
   /* --------------------------------------------------------
-     GET ACTIVE BASE MAP
+     GET ACTIVE PROVIDER
   -------------------------------------------------------- */
 
   getActiveProvider() {
@@ -600,7 +1197,9 @@ const MapEngine = {
       19,
 
       {
+
         duration: 1
+
       }
 
     );
@@ -610,20 +1209,12 @@ const MapEngine = {
 
   /* --------------------------------------------------------
      ADD GIS LAYER
-  --------------------------------------------------------
-
-     Generic future layer interface.
-
-     Example:
-
-       MapEngine.addGISLayer(
-         "pipe",
-         someLeafletLayer
-       );
-
   -------------------------------------------------------- */
 
-  addGISLayer(layerId, leafletLayer) {
+  addGISLayer(
+    layerId,
+    leafletLayer
+  ) {
 
     const registry =
       GISLayerRegistry[layerId];
@@ -632,9 +1223,13 @@ const MapEngine = {
     if (!registry) {
 
       console.error(
+
         "TGS GIS: Unknown GIS layer:",
+
         layerId
+
       );
+
 
       return false;
 
@@ -644,9 +1239,13 @@ const MapEngine = {
     if (!leafletLayer) {
 
       console.error(
+
         "TGS GIS: Invalid Leaflet layer:",
+
         layerId
+
       );
+
 
       return false;
 
@@ -691,7 +1290,8 @@ const MapEngine = {
     }
 
 
-    registry.visible = true;
+    registry.visible =
+      true;
 
 
     if (
@@ -699,9 +1299,17 @@ const MapEngine = {
       this.map
     ) {
 
-      registry.layer.addTo(
-        this.map
-      );
+      if (
+        !this.map.hasLayer(
+          registry.layer
+        )
+      ) {
+
+        registry.layer.addTo(
+          this.map
+        );
+
+      }
 
     }
 
@@ -728,7 +1336,8 @@ const MapEngine = {
     }
 
 
-    registry.visible = false;
+    registry.visible =
+      false;
 
 
     if (
@@ -736,9 +1345,17 @@ const MapEngine = {
       this.map
     ) {
 
-      this.map.removeLayer(
-        registry.layer
-      );
+      if (
+        this.map.hasLayer(
+          registry.layer
+        )
+      ) {
+
+        this.map.removeLayer(
+          registry.layer
+        );
+
+      }
 
     }
 
@@ -760,6 +1377,15 @@ const MapEngine = {
 
     if (!registry) {
 
+      console.error(
+
+        "TGS GIS: Unknown GIS layer:",
+
+        layerId
+
+      );
+
+
       return false;
 
     }
@@ -777,6 +1403,171 @@ const MapEngine = {
     return this.showGISLayer(
       layerId
     );
+
+  }
+
+};
+
+
+/* ==========================================================
+   MAP LAYER CONTROL
+========================================================== */
+
+const MapLayerControl = {
+
+
+  /* --------------------------------------------------------
+     BASE MAP CONTROL
+  -------------------------------------------------------- */
+
+  bindBaseMapControls() {
+
+    const controls =
+      document.querySelectorAll(
+        'input[name="baseMap"]'
+      );
+
+
+    controls.forEach(control => {
+
+      control.addEventListener(
+        "change",
+        () => {
+
+          const providerId =
+            control.value;
+
+
+          if (
+            providerId === "arcgis"
+          ) {
+
+            MapEngine.setBaseMap(
+              "arcgis"
+            );
+
+            return;
+
+          }
+
+
+          console.log(
+
+            "TGS GIS: Google provider is prepared but not activated."
+
+          );
+
+        }
+      );
+
+    });
+
+  },
+
+
+  /* --------------------------------------------------------
+     GIS LAYER CONTROL
+  -------------------------------------------------------- */
+
+  bindGISLayerControls() {
+
+    const controls =
+      document.querySelectorAll(
+        "[data-layer] input[type='checkbox']"
+      );
+
+
+    controls.forEach(control => {
+
+      const option =
+        control.closest(
+          "[data-layer]"
+        );
+
+
+      if (!option) {
+
+        return;
+
+      }
+
+
+      const layerId =
+        option.dataset.layer;
+
+
+      control.addEventListener(
+        "change",
+        () => {
+
+          MapEngine.toggleGISLayer(
+            layerId
+          );
+
+
+          console.log(
+
+            "TGS GIS Layer:",
+
+            layerId,
+
+            GISLayerRegistry[layerId]
+              ? GISLayerRegistry[layerId].visible
+              : null
+
+          );
+
+        }
+      );
+
+    });
+
+  },
+
+
+  /* --------------------------------------------------------
+     SYNC UI WITH REGISTRY
+  -------------------------------------------------------- */
+
+  syncUI() {
+
+    Object.keys(
+      GISLayerRegistry
+    ).forEach(layerId => {
+
+      const registry =
+        GISLayerRegistry[layerId];
+
+
+      const option =
+        document.querySelector(
+          `[data-layer="${layerId}"] input[type="checkbox"]`
+        );
+
+
+      if (option) {
+
+        option.checked =
+          registry.visible;
+
+      }
+
+    });
+
+  },
+
+
+  /* --------------------------------------------------------
+     INITIALIZE
+  -------------------------------------------------------- */
+
+  initialize() {
+
+    this.bindBaseMapControls();
+
+    this.bindGISLayerControls();
+
+    this.syncUI();
 
   }
 
@@ -831,8 +1622,11 @@ async function createProject() {
   if (!dbReady) {
 
     alert(
+
       "Offline Database chưa sẵn sàng."
+
     );
+
 
     return;
 
@@ -853,8 +1647,11 @@ async function createProject() {
   ) {
 
     alert(
+
       "Nhập tên và mã công trình."
+
     );
+
 
     return;
 
@@ -883,7 +1680,9 @@ async function createProject() {
 
 
   show(
+
     "screenSurveyHome"
+
   );
 
 }
@@ -906,25 +1705,26 @@ function bindButtons() {
 
   if (btnStart) {
 
-    btnStart.onclick = () => {
+    btnStart.onclick =
+      () => {
 
-      if (currentProject) {
+        if (currentProject) {
 
-        updateHome();
+          updateHome();
 
-        show(
-          "screenSurveyHome"
-        );
+          show(
+            "screenSurveyHome"
+          );
 
-      } else {
+        } else {
 
-        show(
-          "screenProject"
-        );
+          show(
+            "screenProject"
+          );
 
-      }
+        }
 
-    };
+      };
 
   }
 
@@ -956,7 +1756,9 @@ function bindButtons() {
   if (btnPoint) {
 
     btnPoint.onclick =
-      () => show("screenPoint");
+      () => show(
+        "screenPoint"
+      );
 
   }
 
@@ -972,7 +1774,9 @@ function bindButtons() {
   if (btnLinear) {
 
     btnLinear.onclick =
-      () => show("screenLinear");
+      () => show(
+        "screenLinear"
+      );
 
   }
 
@@ -982,11 +1786,15 @@ function bindButtons() {
   -------------------------------------------------------- */
 
   document
-    .querySelectorAll(".back-btn")
+    .querySelectorAll(
+      ".back-btn"
+    )
     .forEach(btn => {
 
-      btn.onclick = () =>
-        show("screenSurveyHome");
+      btn.onclick =
+        () => show(
+          "screenSurveyHome"
+        );
 
     });
 
@@ -1045,13 +1853,16 @@ function bindButtons() {
 
   if (btnFirstGPS) {
 
-    btnFirstGPS.onclick = () => {
+    btnFirstGPS.onclick =
+      () => {
 
-      alert(
-        "REV05 sẽ lấy GPS thật của thiết bị."
-      );
+        alert(
 
-    };
+          "REV05 sẽ lấy GPS thật của thiết bị."
+
+        );
+
+      };
 
   }
 
@@ -1063,7 +1874,9 @@ function bindButtons() {
 ========================================================== */
 
 window.addEventListener(
+
   "load",
+
   async () => {
 
 
@@ -1084,6 +1897,13 @@ window.addEventListener(
 
 
     /* ------------------------------------------------------
+       MAP LAYER CONTROL
+    ------------------------------------------------------ */
+
+    MapLayerControl.initialize();
+
+
+    /* ------------------------------------------------------
        OFFLINE DATABASE
     ------------------------------------------------------ */
 
@@ -1091,7 +1911,9 @@ window.addEventListener(
 
       await DB.initDatabase();
 
-      dbReady = true;
+
+      dbReady =
+        true;
 
 
       currentProject =
@@ -1108,16 +1930,22 @@ window.addEventListener(
     } catch (err) {
 
       console.error(
+
         "TGS Offline Database Error:",
+
         err
+
       );
 
 
       alert(
+
         "Không thể khởi tạo bộ nhớ Offline."
+
       );
 
     }
 
   }
+
 );
