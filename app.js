@@ -1,416 +1,153 @@
-/* ==========================================================
-   TGS PLATFORM — SURVEY REV02
-   Camera Session Engine
-========================================================== */
+// ======================================================
+// TGS Platform Genesis 2.0
+// REV03 - Application Controller
+// File: app.js
+// ======================================================
 
-let survey = null;
-let stream = null;
+let currentProject = null;
 
-let seconds = 0;
-let timer = null;
+const SCREENS = {
+  splash: "screenSplash",
+  project: "screenProject",
+  home: "screenSurveyHome",
+  point: "screenPoint",
+  linear: "screenLinear"
+};
 
-let paused = false;
+// ---------------------------
+// Helpers
+// ---------------------------
 
-let gps = null;
+function $(id) {
+  return document.getElementById(id);
+}
 
-/* ---------------- DOM ---------------- */
+function showScreen(name) {
 
-const $ = id => document.getElementById(id);
+  Object.values(SCREENS).forEach(id => {
+    $(id).classList.remove("active");
+  });
 
-const setupScreen = $("setupScreen");
-const surveyScreen = $("surveyScreen");
-const timelineScreen = $("timelineScreen");
-const resumeCard = $("resumeCard");
+  $(SCREENS[name]).classList.add("active");
+}
 
-const video = $("camera");
-const canvas = $("captureCanvas");
+// ---------------------------
+// Splash
+// ---------------------------
 
-const timerLabel = $("timer");
-const gpsStatus = $("gpsStatus");
-const recDot = $("recDot");
-const recordState = $("recordState");
+$("btnStart").onclick = async () => {
 
-const itemContainer = $("itemContainer");
-const timeline = $("timeline");
+  const latest = await DB.getLatestProject();
 
-/* ---------------- Khởi động ---------------- */
-
-window.onload = async () => {
-
-    await initDB();
-
-    const pausedSurvey = await getPausedSurvey();
-
-    if (pausedSurvey) {
-
-        survey = pausedSurvey;
-
-        resumeCard.classList.remove("hidden");
-
-    }
+  if (latest) {
+    currentProject = latest;
+    updateProjectUI();
+    showScreen("home");
+  } else {
+    showScreen("project");
+  }
 
 };
 
-/* ---------------- Hạng mục ---------------- */
+// ---------------------------
+// Create Project
+// ---------------------------
 
-function createItemUI() {
+$("btnCreateProject").onclick = async () => {
 
-    const wrap = document.createElement("div");
+  const name = $("projectName").value.trim();
+  const code = $("projectCode").value.trim();
+  const location = $("projectLocation").value.trim();
+  const org = $("organization").value.trim();
 
-    wrap.className = "itemBlock";
+  if (!name || !code) {
+    alert("Vui lòng nhập Tên và Mã công trình.");
+    return;
+  }
 
-    wrap.innerHTML = `
-        <input class="itemName" placeholder="Tên Hạng mục">
+  currentProject = await DB.createProject({
+    projectName: name,
+    projectCode: code,
+    location: location,
+    organization: org
+  });
 
-        <input class="partName" placeholder="Bộ phận đầu tiên">
-    `;
+  updateProjectUI();
 
-    itemContainer.appendChild(wrap);
+  showScreen("home");
+
+};
+
+// ---------------------------
+// Update Home
+// ---------------------------
+
+function updateProjectUI() {
+
+  if (!currentProject) return;
+
+  $("projectTitle").innerText =
+    `${currentProject.projectName} (${currentProject.projectCode})`;
+
+  const recent = $("recentSurvey");
+
+  recent.classList.remove("empty");
+
+  recent.innerHTML = `
+      <div style="padding:10px 0">
+        <strong>${currentProject.projectName}</strong><br>
+        <small>${currentProject.location || "Chưa có địa điểm"}</small>
+      </div>
+  `;
 
 }
 
-$("addItemBtn").onclick = createItemUI;
+// ---------------------------
+// Select Survey Mode
+// ---------------------------
 
-createItemUI();
+$("btnPoint").onclick = async () => {
 
-/* ---------------- GPS ---------------- */
+  currentProject.surveyMode = "POINT";
 
-function getGPS() {
+  await DB.updateProject(currentProject);
 
-    if (!navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(pos => {
-
-        gps = {
-
-            lat: pos.coords.latitude,
-
-            lng: pos.coords.longitude,
-
-            accuracy: pos.coords.accuracy
-
-        };
-
-        gpsStatus.innerText = "GPS ✓";
-
-    }, () => {
-
-        gpsStatus.innerText = "GPS ?";
-
-    });
-
-}
-
-/* ---------------- Camera ---------------- */
-
-async function openCamera() {
-
-    stream = await navigator.mediaDevices.getUserMedia({
-
-        video: {
-
-            facingMode: "environment"
-
-        },
-
-        audio: true
-
-    });
-
-    video.srcObject = stream;
-
-}
-
-/* ---------------- Đồng hồ ---------------- */
-
-function startREC() {
-
-    paused = false;
-
-    recDot.classList.add("recording");
-
-    recordState.innerText = "REC";
-
-    timer = setInterval(() => {
-
-        if (paused) return;
-
-        seconds++;
-
-        const m = String(Math.floor(seconds / 60)).padStart(2, "0");
-        const s = String(seconds % 60).padStart(2, "0");
-
-        timerLabel.innerText = `${m}:${s}`;
-
-    }, 1000);
-
-}
-
-function stopREC() {
-
-    clearInterval(timer);
-
-}
-
-/* ---------------- Khởi tạo khảo sát ---------------- */
-
-$("startSurveyBtn").onclick = async () => {
-
-    const project = $("projectName").value.trim();
-
-    if (project === "") {
-
-        alert("Nhập tên công trình.");
-
-        return;
-
-    }
-
-    survey = createEmptySurvey();
-
-    survey.projectName = project;
-
-    survey.status = "RECORDING";
-
-    document.querySelectorAll(".itemBlock").forEach(block => {
-
-        const item = block.querySelector(".itemName").value;
-
-        const part = block.querySelector(".partName").value;
-
-        survey.items.push({
-
-            item,
-            part
-
-        });
-
-    });
-
-    await saveSurvey(survey);
-
-    setupScreen.classList.add("hidden");
-
-    surveyScreen.classList.remove("hidden");
-
-    timelineScreen.classList.remove("hidden");
-
-    if (survey.items.length > 0) {
-
-        $("currentItem").innerText = survey.items[0].item || "-";
-        $("currentPart").innerText = survey.items[0].part || "-";
-
-    }
-
-    getGPS();
-
-    await openCamera();
-
-    startREC();
+  showScreen("point");
 
 };
 
-/* ---------------- Chụp ảnh ---------------- */
+$("btnLinear").onclick = async () => {
 
-$("captureBtn").onclick = async () => {
+  currentProject.surveyMode = "LINEAR";
 
-    if (!stream) return;
+  await DB.updateProject(currentProject);
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext("2d");
-
-    ctx.drawImage(video, 0, 0);
-
-    const image = canvas.toDataURL("image/jpeg", 0.9);
-
-    const photo = {
-
-        time: timerLabel.innerText,
-
-        gps,
-        image
-
-    };
-
-    survey.photos.push(photo);
-
-    survey.updatedAt = Date.now();
-
-    await saveSurvey(survey);
-
-    navigator.vibrate?.(80);
-
-    renderPhoto(photo);
-
-    $("photoCount").innerText = `${survey.photos.length} ảnh`;
+  showScreen("linear");
 
 };
 
-/* ---------------- Timeline ---------------- */
+// ---------------------------
+// Back Button
+// ---------------------------
 
-function renderPhoto(photo) {
+document.querySelectorAll(".back-btn").forEach(btn => {
 
-    const card = document.createElement("div");
+  btn.onclick = () => {
 
-    card.className = "photoCard";
+    showScreen("home");
 
-    card.innerHTML = `
-        <img src="${photo.image}">
-        <div class="photoInfo">
-            <b>${photo.time}</b>
-        </div>
-    `;
+  };
 
-    timeline.prepend(card);
+});
 
-}
+// ---------------------------
+// Auto Boot
+// ---------------------------
 
-/* ---------------- Pause ---------------- */
+window.addEventListener("load", async () => {
 
-$("pauseBtn").onclick = async () => {
+  await DB.initDatabase();
 
-    paused = true;
+  showScreen("splash");
 
-    survey.status = "PAUSED";
-
-    survey.updatedAt = Date.now();
-
-    await saveSurvey(survey);
-
-    recordState.innerText = "PAUSE";
-
-    $("pauseBtn").classList.add("hidden");
-
-    $("resumeBtn").classList.remove("hidden");
-
-};
-
-$("resumeBtn").onclick = async () => {
-
-    paused = false;
-
-    survey.status = "RECORDING";
-
-    survey.updatedAt = Date.now();
-
-    await saveSurvey(survey);
-
-    recordState.innerText = "REC";
-
-    $("resumeBtn").classList.add("hidden");
-
-    $("pauseBtn").classList.remove("hidden");
-
-};
-
-/* ---------------- Chuyển bộ phận ---------------- */
-
-$("nextPartBtn").onclick = () => {
-
-    const idx = survey.items.findIndex(x =>
-        x.part === $("currentPart").innerText
-    );
-
-    if (idx + 1 >= survey.items.length) {
-
-        alert("Đã là bộ phận cuối.");
-
-        return;
-
-    }
-
-    $("currentItem").innerText = survey.items[idx + 1].item;
-    $("currentPart").innerText = survey.items[idx + 1].part;
-
-};
-
-/* ---------------- Hoàn thành ---------------- */
-
-$("finishBtn").onclick = async () => {
-
-    stopREC();
-
-    stream?.getTracks().forEach(t => t.stop());
-
-    survey.status = "COMPLETED";
-    survey.updatedAt = Date.now();
-
-    await saveSurvey(survey);
-
-    alert("✓ Đã lưu an toàn vào bộ nhớ thiết bị.");
-
-    exportJSON();
-
-    location.reload();
-
-};
-
-/* ---------------- Resume ---------------- */
-
-$("resumeSurveyBtn").onclick = async () => {
-
-    resumeCard.classList.add("hidden");
-
-    setupScreen.classList.add("hidden");
-
-    surveyScreen.classList.remove("hidden");
-
-    timelineScreen.classList.remove("hidden");
-
-    seconds = 0;
-
-    await openCamera();
-
-    getGPS();
-
-    survey.status = "RECORDING";
-
-    await saveSurvey(survey);
-
-    survey.photos.forEach(renderPhoto);
-
-    $("photoCount").innerText = `${survey.photos.length} ảnh`;
-
-    startREC();
-
-};
-
-$("newSurveyBtn").onclick = async () => {
-
-    await deleteSurvey(survey.id);
-
-    location.reload();
-
-};
-
-/* ---------------- JSON ---------------- */
-
-function exportJSON() {
-
-    const blob = new Blob(
-
-        [JSON.stringify(survey, null, 2)],
-
-        {
-
-            type: "application/json"
-
-        }
-
-    );
-
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-
-    a.href = url;
-
-    a.download = `${survey.id}.json`;
-
-    a.click();
-
-    URL.revokeObjectURL(url);
-
-}
+});
