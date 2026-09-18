@@ -1,91 +1,154 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+>
 
 <title>TGS Platform Survey REV03</title>
 
-<meta name="theme-color" content="#1565C0">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta
+    name="theme-color"
+    content="#1565C0"
+>
 
-<link rel="stylesheet" href="style.css">
+<meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+>
 
-<!-- Leaflet CSS -->
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link
+    rel="stylesheet"
+    href="style.css"
+>
+
+<!-- =====================================================
+     LEAFLET CSS
+====================================================== -->
+
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+>
 
 </head>
 
+
 <body>
 
+
 <div id="app">
+
 
 <!-- =====================================================
      SPLASH
 ====================================================== -->
 
-<section id="screenSplash" class="screen active">
+<section
+    id="screenSplash"
+    class="screen active"
+>
 
     <div class="splash-logo">
 
-        <div class="logo-circle">TGS</div>
+        <div class="logo-circle">
+            TGS
+        </div>
 
-        <h1>TGS Platform</h1>
+        <h1>
+            TGS Platform
+        </h1>
 
-        <p>Genesis 2.0</p>
+        <p>
+            Genesis 2.0
+        </p>
 
     </div>
 
-    <button id="btnStart" class="primary-btn">
+
+    <button
+        id="btnStart"
+        class="primary-btn"
+    >
         Bắt đầu
     </button>
 
 </section>
 
+
 <!-- =====================================================
      PROJECT INFORMATION
 ====================================================== -->
 
-<section id="screenProject" class="screen">
+<section
+    id="screenProject"
+    class="screen"
+>
 
     <header class="topbar">
 
-        <h2>Tạo hồ sơ công trình</h2>
+        <h2>
+            Tạo hồ sơ công trình
+        </h2>
 
     </header>
 
+
     <div class="form-card">
 
-        <label>Tên công trình</label>
+        <label>
+            Tên công trình
+        </label>
 
         <input
             id="projectName"
             type="text"
-            placeholder="VD: Trạm CN A">
+            placeholder="VD: Trạm CN A"
+        >
 
-        <label>Mã công trình</label>
+
+        <label>
+            Mã công trình
+        </label>
 
         <input
             id="projectCode"
             type="text"
-            placeholder="TGS-001">
+            placeholder="TGS-001"
+        >
 
-        <label>Địa điểm</label>
+
+        <label>
+            Địa điểm
+        </label>
 
         <input
             id="projectLocation"
             type="text"
-            placeholder="Xã / Huyện / Tỉnh">
+            placeholder="Xã / Huyện / Tỉnh"
+        >
 
-        <label>Đơn vị khảo sát</label>
+
+        <label>
+            Đơn vị khảo sát
+        </label>
 
         <input
             id="organization"
             type="text"
-            placeholder="Công ty khảo sát">
+            placeholder="Công ty khảo sát"
+        >
 
-        <button id="btnCreateProject" class="primary-btn">
+
+        <button
+            id="btnCreateProject"
+            class="primary-btn"
+        >
             Tiếp tục
         </button>
 
@@ -93,17 +156,23 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 </section>
 
+
 <!-- =====================================================
      SURVEY HOME
 ====================================================== -->
 
-<section id="screenSurveyHome" class="screen">
+<section
+    id="screenSurveyHome"
+    class="screen"
+>
 
     <header class="topbar">
 
         <div>
 
-            <h2>Khảo sát hiện trạng</h2>
+            <h2>
+                Khảo sát hiện trạng
+            </h2>
 
             <small id="projectTitle">
                 Chưa có công trình
@@ -113,9 +182,12 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
     </header>
 
+
     <div class="hero-card">
 
-        <h3>Chọn mô hình khảo sát</h3>
+        <h3>
+            Chọn mô hình khảo sát
+        </h3>
 
         <p>
             Một công trình có thể khảo sát theo điểm
@@ -124,49 +196,86 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
     </div>
 
+
     <div class="survey-grid">
 
-        <button id="btnPoint" class="survey-card point">
 
-            <div class="icon">📍</div>
+        <button
+            id="btnPoint"
+            class="survey-card point"
+        >
 
-            <h3>Khảo sát điểm</h3>
+            <div class="icon">
+                📍
+            </div>
 
-            <p>Trạm • Nhà máy • Thiết bị</p>
+            <h3>
+                Khảo sát điểm
+            </h3>
+
+            <p>
+                Trạm • Nhà máy • Thiết bị
+            </p>
 
         </button>
 
-        <button id="btnLinear" class="survey-card linear">
 
-            <div class="icon">🛰️</div>
+        <button
+            id="btnLinear"
+            class="survey-card linear"
+        >
 
-            <h3>Khảo sát tuyến</h3>
+            <div class="icon">
+                🛰️
+            </div>
 
-            <p>Đường ống • Cáp • Kênh</p>
+            <h3>
+                Khảo sát tuyến
+            </h3>
+
+            <p>
+                Đường ống • Cáp • Kênh
+            </p>
 
         </button>
+
 
     </div>
 
 </section>
 
+
 <!-- =====================================================
      POINT PLACEHOLDER
 ====================================================== -->
 
-<section id="screenPoint" class="screen">
+<section
+    id="screenPoint"
+    class="screen"
+>
 
     <header class="topbar">
 
-        <button class="back-btn">←</button>
+        <button
+            class="back-btn"
+            aria-label="Quay lại"
+        >
+            ←
+        </button>
 
-        <h2>Khảo sát điểm</h2>
+
+        <h2>
+            Khảo sát điểm
+        </h2>
 
     </header>
 
+
     <div class="coming-card">
 
-        <h3>TGS02-POINT</h3>
+        <h3>
+            TGS02-POINT
+        </h3>
 
         <p>
             Camera Survey sẽ triển khai ở Sprint POINT.
@@ -176,19 +285,36 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 </section>
 
+
 <!-- =====================================================
      LINEAR SURVEY
 ====================================================== -->
 
-<section id="screenLinear" class="screen">
+<section
+    id="screenLinear"
+    class="screen"
+>
+
+
+    <!-- =================================================
+         HEADER
+    ================================================== -->
 
     <header class="topbar">
 
-        <button class="back-btn">←</button>
+        <button
+            class="back-btn"
+            aria-label="Quay lại"
+        >
+            ←
+        </button>
+
 
         <div>
 
-            <h2>Khảo sát tuyến</h2>
+            <h2>
+                Khảo sát tuyến
+            </h2>
 
             <small id="linearProject">
                 Công trình
@@ -198,13 +324,22 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
     </header>
 
-    <!-- MAP -->
+
+    <!-- =================================================
+         MAP CARD
+    ================================================== -->
 
     <div class="linear-map-card">
 
-        <!-- HUD GPS -->
 
-        <div class="gps-hud">
+        <!-- =============================================
+             GPS HUD
+        ============================================== -->
+
+        <div
+            class="gps-hud"
+            aria-live="polite"
+        >
 
             <span class="gps-status"></span>
 
@@ -214,41 +349,399 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
         </div>
 
-        <!-- LEAFLET CONTAINER -->
 
-        <div id="map"></div>
+        <!-- =============================================
+             LEAFLET MAP
+        ============================================== -->
 
-        <!-- TOOLBAR -->
+        <div
+            id="map"
+            aria-label="Bản đồ khảo sát tuyến"
+        ></div>
+
+
+        <!-- =============================================
+             MAP LAYER CONTROL
+             
+             Native HTML control for this sprint.
+             Actual provider/layer switching is handled
+             by TGS Map Engine in app.js.
+        ============================================== -->
+
+        <details
+            id="mapLayerControl"
+            class="map-layer-control"
+        >
+
+            <summary
+                id="btnMapLayers"
+                title="Lớp bản đồ"
+            >
+                🗺️
+            </summary>
+
+
+            <div class="map-layer-panel">
+
+
+                <!-- =====================================
+                     BASE MAP
+                ====================================== -->
+
+                <div class="map-layer-section">
+
+                    <h4>
+                        Nền bản đồ
+                    </h4>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-provider="arcgis"
+                    >
+
+                        <input
+                            id="baseMapArcGIS"
+                            type="radio"
+                            name="baseMap"
+                            value="arcgis"
+                            checked
+                        >
+
+                        <span>
+                            🗺️ ArcGIS
+                        </span>
+
+                        <small>
+                            Mặc định
+                        </small>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-provider="google-road"
+                    >
+
+                        <input
+                            id="baseMapGoogleRoad"
+                            type="radio"
+                            name="baseMap"
+                            value="google-road"
+                            disabled
+                        >
+
+                        <span>
+                            🛣️ Google Đường phố
+                        </span>
+
+                        <small>
+                            Chuẩn bị
+                        </small>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-provider="google-satellite"
+                    >
+
+                        <input
+                            id="baseMapGoogleSatellite"
+                            type="radio"
+                            name="baseMap"
+                            value="google-satellite"
+                            disabled
+                        >
+
+                        <span>
+                            🛰️ Google Vệ tinh
+                        </span>
+
+                        <small>
+                            Chuẩn bị
+                        </small>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-provider="google-hybrid"
+                    >
+
+                        <input
+                            id="baseMapGoogleHybrid"
+                            type="radio"
+                            name="baseMap"
+                            value="google-hybrid"
+                            disabled
+                        >
+
+                        <span>
+                            🌍 Google Hybrid
+                        </span>
+
+                        <small>
+                            Chuẩn bị
+                        </small>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-provider="google-terrain"
+                    >
+
+                        <input
+                            id="baseMapGoogleTerrain"
+                            type="radio"
+                            name="baseMap"
+                            value="google-terrain"
+                            disabled
+                        >
+
+                        <span>
+                            ⛰️ Google Địa hình
+                        </span>
+
+                        <small>
+                            Chuẩn bị
+                        </small>
+
+                    </label>
+
+                </div>
+
+
+                <!-- =====================================
+                     TGS GIS LAYERS
+                ====================================== -->
+
+                <div class="map-layer-section">
+
+                    <h4>
+                        Lớp GIS TGS
+                    </h4>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-layer="surveyPoint"
+                    >
+
+                        <input
+                            id="layerSurveyPoint"
+                            type="checkbox"
+                            checked
+                        >
+
+                        <span>
+                            📍 Điểm khảo sát
+                        </span>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-layer="surveyRoute"
+                    >
+
+                        <input
+                            id="layerSurveyRoute"
+                            type="checkbox"
+                            checked
+                        >
+
+                        <span>
+                            ━ Tuyến khảo sát
+                        </span>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-layer="pipe"
+                    >
+
+                        <input
+                            id="layerPipe"
+                            type="checkbox"
+                        >
+
+                        <span>
+                            ━ Ống
+                        </span>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-layer="valve"
+                    >
+
+                        <input
+                            id="layerValve"
+                            type="checkbox"
+                        >
+
+                        <span>
+                            ● Van
+                        </span>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-layer="tee"
+                    >
+
+                        <input
+                            id="layerTee"
+                            type="checkbox"
+                        >
+
+                        <span>
+                            ◆ Tê
+                        </span>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-layer="elbow"
+                    >
+
+                        <input
+                            id="layerElbow"
+                            type="checkbox"
+                        >
+
+                        <span>
+                            ◇ Cút
+                        </span>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-layer="waterStation"
+                    >
+
+                        <input
+                            id="layerWaterStation"
+                            type="checkbox"
+                        >
+
+                        <span>
+                            🏭 Trạm cấp nước
+                        </span>
+
+                    </label>
+
+
+                    <label
+                        class="map-layer-option"
+                        data-layer="customerMeter"
+                    >
+
+                        <input
+                            id="layerCustomerMeter"
+                            type="checkbox"
+                        >
+
+                        <span>
+                            ⏱️ Đồng hồ khách hàng
+                        </span>
+
+                    </label>
+
+                </div>
+
+
+            </div>
+
+        </details>
+
+
+        <!-- =============================================
+             MAP TOOLBAR
+        ============================================== -->
 
         <div class="map-toolbar">
 
-            <button id="btnLocate" title="Lấy GPS">
+
+            <button
+                id="btnLocate"
+                title="Lấy GPS"
+                aria-label="Lấy GPS"
+            >
                 📍
             </button>
 
-            <button id="btnSurvey" title="Thiết bị">
+
+            <button
+                id="btnSurvey"
+                title="Thiết bị"
+                aria-label="Thiết bị"
+            >
                 🛰️
             </button>
 
-            <button id="btnZoomIn">+</button>
 
-            <button id="btnZoomOut">−</button>
+            <button
+                id="btnZoomIn"
+                title="Phóng to"
+                aria-label="Phóng to"
+            >
+                +
+            </button>
+
+
+            <button
+                id="btnZoomOut"
+                title="Thu nhỏ"
+                aria-label="Thu nhỏ"
+            >
+                −
+            </button>
+
 
         </div>
 
+
     </div>
 
-    <!-- INFORMATION -->
+
+    <!-- =================================================
+         SURVEY INFORMATION
+    ================================================== -->
 
     <div class="recent-card">
 
-        <h4>Thông số khảo sát</h4>
+
+        <h4>
+            Thông số khảo sát
+        </h4>
+
 
         <div class="stats-grid">
 
+
             <div>
 
-                <small>GPS</small>
+                <small>
+                    GPS
+                </small>
 
                 <strong id="gpsAccuracy">
                     ± --
@@ -256,9 +749,12 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
             </div>
 
+
             <div>
 
-                <small>VN2000</small>
+                <small>
+                    VN2000
+                </small>
 
                 <strong id="vnCoord">
                     X / Y
@@ -266,9 +762,12 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
             </div>
 
+
             <div>
 
-                <small>Điểm</small>
+                <small>
+                    Điểm
+                </small>
 
                 <strong id="pointCode">
                     D001
@@ -276,9 +775,12 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
             </div>
 
+
             <div>
 
-                <small>Chiều dài</small>
+                <small>
+                    Chiều dài
+                </small>
 
                 <strong id="routeLength">
                     0.000 km
@@ -286,29 +788,48 @@ href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
             </div>
 
+
         </div>
 
-        <button id="btnFirstGPS" class="primary-btn">
+
+        <button
+            id="btnFirstGPS"
+            class="primary-btn"
+        >
 
             Lấy GPS đầu tiên
 
         </button>
 
+
     </div>
+
 
 </section>
 
+
 </div>
+
 
 <!-- =====================================================
      JAVASCRIPT
 ====================================================== -->
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+></script>
 
-<script src="db.js"></script>
 
-<script src="app.js"></script>
+<script
+    src="db.js"
+></script>
+
+
+<script
+    src="app.js"
+></script>
+
 
 </body>
+
 </html>
