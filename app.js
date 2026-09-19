@@ -2,46 +2,42 @@
    TGS Platform Genesis 2.0
    TGS02-WEB-LINEAR-004
    app.js
-   REV07
+   REV09
 
-   PROJECT LIFECYCLE + GIS LAB
+   GIS-02.1 — REAL GPS READ
 
-   REV07 CHANGE
-   ----------------------------------------------------------
-   1. Project lifecycle is now fully implemented.
-   2. IN_PROGRESS -> COMPLETED -> SAVED.
-   3. COMPLETED but not SAVED remains an unfinished project.
-   4. Added "Hoàn thành khảo sát" workflow.
-   5. Added "Lưu công trình" workflow.
-   6. Added completion screen handling.
-   7. Existing saved projects remain readable.
-   8. Legacy projects without lifecycle fields remain SAVED.
-   9. Existing ArcGIS / GIS Lab / D001 behavior preserved.
-  10. No database reset.
-  11. No project deletion.
+   Purpose:
+   - Preserve verified Project Lifecycle.
+   - Preserve ArcGIS default base map.
+   - Preserve GIS Layer Control.
+   - Preserve clean real-project map.
+   - Read REAL device GPS.
+   - Display GPS position / accuracy / altitude / time.
+   - DO NOT save GPS to IndexedDB in this revision.
+   - DO NOT create GIS Object in this revision.
+   - DO NOT create demo/synthetic GIS data.
 
-   PROJECT LIFECYCLE
+   GIS-02.1 flow:
 
-      CREATE
-        ↓
-      IN_PROGRESS
-        ↓
-      HOÀN THÀNH KHẢO SÁT
-        ↓
-      COMPLETED / NOT SAVED
-        ↓
-      LƯU CÔNG TRÌNH
-        ↓
-      SAVED
-        ↓
-      MỞ LẠI CÔNG TRÌNH ĐÃ LƯU
+       Device GPS
+            ↓
+       Browser Geolocation API
+            ↓
+       GPSManager
+            ↓
+       GPS HUD
+            ↓
+       QA
 
-   IMPORTANT
+   Later:
 
-   - "COMPLETED" does NOT mean saved.
-   - Only "SAVED" is displayed in saved-project list.
-   - A COMPLETED but unsaved project remains resumable.
-   - Legacy projects without status are treated as saved.
+       GPS
+        ↓
+       Confirm
+        ↓
+       GIS Object
+        ↓
+       IndexedDB
 ========================================================== */
 
 
@@ -50,8 +46,6 @@
 ========================================================== */
 
 let currentProject = null;
-
-let allProjects = [];
 
 let draftProject = null;
 
@@ -64,11 +58,7 @@ let dbReady = false;
    DOM HELPER
 ========================================================== */
 
-const $ = (id) => {
-
-  return document.getElementById(id);
-
-};
+const $ = (id) => document.getElementById(id);
 
 
 /* ==========================================================
@@ -98,18 +88,11 @@ L.Icon.Default.mergeOptions({
 const screens = [
 
   "screenSplash",
-
-  "screenProjectHome",
-
   "screenProject",
-
   "screenSurveyHome",
-
-  "screenProjectComplete",
-
   "screenPoint",
-
-  "screenLinear"
+  "screenLinear",
+  "screenProjectComplete"
 
 ];
 
@@ -118,11 +101,11 @@ function show(screenId) {
 
   screens.forEach(id => {
 
-    const element = $(id);
+    const el = $(id);
 
-    if (element) {
+    if (el) {
 
-      element.classList.remove("active");
+      el.classList.remove("active");
 
     }
 
@@ -153,1310 +136,10 @@ function show(screenId) {
 
 
 /* ==========================================================
-   PROJECT STATUS
-========================================================== */
-
-const ProjectStatus = {
-
-  DRAFT:
-    "DRAFT",
-
-  IN_PROGRESS:
-    "IN_PROGRESS",
-
-  COMPLETED:
-    "COMPLETED",
-
-  SAVED:
-    "SAVED"
-
-};
-
-
-/* ==========================================================
-   PROJECT STATUS HELPERS
-========================================================== */
-
-/*
-   A project is considered unfinished when:
-
-   - DRAFT
-   - IN_PROGRESS
-   - COMPLETED but not yet saved
-   - isSaved === false
-
-   This is important because:
-
-   COMPLETED != SAVED
-*/
-
-function isDraftProject(project) {
-
-  if (!project) {
-
-    return false;
-
-  }
-
-
-  const status =
-    project.status;
-
-
-  if (
-    status === ProjectStatus.DRAFT ||
-    status === ProjectStatus.IN_PROGRESS
-  ) {
-
-    return true;
-
-  }
-
-
-  /*
-     Completed but not saved.
-  */
-
-  if (
-    status === ProjectStatus.COMPLETED &&
-    project.isSaved !== true
-  ) {
-
-    return true;
-
-  }
-
-
-  if (
-    project.isSaved === false
-  ) {
-
-    return true;
-
-  }
-
-
-  if (
-    project.completed === false
-  ) {
-
-    return true;
-
-  }
-
-
-  return false;
-
-}
-
-
-/*
-   Only SAVED projects belong to:
-
-   "Mở lại công trình đã lưu"
-
-   Legacy projects without lifecycle fields are
-   still considered saved for backward compatibility.
-*/
-
-function isSavedProject(project) {
-
-  if (!project) {
-
-    return false;
-
-  }
-
-
-  /*
-     Never put unfinished projects in saved list.
-  */
-
-  if (
-    isDraftProject(project)
-  ) {
-
-    return false;
-
-  }
-
-
-  /*
-     Explicit SAVED state.
-  */
-
-  if (
-    project.status ===
-    ProjectStatus.SAVED
-  ) {
-
-    return true;
-
-  }
-
-
-  /*
-     Explicit saved flag.
-  */
-
-  if (
-    project.isSaved === true
-  ) {
-
-    return true;
-
-  }
-
-
-  /*
-     Legacy project.
-
-     Old projects may not contain:
-
-     - status
-     - isSaved
-     - completed
-
-     They are preserved as saved projects.
-  */
-
-  const hasLifecycleField =
-    Object.prototype.hasOwnProperty.call(
-      project,
-      "status"
-    ) ||
-    Object.prototype.hasOwnProperty.call(
-      project,
-      "isSaved"
-    ) ||
-    Object.prototype.hasOwnProperty.call(
-      project,
-      "completed"
-    );
-
-
-  if (
-    !hasLifecycleField
-  ) {
-
-    return true;
-
-  }
-
-
-  return false;
-
-}
-
-
-/* ==========================================================
-   PROJECT SORT
-========================================================== */
-
-function getProjectTime(project) {
-
-  if (!project) {
-
-    return 0;
-
-  }
-
-
-  const value =
-    project.updatedAt ||
-    project.createdAt;
-
-
-  const time =
-    new Date(
-      value || 0
-    ).getTime();
-
-
-  return Number.isNaN(time)
-    ? 0
-    : time;
-
-}
-
-
-/* ==========================================================
-   PROJECT HOME STATE
-========================================================== */
-
-function updateProjectHome() {
-
-  const notice =
-    $("projectDraftNotice");
-
-
-  const resumeButton =
-    $("btnResumeProject");
-
-
-  /*
-     Draft / unfinished project
-  */
-
-  if (
-    draftProject &&
-    notice
-  ) {
-
-    notice.hidden =
-      false;
-
-
-    if (resumeButton) {
-
-      resumeButton.hidden =
-        false;
-
-    }
-
-  } else if (notice) {
-
-    notice.hidden =
-      true;
-
-  }
-
-
-  updateSavedProjectHome();
-
-}
-
-
-/* ==========================================================
-   RENDER SAVED PROJECTS
-========================================================== */
-
-function updateSavedProjectHome() {
-
-  const items =
-    $("savedProjectItems");
-
-
-  if (!items) {
-
-    return;
-
-  }
-
-
-  items.innerHTML = "";
-
-
-  /*
-     No saved projects
-  */
-
-  if (
-    savedProjects.length === 0
-  ) {
-
-    const empty =
-      document.createElement(
-        "div"
-      );
-
-
-    empty.className =
-      "saved-project-empty";
-
-
-    empty.textContent =
-      "Chưa có công trình đã lưu.";
-
-
-    items.appendChild(
-      empty
-    );
-
-
-    return;
-
-  }
-
-
-  /*
-     Render every saved project
-  */
-
-  savedProjects.forEach(
-    project => {
-
-      const card =
-        document.createElement(
-          "div"
-        );
-
-
-      card.className =
-        "saved-project-item";
-
-
-      /*
-         Project name
-      */
-
-      const name =
-        document.createElement(
-          "strong"
-        );
-
-
-      name.textContent =
-        project.projectName ||
-        "Công trình chưa đặt tên";
-
-
-      /*
-         Project code
-      */
-
-      const code =
-        document.createElement(
-          "small"
-        );
-
-
-      code.textContent =
-        project.projectCode
-          ? `Mã: ${project.projectCode}`
-          : "Chưa có mã công trình";
-
-
-      /*
-         Project location
-      */
-
-      const location =
-        document.createElement(
-          "small"
-        );
-
-
-      location.textContent =
-        project.location
-          ? `Địa điểm: ${project.location}`
-          : "Địa điểm: Chưa cập nhật";
-
-
-      /*
-         Open button
-      */
-
-      const openButton =
-        document.createElement(
-          "button"
-        );
-
-
-      openButton.type =
-        "button";
-
-
-      openButton.className =
-        "primary-btn";
-
-
-      openButton.textContent =
-        "Mở công trình";
-
-
-      openButton.addEventListener(
-        "click",
-        () => {
-
-          openSavedProject(
-            project.projectId
-          );
-
-        }
-      );
-
-
-      card.appendChild(
-        name
-      );
-
-
-      card.appendChild(
-        code
-      );
-
-
-      card.appendChild(
-        location
-      );
-
-
-      card.appendChild(
-        openButton
-      );
-
-
-      items.appendChild(
-        card
-      );
-
-    }
-  );
-
-}
-
-
-/* ==========================================================
-   PROJECT HOME
-========================================================== */
-
-function openProjectHome() {
-
-  updateProjectHome();
-
-  show(
-    "screenProjectHome"
-  );
-
-}
-
-
-/* ==========================================================
-   PROJECT INFORMATION
-========================================================== */
-
-function updateHome() {
-
-  if (!currentProject) {
-
-    return;
-
-  }
-
-
-  const projectTitle =
-    $("projectTitle");
-
-
-  if (projectTitle) {
-
-    projectTitle.textContent =
-      currentProject.projectName ||
-      "Chưa có công trình";
-
-  }
-
-
-  const linearProject =
-    $("linearProject");
-
-
-  if (linearProject) {
-
-    linearProject.textContent =
-      currentProject.projectName ||
-      "Công trình";
-
-  }
-
-
-  updateCompletionUI();
-
-}
-
-
-/* ==========================================================
-   COMPLETION UI
-========================================================== */
-
-function updateCompletionUI() {
-
-  const card =
-    $("projectCompletionCard");
-
-
-  if (!card) {
-
-    return;
-
-  }
-
-
-  /*
-     Saved project:
-
-     The project has already been stored as completed.
-     Do not present "Hoàn thành khảo sát" again.
-  */
-
-  if (
-    currentProject &&
-    currentProject.status ===
-    ProjectStatus.SAVED
-  ) {
-
-    card.hidden =
-      true;
-
-    return;
-
-  }
-
-
-  /*
-     New / in-progress / completed-but-unsaved
-
-     Keep completion action available.
-  */
-
-  card.hidden =
-    false;
-
-}
-
-
-/* ==========================================================
-   RESET PROJECT FORM
-========================================================== */
-
-function resetProjectForm() {
-
-  const fields = [
-
-    "projectName",
-
-    "projectCode",
-
-    "projectLocation",
-
-    "organization"
-
-  ];
-
-
-  fields.forEach(
-    id => {
-
-      const field =
-        $(id);
-
-
-      if (field) {
-
-        field.value =
-          "";
-
-      }
-
-    }
-  );
-
-}
-
-
-/* ==========================================================
-   NEW PROJECT
-========================================================== */
-
-function openNewProject() {
-
-  currentProject =
-    null;
-
-
-  resetProjectForm();
-
-
-  show(
-    "screenProject"
-  );
-
-}
-
-
-/* ==========================================================
-   CREATE PROJECT
-========================================================== */
-
-async function createProject() {
-
-  if (!dbReady) {
-
-    alert(
-      "Offline Database chưa sẵn sàng."
-    );
-
-
-    return;
-
-  }
-
-
-  const name =
-    $("projectName")
-      ? $("projectName").value.trim()
-      : "";
-
-
-  const code =
-    $("projectCode")
-      ? $("projectCode").value.trim()
-      : "";
-
-
-  const location =
-    $("projectLocation")
-      ? $("projectLocation").value.trim()
-      : "";
-
-
-  const organization =
-    $("organization")
-      ? $("organization").value.trim()
-      : "";
-
-
-  if (
-    name === "" ||
-    code === ""
-  ) {
-
-    alert(
-      "Nhập tên và mã công trình."
-    );
-
-
-    return;
-
-  }
-
-
-  try {
-
-    currentProject =
-      await DB.createProject({
-
-        projectName:
-          name,
-
-        projectCode:
-          code,
-
-        location:
-          location,
-
-        organization:
-          organization,
-
-        surveyMode:
-          null,
-
-        status:
-          ProjectStatus.IN_PROGRESS,
-
-        completed:
-          false,
-
-        isSaved:
-          false,
-
-        updatedAt:
-          new Date().toISOString()
-
-      });
-
-
-    currentProject.status =
-      ProjectStatus.IN_PROGRESS;
-
-
-    currentProject.completed =
-      false;
-
-
-    currentProject.isSaved =
-      false;
-
-
-    currentProject.updatedAt =
-      new Date().toISOString();
-
-
-    if (
-      DB.updateProject
-    ) {
-
-      await DB.updateProject(
-        currentProject
-      );
-
-    }
-
-
-    await loadProjectState();
-
-
-    draftProject =
-      currentProject;
-
-
-    updateHome();
-
-
-    show(
-      "screenSurveyHome"
-    );
-
-
-  } catch (error) {
-
-    console.error(
-
-      "TGS Project Create Error:",
-
-      error
-
-    );
-
-
-    alert(
-      "Không thể tạo hồ sơ công trình."
-    );
-
-  }
-
-}
-
-
-/* ==========================================================
-   RESUME DRAFT PROJECT
-========================================================== */
-
-function resumeDraftProject() {
-
-  if (!draftProject) {
-
-    alert(
-      "Không tìm thấy công trình đang thực hiện."
-    );
-
-
-    return;
-
-  }
-
-
-  currentProject =
-    draftProject;
-
-
-  updateHome();
-
-
-  show(
-    "screenSurveyHome"
-  );
-
-}
-
-
-/* ==========================================================
-   OPEN SAVED PROJECT
-========================================================== */
-
-function openSavedProject(
-  projectId
-) {
-
-  if (!projectId) {
-
-    alert(
-      "Không xác định được công trình."
-    );
-
-
-    return;
-
-  }
-
-
-  const project =
-    savedProjects.find(
-      item =>
-        item.projectId ===
-        projectId
-    );
-
-
-  if (!project) {
-
-    alert(
-      "Không tìm thấy công trình đã lưu."
-    );
-
-
-    return;
-
-  }
-
-
-  currentProject =
-    project;
-
-
-  updateHome();
-
-
-  closeSavedProjectPanel();
-
-
-  show(
-    "screenSurveyHome"
-  );
-
-}
-
-
-/* ==========================================================
-   SAVED PROJECT PANEL
-========================================================== */
-
-function openSavedProjectPanel() {
-
-  const list =
-    $("savedProjectList");
-
-
-  if (!list) {
-
-    return;
-
-  }
-
-
-  updateSavedProjectHome();
-
-
-  list.hidden =
-    false;
-
-}
-
-
-function closeSavedProjectPanel() {
-
-  const list =
-    $("savedProjectList");
-
-
-  if (list) {
-
-    list.hidden =
-      true;
-
-  }
-
-}
-
-
-/* ==========================================================
-   COMPLETE PROJECT
-========================================================== */
-
-async function completeProject() {
-
-  if (!currentProject) {
-
-    alert(
-      "Chưa có công trình đang thực hiện."
-    );
-
-
-    return;
-
-  }
-
-
-  /*
-     If already saved, there is nothing to complete.
-  */
-
-  if (
-    currentProject.status ===
-    ProjectStatus.SAVED
-  ) {
-
-    alert(
-      "Công trình này đã được lưu."
-    );
-
-
-    return;
-
-  }
-
-
-  const confirmed =
-    window.confirm(
-
-      "Xác nhận đã hoàn thành khảo sát công trình?\n\n" +
-      "Sau bước này hồ sơ sẽ chuyển sang trạng thái " +
-      "\"Đã hoàn thành\" và chờ bạn bấm \"Lưu công trình\"."
-
-    );
-
-
-  if (!confirmed) {
-
-    return;
-
-  }
-
-
-  try {
-
-    /*
-       IMPORTANT:
-
-       COMPLETED is NOT SAVED.
-
-       The project remains resumable until the
-       user explicitly presses "Lưu công trình".
-    */
-
-    currentProject.status =
-      ProjectStatus.COMPLETED;
-
-
-    currentProject.completed =
-      true;
-
-
-    currentProject.isSaved =
-      false;
-
-
-    currentProject.completedAt =
-      new Date().toISOString();
-
-
-    currentProject.updatedAt =
-      new Date().toISOString();
-
-
-    await DB.updateProject(
-      currentProject
-    );
-
-
-    /*
-       Refresh all project state.
-
-       Because isSaved === false,
-       this project remains in draftProject.
-    */
-
-    await loadProjectState();
-
-
-    /*
-       Keep current project reference after refresh.
-    */
-
-    const refreshedProject =
-      allProjects.find(
-        project =>
-          project.projectId ===
-          currentProject.projectId
-      );
-
-
-    if (refreshedProject) {
-
-      currentProject =
-        refreshedProject;
-
-    }
-
-
-    /*
-       Update completion screen.
-    */
-
-    updateCompletionScreen();
-
-
-    show(
-      "screenProjectComplete"
-    );
-
-
-    console.log(
-      "TGS Project Status:",
-      "COMPLETED / NOT SAVED"
-    );
-
-
-  } catch (error) {
-
-    console.error(
-
-      "TGS Complete Project Error:",
-
-      error
-
-    );
-
-
-    alert(
-      "Không thể hoàn thành hồ sơ công trình."
-    );
-
-  }
-
-}
-
-
-/* ==========================================================
-   COMPLETION SCREEN
-========================================================== */
-
-function updateCompletionScreen() {
-
-  if (!currentProject) {
-
-    return;
-
-  }
-
-
-  const title =
-    $("completeProjectTitle");
-
-
-  const name =
-    $("completeProjectName");
-
-
-  const code =
-    $("completeProjectCode");
-
-
-  if (title) {
-
-    title.textContent =
-      currentProject.projectName ||
-      "Công trình";
-
-  }
-
-
-  if (name) {
-
-    name.textContent =
-      currentProject.projectName ||
-      "--";
-
-  }
-
-
-  if (code) {
-
-    code.textContent =
-      currentProject.projectCode ||
-      "--";
-
-  }
-
-}
-
-
-/* ==========================================================
-   BACK FROM COMPLETION
-========================================================== */
-
-function backToSurveyFromCompletion() {
-
-  if (!currentProject) {
-
-    openProjectHome();
-
-    return;
-
-  }
-
-
-  /*
-     Do NOT change status.
-
-     If the project is COMPLETED but not saved,
-     it remains COMPLETED / NOT SAVED.
-  */
-
-  updateHome();
-
-
-  show(
-    "screenSurveyHome"
-  );
-
-}
-
-
-/* ==========================================================
-   SAVE PROJECT
-========================================================== */
-
-async function saveProject() {
-
-  if (!currentProject) {
-
-    alert(
-      "Không có công trình để lưu."
-    );
-
-
-    return;
-
-  }
-
-
-  /*
-     Only a completed project can be saved.
-  */
-
-  if (
-    currentProject.status !==
-      ProjectStatus.COMPLETED &&
-    currentProject.completed !== true
-  ) {
-
-    alert(
-      "Hãy hoàn thành khảo sát trước khi lưu công trình."
-    );
-
-
-    return;
-
-  }
-
-
-  const confirmed =
-    window.confirm(
-
-      "Lưu công trình này vào hồ sơ đã hoàn thành?"
-
-    );
-
-
-  if (!confirmed) {
-
-    return;
-
-  }
-
-
-  try {
-
-    /*
-       Final lifecycle transition.
-    */
-
-    currentProject.status =
-      ProjectStatus.SAVED;
-
-
-    currentProject.completed =
-      true;
-
-
-    currentProject.isSaved =
-      true;
-
-
-    currentProject.savedAt =
-      new Date().toISOString();
-
-
-    currentProject.updatedAt =
-      new Date().toISOString();
-
-
-    await DB.updateProject(
-      currentProject
-    );
-
-
-    /*
-       Reload complete project state.
-
-       This removes the project from draftProject
-       and places it into savedProjects.
-    */
-
-    await loadProjectState();
-
-
-    /*
-       Refresh current reference.
-    */
-
-    const savedReference =
-      allProjects.find(
-        project =>
-          project.projectId ===
-          currentProject.projectId
-      );
-
-
-    if (savedReference) {
-
-      currentProject =
-        savedReference;
-
-    }
-
-
-    /*
-       Return to project home.
-    */
-
-    openProjectHome();
-
-
-    console.log(
-      "TGS Project Status:",
-      "SAVED"
-    );
-
-
-  } catch (error) {
-
-    console.error(
-
-      "TGS Save Project Error:",
-
-      error
-
-    );
-
-
-    alert(
-      "Không thể lưu công trình."
-    );
-
-  }
-
-}
-
-
-/* ==========================================================
    MAP PROVIDERS
 ========================================================== */
 
 const MapProviders = {
-
 
   arcgis: {
 
@@ -1514,11 +197,10 @@ const MapProviders = {
 
 
 /* ==========================================================
-   TGS GIS LAYER REGISTRY
+   GIS LAYER REGISTRY
 ========================================================== */
 
 const GISLayerRegistry = {
-
 
   surveyPoint: {
 
@@ -1683,352 +365,1467 @@ const GISLayerRegistry = {
 
 
 /* ==========================================================
-   GIS LAB DEMO DATA
+   RESET GIS LAYER REGISTRY
 ========================================================== */
 
-const GISLabData = {
+function resetGISLayerRegistry() {
+
+  Object.keys(
+    GISLayerRegistry
+  ).forEach(layerId => {
+
+    GISLayerRegistry[layerId].layer =
+      null;
+
+  });
+
+}
 
 
-  pipe: [
+/* ==========================================================
+   GPS STATE
+========================================================== */
 
-    [10.762250, 106.659800],
+const GPSState = {
 
-    [10.762420, 106.660000],
+  available:
+    false,
 
-    [10.762622, 106.660172],
+  acquiring:
+    false,
 
-    [10.762850, 106.660350],
+  latitude:
+    null,
 
-    [10.763080, 106.660550]
+  longitude:
+    null,
 
-  ],
+  accuracy:
+    null,
 
+  altitude:
+    null,
 
-  valve: [
+  altitudeAccuracy:
+    null,
 
-    [10.762622, 106.660172],
+  heading:
+    null,
 
-    [10.762850, 106.660350]
+  speed:
+    null,
 
-  ],
+  timestamp:
+    null,
 
-
-  tee: [
-
-    [10.762850, 106.660350]
-
-  ],
-
-
-  elbow: [
-
-    [10.763080, 106.660550]
-
-  ],
-
-
-  waterStation: [
-
-    [10.763350, 106.660800]
-
-  ],
-
-
-  customerMeter: [
-
-    [10.762200, 106.660600],
-
-    [10.762350, 106.660750],
-
-    [10.762500, 106.660900]
-
-  ]
+  error:
+    null
 
 };
 
 
 /* ==========================================================
-   GIS LAB LAYER BUILDER
+   GPS MANAGER
 ========================================================== */
 
-const GISLabLayerBuilder = {
+const GPSManager = {
 
 
-  createPipeLayer() {
+  /* --------------------------------------------------------
+     CHECK BROWSER SUPPORT
+  -------------------------------------------------------- */
 
-    return L.polyline(
+  isSupported() {
 
-      GISLabData.pipe,
+    return (
+      "geolocation" in navigator
+    );
+
+  },
+
+
+  /* --------------------------------------------------------
+     RESET
+  -------------------------------------------------------- */
+
+  reset() {
+
+    GPSState.available =
+      false;
+
+    GPSState.acquiring =
+      false;
+
+    GPSState.latitude =
+      null;
+
+    GPSState.longitude =
+      null;
+
+    GPSState.accuracy =
+      null;
+
+    GPSState.altitude =
+      null;
+
+    GPSState.altitudeAccuracy =
+      null;
+
+    GPSState.heading =
+      null;
+
+    GPSState.speed =
+      null;
+
+    GPSState.timestamp =
+      null;
+
+    GPSState.error =
+      null;
+
+  },
+
+
+  /* --------------------------------------------------------
+     FORMAT NUMBER
+  -------------------------------------------------------- */
+
+  formatNumber(
+    value,
+    decimals = 6
+  ) {
+
+    if (
+      value === null ||
+      value === undefined ||
+      Number.isNaN(value)
+    ) {
+
+      return "--";
+
+    }
+
+
+    return Number(value)
+      .toFixed(decimals);
+
+  },
+
+
+  /* --------------------------------------------------------
+     FORMAT ACCURACY
+  -------------------------------------------------------- */
+
+  formatAccuracy(
+    accuracy
+  ) {
+
+    if (
+      accuracy === null ||
+      accuracy === undefined ||
+      Number.isNaN(accuracy)
+    ) {
+
+      return "--";
+
+    }
+
+
+    return `${Math.round(accuracy)} m`;
+
+  },
+
+
+  /* --------------------------------------------------------
+     FORMAT ALTITUDE
+  -------------------------------------------------------- */
+
+  formatAltitude(
+    altitude
+  ) {
+
+    if (
+      altitude === null ||
+      altitude === undefined ||
+      Number.isNaN(altitude)
+    ) {
+
+      return "--";
+
+    }
+
+
+    return `${altitude.toFixed(1)} m`;
+
+  },
+
+
+  /* --------------------------------------------------------
+     UPDATE HUD
+  -------------------------------------------------------- */
+
+  updateHUD() {
+
+    const gpsText =
+      $("gpsText");
+
+
+    if (!gpsText) {
+
+      return;
+
+    }
+
+
+    if (
+      GPSState.acquiring
+    ) {
+
+      gpsText.textContent =
+        "Đang lấy GPS...";
+
+      return;
+
+    }
+
+
+    if (
+      GPSState.error
+    ) {
+
+      gpsText.textContent =
+        `GPS lỗi: ${GPSState.error}`;
+
+      return;
+
+    }
+
+
+    if (
+      !GPSState.available
+    ) {
+
+      gpsText.textContent =
+        "GPS chưa lấy";
+
+      return;
+
+    }
+
+
+    gpsText.textContent =
+      [
+        `Lat ${this.formatNumber(GPSState.latitude, 6)}`,
+        `Lon ${this.formatNumber(GPSState.longitude, 6)}`,
+        `±${this.formatAccuracy(GPSState.accuracy)}`
+      ].join(" • ");
+
+  },
+
+
+  /* --------------------------------------------------------
+     UPDATE MAP
+  -------------------------------------------------------- */
+
+  updateMap() {
+
+    if (
+      !GPSState.available
+    ) {
+
+      return;
+
+    }
+
+
+    if (
+      !MapEngine.map
+    ) {
+
+      return;
+
+    }
+
+
+    const lat =
+      GPSState.latitude;
+
+
+    const lon =
+      GPSState.longitude;
+
+
+    if (
+      lat === null ||
+      lon === null
+    ) {
+
+      return;
+
+    }
+
+
+    const position =
+      [
+        lat,
+        lon
+      ];
+
+
+    /*
+     * IMPORTANT:
+     *
+     * This is ONLY a temporary GPS position marker.
+     *
+     * It is NOT a GIS Object.
+     * It is NOT saved to IndexedDB.
+     * It is NOT a survey point.
+     *
+     * The marker will be replaced by the real
+     * survey-object workflow in GIS-02.2.
+     */
+
+    MapEngine.showGPSPosition(
+      position
+    );
+
+  },
+
+
+  /* --------------------------------------------------------
+     SUCCESS
+  -------------------------------------------------------- */
+
+  handleSuccess(
+    position
+  ) {
+
+    const coords =
+      position.coords;
+
+
+    GPSState.available =
+      true;
+
+    GPSState.acquiring =
+      false;
+
+    GPSState.error =
+      null;
+
+
+    GPSState.latitude =
+      coords.latitude;
+
+
+    GPSState.longitude =
+      coords.longitude;
+
+
+    GPSState.accuracy =
+      coords.accuracy;
+
+
+    GPSState.altitude =
+      coords.altitude;
+
+
+    GPSState.altitudeAccuracy =
+      coords.altitudeAccuracy;
+
+
+    GPSState.heading =
+      coords.heading;
+
+
+    GPSState.speed =
+      coords.speed;
+
+
+    GPSState.timestamp =
+      position.timestamp;
+
+
+    this.updateHUD();
+
+    this.updateMap();
+
+
+    console.log(
+      "TGS GPS — REAL POSITION:",
+      {
+        latitude:
+          GPSState.latitude,
+
+        longitude:
+          GPSState.longitude,
+
+        accuracy:
+          GPSState.accuracy,
+
+        altitude:
+          GPSState.altitude,
+
+        timestamp:
+          new Date(
+            GPSState.timestamp
+          ).toISOString()
+      }
+    );
+
+  },
+
+
+  /* --------------------------------------------------------
+     ERROR
+  -------------------------------------------------------- */
+
+  handleError(
+    error
+  ) {
+
+    GPSState.acquiring =
+      false;
+
+    GPSState.available =
+      false;
+
+
+    let message =
+      "Không xác định";
+
+
+    switch (
+      error.code
+    ) {
+
+      case 1:
+
+        message =
+          "Bạn chưa cấp quyền vị trí.";
+
+        break;
+
+
+      case 2:
+
+        message =
+          "Thiết bị không xác định được vị trí.";
+
+        break;
+
+
+      case 3:
+
+        message =
+          "GPS hết thời gian chờ.";
+
+        break;
+
+
+      default:
+
+        message =
+          error.message ||
+          "Không xác định";
+
+        break;
+
+    }
+
+
+    GPSState.error =
+      message;
+
+
+    this.updateHUD();
+
+
+    console.error(
+      "TGS GPS Error:",
+      error
+    );
+
+  },
+
+
+  /* --------------------------------------------------------
+     ACQUIRE CURRENT POSITION
+  -------------------------------------------------------- */
+
+  acquire() {
+
+    if (
+      !this.isSupported()
+    ) {
+
+      GPSState.error =
+        "Trình duyệt không hỗ trợ GPS.";
+
+      this.updateHUD();
+
+      alert(
+        "Thiết bị/trình duyệt không hỗ trợ GPS."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      GPSState.acquiring
+    ) {
+
+      return;
+
+    }
+
+
+    GPSState.acquiring =
+      true;
+
+    GPSState.error =
+      null;
+
+
+    this.updateHUD();
+
+
+    navigator.geolocation.getCurrentPosition(
+
+      position => {
+
+        this.handleSuccess(
+          position
+        );
+
+      },
+
+      error => {
+
+        this.handleError(
+          error
+        );
+
+      },
 
       {
 
-        weight:
-          6,
+        enableHighAccuracy:
+          true,
 
-        opacity:
-          0.9
+        timeout:
+          20000,
 
-      }
-
-    ).bindPopup(
-
-      "<strong>TGS GIS LAB</strong><br>Ống"
-
-    );
-
-  },
-
-
-  createValveLayer() {
-
-    const group =
-      L.layerGroup();
-
-
-    GISLabData.valve.forEach(
-      (coordinate, index) => {
-
-        L.circleMarker(
-
-          coordinate,
-
-          {
-
-            radius:
-              8,
-
-            weight:
-              3,
-
-            fillOpacity:
-              0.9
-
-          }
-
-        )
-
-          .bindPopup(
-
-            "<strong>TGS GIS LAB</strong><br>" +
-            "Van V" +
-            String(index + 1)
-              .padStart(3, "0")
-
-          )
-
-          .addTo(
-            group
-          );
+        maximumAge:
+          0
 
       }
+
     );
-
-
-    return group;
-
-  },
-
-
-  createTeeLayer() {
-
-    const group =
-      L.layerGroup();
-
-
-    GISLabData.tee.forEach(
-      (coordinate, index) => {
-
-        L.circleMarker(
-
-          coordinate,
-
-          {
-
-            radius:
-              10,
-
-            weight:
-              3,
-
-            fillOpacity:
-              0.9
-
-          }
-
-        )
-
-          .bindPopup(
-
-            "<strong>TGS GIS LAB</strong><br>" +
-            "Tê T" +
-            String(index + 1)
-              .padStart(3, "0")
-
-          )
-
-          .addTo(
-            group
-          );
-
-      }
-    );
-
-
-    return group;
-
-  },
-
-
-  createElbowLayer() {
-
-    const group =
-      L.layerGroup();
-
-
-    GISLabData.elbow.forEach(
-      (coordinate, index) => {
-
-        L.circleMarker(
-
-          coordinate,
-
-          {
-
-            radius:
-              9,
-
-            weight:
-              3,
-
-            fillOpacity:
-              0.9
-
-          }
-
-        )
-
-          .bindPopup(
-
-            "<strong>TGS GIS LAB</strong><br>" +
-            "Cút C" +
-            String(index + 1)
-              .padStart(3, "0")
-
-          )
-
-          .addTo(
-            group
-          );
-
-      }
-    );
-
-
-    return group;
-
-  },
-
-
-  createWaterStationLayer() {
-
-    const group =
-      L.layerGroup();
-
-
-    GISLabData.waterStation.forEach(
-      (coordinate, index) => {
-
-        L.circleMarker(
-
-          coordinate,
-
-          {
-
-            radius:
-              13,
-
-            weight:
-              3,
-
-            fillOpacity:
-              0.9
-
-          }
-
-        )
-
-          .bindPopup(
-
-            "<strong>TGS GIS LAB</strong><br>" +
-            "Trạm cấp nước TS" +
-            String(index + 1)
-              .padStart(3, "0")
-
-          )
-
-          .addTo(
-            group
-          );
-
-      }
-    );
-
-
-    return group;
-
-  },
-
-
-  createCustomerMeterLayer() {
-
-    const group =
-      L.layerGroup();
-
-
-    GISLabData.customerMeter.forEach(
-      (coordinate, index) => {
-
-        L.circleMarker(
-
-          coordinate,
-
-          {
-
-            radius:
-              6,
-
-            weight:
-              2,
-
-            fillOpacity:
-              0.9
-
-          }
-
-        )
-
-          .bindPopup(
-
-            "<strong>TGS GIS LAB</strong><br>" +
-            "Đồng hồ KH KH" +
-            String(index + 1)
-              .padStart(3, "0")
-
-          )
-
-          .addTo(
-            group
-          );
-
-      }
-    );
-
-
-    return group;
 
   }
 
 };
+
+
+/* ==========================================================
+   PROJECT LIFECYCLE HELPERS
+========================================================== */
+
+function isDraftProject(
+  project
+) {
+
+  if (!project) {
+
+    return false;
+
+  }
+
+
+  if (
+    project.status === "DRAFT" ||
+    project.status === "IN_PROGRESS"
+  ) {
+
+    return true;
+
+  }
+
+
+  if (
+    project.status === "COMPLETED" &&
+    project.isSaved !== true
+  ) {
+
+    return true;
+
+  }
+
+
+  if (
+    project.isSaved === false
+  ) {
+
+    return true;
+
+  }
+
+
+  if (
+    project.completed === false &&
+    project.isSaved !== true
+  ) {
+
+    return true;
+
+  }
+
+
+  return false;
+
+}
+
+
+function isSavedProject(
+  project
+) {
+
+  if (!project) {
+
+    return false;
+
+  }
+
+
+  if (
+    project.status === "SAVED"
+  ) {
+
+    return true;
+
+  }
+
+
+  if (
+    project.isSaved === true
+  ) {
+
+    return true;
+
+  }
+
+
+  const hasLifecycleFields =
+
+    Object.prototype.hasOwnProperty.call(
+      project,
+      "status"
+    ) ||
+
+    Object.prototype.hasOwnProperty.call(
+      project,
+      "isSaved"
+    ) ||
+
+    Object.prototype.hasOwnProperty.call(
+      project,
+      "completed"
+    );
+
+
+  if (
+    !hasLifecycleFields
+  ) {
+
+    return true;
+
+  }
+
+
+  return false;
+
+}
+
+
+/* ==========================================================
+   PROJECT HOME
+========================================================== */
+
+function updateProjectHome() {
+
+  const notice =
+    $("projectDraftNotice");
+
+  const resumeButton =
+    $("btnResumeProject");
+
+  const savedList =
+    $("savedProjectList");
+
+  const savedItems =
+    $("savedProjectItems");
+
+
+  if (notice) {
+
+    notice.style.display =
+      draftProject
+        ? ""
+        : "none";
+
+  }
+
+
+  if (resumeButton) {
+
+    resumeButton.style.display =
+      draftProject
+        ? ""
+        : "none";
+
+  }
+
+
+  if (savedList) {
+
+    savedList.style.display =
+      savedProjects.length > 0
+        ? ""
+        : "none";
+
+  }
+
+
+  if (!savedItems) {
+
+    return;
+
+  }
+
+
+  savedItems.innerHTML =
+    "";
+
+
+  if (
+    savedProjects.length === 0
+  ) {
+
+    const empty =
+      document.createElement(
+        "div"
+      );
+
+
+    empty.className =
+      "empty";
+
+
+    empty.textContent =
+      "Chưa có công trình đã lưu.";
+
+
+    savedItems.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  savedProjects.forEach(
+    project => {
+
+      const button =
+        document.createElement(
+          "button"
+        );
+
+
+      button.type =
+        "button";
+
+
+      button.className =
+        "saved-project-item";
+
+
+      button.dataset.projectId =
+        project.projectId;
+
+
+      const name =
+        document.createElement(
+          "strong"
+        );
+
+
+      name.textContent =
+        project.projectName ||
+        "Công trình chưa đặt tên";
+
+
+      const meta =
+        document.createElement(
+          "small"
+        );
+
+
+      meta.textContent =
+        [
+          project.projectCode,
+          project.location
+        ]
+          .filter(Boolean)
+          .join(" • ");
+
+
+      button.appendChild(
+        name
+      );
+
+
+      button.appendChild(
+        meta
+      );
+
+
+      button.onclick =
+        () =>
+          openSavedProject(
+            project.projectId
+          );
+
+
+      savedItems.appendChild(
+        button
+      );
+
+    }
+  );
+
+}
+
+
+/* ==========================================================
+   LOAD PROJECT STATE
+========================================================== */
+
+async function loadProjectState() {
+
+  if (!dbReady) {
+
+    return;
+
+  }
+
+
+  try {
+
+    let projects =
+      await DB.getAllProjects();
+
+
+    if (
+      !Array.isArray(projects)
+    ) {
+
+      projects = [];
+
+    }
+
+
+    draftProject =
+      projects.find(
+        project =>
+          isDraftProject(
+            project
+          )
+      ) || null;
+
+
+    savedProjects =
+      projects.filter(
+        project =>
+          isSavedProject(
+            project
+          )
+      );
+
+
+    updateProjectHome();
+
+  } catch (error) {
+
+    console.error(
+      "TGS Project State Error:",
+      error
+    );
+
+  }
+
+}
+
+
+/* ==========================================================
+   UPDATE CURRENT PROJECT UI
+========================================================== */
+
+function updateHome() {
+
+  if (!currentProject) {
+
+    return;
+
+  }
+
+
+  const projectTitle =
+    $("projectTitle");
+
+
+  if (projectTitle) {
+
+    projectTitle.textContent =
+      currentProject.projectName ||
+      "Chưa có công trình";
+
+  }
+
+
+  const linearProject =
+    $("linearProject");
+
+
+  if (linearProject) {
+
+    linearProject.textContent =
+      currentProject.projectName ||
+      "Công trình";
+
+  }
+
+
+  const completeTitle =
+    $("completeProjectTitle");
+
+
+  if (completeTitle) {
+
+    completeTitle.textContent =
+      "Hoàn thành khảo sát";
+
+  }
+
+
+  const completeName =
+    $("completeProjectName");
+
+
+  if (completeName) {
+
+    completeName.textContent =
+      currentProject.projectName ||
+      "Chưa có công trình";
+
+  }
+
+
+  const completeCode =
+    $("completeProjectCode");
+
+
+  if (completeCode) {
+
+    completeCode.textContent =
+      currentProject.projectCode ||
+      "";
+
+  }
+
+}
+
+
+/* ==========================================================
+   PROJECT FORM RESET
+========================================================== */
+
+function resetProjectForm() {
+
+  [
+
+    "projectName",
+    "projectCode",
+    "projectLocation",
+    "organization"
+
+  ].forEach(
+    id => {
+
+      const input =
+        $(id);
+
+
+      if (input) {
+
+        input.value =
+          "";
+
+      }
+
+    }
+  );
+
+}
+
+
+/* ==========================================================
+   CREATE PROJECT
+========================================================== */
+
+async function createProject() {
+
+  if (!dbReady) {
+
+    alert(
+      "Offline Database chưa sẵn sàng."
+    );
+
+    return;
+
+  }
+
+
+  const name =
+    $("projectName")
+      ? $("projectName")
+          .value
+          .trim()
+      : "";
+
+
+  const code =
+    $("projectCode")
+      ? $("projectCode")
+          .value
+          .trim()
+      : "";
+
+
+  if (
+    name === "" ||
+    code === ""
+  ) {
+
+    alert(
+      "Nhập tên và mã công trình."
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    currentProject =
+      await DB.createProject({
+
+        projectName:
+          name,
+
+        projectCode:
+          code,
+
+        location:
+          $("projectLocation")
+            ? $("projectLocation")
+                .value
+                .trim()
+            : "",
+
+        organization:
+          $("organization")
+            ? $("organization")
+                .value
+                .trim()
+            : "",
+
+        status:
+          "IN_PROGRESS",
+
+        completed:
+          false,
+
+        isSaved:
+          false
+
+      });
+
+
+    resetGISLayerRegistry();
+
+    GPSManager.reset();
+
+    GPSManager.updateHUD();
+
+    updateHome();
+
+    await loadProjectState();
+
+    show(
+      "screenSurveyHome"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "TGS Create Project Error:",
+      error
+    );
+
+
+    alert(
+      "Không thể tạo công trình."
+    );
+
+  }
+
+}
+
+
+/* ==========================================================
+   RESUME PROJECT
+========================================================== */
+
+async function resumeProject() {
+
+  if (!draftProject) {
+
+    return;
+
+  }
+
+
+  currentProject =
+    draftProject;
+
+
+  resetGISLayerRegistry();
+
+  GPSManager.reset();
+
+  GPSManager.updateHUD();
+
+  updateHome();
+
+  show(
+    "screenSurveyHome"
+  );
+
+}
+
+
+/* ==========================================================
+   OPEN SAVED PROJECT
+========================================================== */
+
+async function openSavedProject(
+  projectId
+) {
+
+  if (!dbReady) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const project =
+      await DB.getProject(
+        projectId
+      );
+
+
+    if (!project) {
+
+      alert(
+        "Không tìm thấy công trình."
+      );
+
+
+      await loadProjectState();
+
+      return;
+
+    }
+
+
+    currentProject =
+      project;
+
+
+    resetGISLayerRegistry();
+
+    GPSManager.reset();
+
+    GPSManager.updateHUD();
+
+    updateHome();
+
+    show(
+      "screenSurveyHome"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "TGS Open Project Error:",
+      error
+    );
+
+
+    alert(
+      "Không thể mở công trình."
+    );
+
+  }
+
+}
+
+
+/* ==========================================================
+   COMPLETE PROJECT
+========================================================== */
+
+async function completeProject() {
+
+  if (!currentProject) {
+
+    return;
+
+  }
+
+
+  const confirmed =
+    window.confirm(
+      "Bạn có chắc chắn muốn hoàn thành khảo sát công trình này?"
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  currentProject = {
+
+    ...currentProject,
+
+    status:
+      "COMPLETED",
+
+    completed:
+      true,
+
+    isSaved:
+      false,
+
+    completedAt:
+      new Date().toISOString(),
+
+    updatedAt:
+      new Date().toISOString()
+
+  };
+
+
+  try {
+
+    await DB.updateProject(
+      currentProject
+    );
+
+
+    await loadProjectState();
+
+    updateHome();
+
+    updateCompletionScreen();
+
+    show(
+      "screenProjectComplete"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "TGS Complete Project Error:",
+      error
+    );
+
+
+    alert(
+      "Không thể hoàn thành công trình."
+    );
+
+  }
+
+}
+
+
+/* ==========================================================
+   UPDATE COMPLETION SCREEN
+========================================================== */
+
+function updateCompletionScreen() {
+
+  if (!currentProject) {
+
+    return;
+
+  }
+
+
+  const name =
+    $("completeProjectName");
+
+
+  if (name) {
+
+    name.textContent =
+      currentProject.projectName ||
+      "Chưa có công trình";
+
+  }
+
+
+  const code =
+    $("completeProjectCode");
+
+
+  if (code) {
+
+    code.textContent =
+      currentProject.projectCode ||
+      "";
+
+  }
+
+}
+
+
+/* ==========================================================
+   SAVE PROJECT
+========================================================== */
+
+async function saveProject() {
+
+  if (!currentProject) {
+
+    return;
+
+  }
+
+
+  const confirmed =
+    window.confirm(
+      "Lưu công trình này vào danh sách công trình đã lưu?"
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  currentProject = {
+
+    ...currentProject,
+
+    status:
+      "SAVED",
+
+    completed:
+      true,
+
+    isSaved:
+      true,
+
+    savedAt:
+      new Date().toISOString(),
+
+    updatedAt:
+      new Date().toISOString()
+
+  };
+
+
+  try {
+
+    await DB.updateProject(
+      currentProject
+    );
+
+
+    await loadProjectState();
+
+    updateHome();
+
+    show(
+      "screenProject"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "TGS Save Project Error:",
+      error
+    );
+
+
+    alert(
+      "Không thể lưu công trình."
+    );
+
+  }
+
+}
+
+
+/* ==========================================================
+   RETURN TO SURVEY
+========================================================== */
+
+function backToSurveyFromCompletion() {
+
+  if (!currentProject) {
+
+    return;
+
+  }
+
+
+  show(
+    "screenSurveyHome"
+  );
+
+}
 
 
 /* ==========================================================
@@ -2043,6 +1840,12 @@ const MapEngine = {
   marker:
     null,
 
+  gpsMarker:
+    null,
+
+  gpsAccuracyCircle:
+    null,
+
   baseLayer:
     null,
 
@@ -2052,21 +1855,27 @@ const MapEngine = {
   defaultLocation: [
 
     10.762622,
-
     106.660172
 
   ],
 
 
+  /* --------------------------------------------------------
+     INITIALIZE
+  -------------------------------------------------------- */
+
   initialize() {
 
     if (this.map) {
 
-      setTimeout(() => {
+      setTimeout(
+        () => {
 
-        this.map.invalidateSize();
+          this.map.invalidateSize();
 
-      }, 50);
+        },
+        50
+      );
 
 
       return;
@@ -2084,30 +1893,25 @@ const MapEngine = {
         "TGS GIS: #map element was not found."
       );
 
-
       return;
 
     }
 
 
+    resetGISLayerRegistry();
+
+
     this.map =
       L.map(
-
         "map",
-
         {
-
           zoomControl:
             false
-
         }
-
-      ).setView(
-
+      )
+      .setView(
         this.defaultLocation,
-
         18
-
       );
 
 
@@ -2116,42 +1920,23 @@ const MapEngine = {
     );
 
 
-    this.marker =
-      L.marker(
-
-        this.defaultLocation
-
-      ).addTo(
-
-        this.map
-
-      );
-
-
-    GISLayerRegistry
-      .surveyPoint
-      .layer =
-      this.marker;
-
-
-    this.marker.bindPopup(
-      "D001 - Điểm đầu tuyến"
-    );
-
-
-    this.marker.openPopup();
-
-
-    this.createGISLabLayers();
+    /*
+     * IMPORTANT:
+     *
+     * No demo marker.
+     * No D001 marker.
+     * No synthetic GIS object.
+     *
+     * GPS position is created only after the user
+     * explicitly requests GPS.
+     */
 
 
     this.applyAllGISLayerVisibility();
 
 
     console.log(
-
       "TGS GIS initialized:",
-
       {
 
         engine:
@@ -2160,65 +1945,504 @@ const MapEngine = {
         provider:
           this.activeProvider,
 
-        layers:
-          Object.keys(
-            GISLayerRegistry
-          )
+        projectId:
+          currentProject
+            ? currentProject.projectId
+            : null,
+
+        mode:
+          "REAL_PROJECT",
+
+        syntheticData:
+          false
 
       }
-
     );
 
   },
 
 
-  createGISLabLayers() {
+  /* --------------------------------------------------------
+     SET BASE MAP
+  -------------------------------------------------------- */
 
-    GISLayerRegistry
-      .pipe
-      .layer =
-      GISLabLayerBuilder
-        .createPipeLayer();
+  setBaseMap(
+    providerId
+  ) {
 
+    if (!this.map) {
 
-    GISLayerRegistry
-      .valve
-      .layer =
-      GISLabLayerBuilder
-        .createValveLayer();
+      console.warn(
+        "TGS GIS: Map has not been initialized."
+      );
 
+      return false;
 
-    GISLayerRegistry
-      .tee
-      .layer =
-      GISLabLayerBuilder
-        .createTeeLayer();
+    }
 
 
-    GISLayerRegistry
-      .elbow
-      .layer =
-      GISLabLayerBuilder
-        .createElbowLayer();
+    const provider =
+      MapProviders[
+        providerId
+      ];
 
 
-    GISLayerRegistry
-      .waterStation
-      .layer =
-      GISLabLayerBuilder
-        .createWaterStationLayer();
+    if (!provider) {
+
+      console.error(
+        "TGS GIS: Unknown map provider:",
+        providerId
+      );
+
+      return false;
+
+    }
 
 
-    GISLayerRegistry
-      .customerMeter
-      .layer =
-      GISLabLayerBuilder
-        .createCustomerMeterLayer();
+    if (
+      provider.enabled === false
+    ) {
+
+      console.warn(
+        `TGS GIS: Provider "${providerId}" is not active yet.`
+      );
+
+      return false;
+
+    }
+
+
+    if (this.baseLayer) {
+
+      this.map.removeLayer(
+        this.baseLayer
+      );
+
+
+      this.baseLayer =
+        null;
+
+    }
+
+
+    if (
+      provider.type === "tile"
+    ) {
+
+      this.baseLayer =
+        L.tileLayer(
+          provider.url,
+          provider.options
+        );
+
+
+      this.baseLayer.addTo(
+        this.map
+      );
+
+
+      this.activeProvider =
+        providerId;
+
+
+      console.log(
+        "TGS GIS Base Map:",
+        provider.name
+      );
+
+
+      return true;
+
+    }
+
+
+    console.warn(
+      "TGS GIS: Provider type not implemented:",
+      provider.type
+    );
+
+
+    return false;
 
   },
 
 
+  /* --------------------------------------------------------
+     SHOW TEMPORARY GPS POSITION
+  -------------------------------------------------------- */
+
+  showGPSPosition(
+    position
+  ) {
+
+    if (!this.map) {
+
+      return;
+
+    }
+
+
+    const lat =
+      position[0];
+
+
+    const lon =
+      position[1];
+
+
+    /* ------------------------------------------------------
+       Temporary GPS marker
+    ------------------------------------------------------ */
+
+    if (!this.gpsMarker) {
+
+      this.gpsMarker =
+        L.circleMarker(
+          position,
+          {
+
+            radius:
+              8,
+
+            weight:
+              3,
+
+            fillOpacity:
+              0.85
+
+          }
+        );
+
+
+      this.gpsMarker.addTo(
+        this.map
+      );
+
+    } else {
+
+      this.gpsMarker.setLatLng(
+        position
+      );
+
+    }
+
+
+    /* ------------------------------------------------------
+       Accuracy circle
+    ------------------------------------------------------ */
+
+    if (
+      GPSState.accuracy !== null &&
+      !Number.isNaN(
+        GPSState.accuracy
+      )
+    ) {
+
+      if (
+        !this.gpsAccuracyCircle
+      ) {
+
+        this.gpsAccuracyCircle =
+          L.circle(
+            position,
+            {
+
+              radius:
+                GPSState.accuracy,
+
+              weight:
+                1,
+
+              fillOpacity:
+                0.08
+
+            }
+          );
+
+
+        this.gpsAccuracyCircle.addTo(
+          this.map
+        );
+
+      } else {
+
+        this.gpsAccuracyCircle.setLatLng(
+          position
+        );
+
+
+        this.gpsAccuracyCircle.setRadius(
+          GPSState.accuracy
+        );
+
+      }
+
+    }
+
+
+    /* ------------------------------------------------------
+       Move map to GPS position
+    ------------------------------------------------------ */
+
+    this.map.flyTo(
+      position,
+      Math.max(
+        this.map.getZoom(),
+        18
+      ),
+      {
+
+        duration:
+          0.8
+
+      }
+    );
+
+
+    console.log(
+      "TGS GPS temporary map position:",
+      {
+        latitude:
+          lat,
+
+        longitude:
+          lon,
+
+        accuracy:
+          GPSState.accuracy
+      }
+    );
+
+  },
+
+
+  /* --------------------------------------------------------
+     GET ACTIVE PROVIDER
+  -------------------------------------------------------- */
+
+  getActiveProvider() {
+
+    return this.activeProvider;
+
+  },
+
+
+  /* --------------------------------------------------------
+     ADD GIS LAYER
+  -------------------------------------------------------- */
+
+  addGISLayer(
+    layerId,
+    leafletLayer
+  ) {
+
+    const registry =
+      GISLayerRegistry[
+        layerId
+      ];
+
+
+    if (!registry) {
+
+      console.error(
+        "TGS GIS: Unknown GIS layer:",
+        layerId
+      );
+
+      return false;
+
+    }
+
+
+    if (!leafletLayer) {
+
+      console.error(
+        "TGS GIS: Invalid Leaflet layer:",
+        layerId
+      );
+
+      return false;
+
+    }
+
+
+    registry.layer =
+      leafletLayer;
+
+
+    if (
+      registry.visible &&
+      this.map
+    ) {
+
+      leafletLayer.addTo(
+        this.map
+      );
+
+    }
+
+
+    return true;
+
+  },
+
+
+  /* --------------------------------------------------------
+     SHOW GIS LAYER
+  -------------------------------------------------------- */
+
+  showGISLayer(
+    layerId
+  ) {
+
+    const registry =
+      GISLayerRegistry[
+        layerId
+      ];
+
+
+    if (!registry) {
+
+      return false;
+
+    }
+
+
+    registry.visible =
+      true;
+
+
+    if (
+      registry.layer &&
+      this.map
+    ) {
+
+      if (
+        !this.map.hasLayer(
+          registry.layer
+        )
+      ) {
+
+        registry.layer.addTo(
+          this.map
+        );
+
+      }
+
+    }
+
+
+    return true;
+
+  },
+
+
+  /* --------------------------------------------------------
+     HIDE GIS LAYER
+  -------------------------------------------------------- */
+
+  hideGISLayer(
+    layerId
+  ) {
+
+    const registry =
+      GISLayerRegistry[
+        layerId
+      ];
+
+
+    if (!registry) {
+
+      return false;
+
+    }
+
+
+    registry.visible =
+      false;
+
+
+    if (
+      registry.layer &&
+      this.map
+    ) {
+
+      if (
+        this.map.hasLayer(
+          registry.layer
+        )
+      ) {
+
+        this.map.removeLayer(
+          registry.layer
+        );
+
+      }
+
+    }
+
+
+    return true;
+
+  },
+
+
+  /* --------------------------------------------------------
+     TOGGLE GIS LAYER
+  -------------------------------------------------------- */
+
+  toggleGISLayer(
+    layerId
+  ) {
+
+    const registry =
+      GISLayerRegistry[
+        layerId
+      ];
+
+
+    if (!registry) {
+
+      console.error(
+        "TGS GIS: Unknown GIS layer:",
+        layerId
+      );
+
+      return false;
+
+    }
+
+
+    if (
+      registry.visible
+    ) {
+
+      return this.hideGISLayer(
+        layerId
+      );
+
+    }
+
+
+    return this.showGISLayer(
+      layerId
+    );
+
+  },
+
+
+  /* --------------------------------------------------------
+     APPLY GIS VISIBILITY
+  -------------------------------------------------------- */
+
   applyAllGISLayerVisibility() {
+
+    if (!this.map) {
+
+      return;
+
+    }
+
 
     Object.keys(
       GISLayerRegistry
@@ -2226,7 +2450,9 @@ const MapEngine = {
       layerId => {
 
         const registry =
-          GISLayerRegistry[layerId];
+          GISLayerRegistry[
+            layerId
+          ];
 
 
         if (!registry.layer) {
@@ -2274,117 +2500,9 @@ const MapEngine = {
   },
 
 
-  setBaseMap(providerId) {
-
-    if (!this.map) {
-
-      console.warn(
-        "TGS GIS: Map has not been initialized."
-      );
-
-
-      return false;
-
-    }
-
-
-    const provider =
-      MapProviders[
-        providerId
-      ];
-
-
-    if (!provider) {
-
-      console.error(
-        "TGS GIS: Unknown map provider:",
-        providerId
-      );
-
-
-      return false;
-
-    }
-
-
-    if (
-      provider.enabled === false
-    ) {
-
-      console.warn(
-        `TGS GIS: Provider "${providerId}" is not active yet.`
-      );
-
-
-      return false;
-
-    }
-
-
-    if (this.baseLayer) {
-
-      this.map.removeLayer(
-        this.baseLayer
-      );
-
-
-      this.baseLayer =
-        null;
-
-    }
-
-
-    if (
-      provider.type === "tile"
-    ) {
-
-      this.baseLayer =
-        L.tileLayer(
-
-          provider.url,
-
-          provider.options
-
-        );
-
-
-      this.baseLayer.addTo(
-        this.map
-      );
-
-
-      this.activeProvider =
-        providerId;
-
-
-      console.log(
-        "TGS GIS Base Map:",
-        provider.name
-      );
-
-
-      return true;
-
-    }
-
-
-    console.warn(
-      "TGS GIS: Provider type not implemented:",
-      provider.type
-    );
-
-
-    return false;
-
-  },
-
-
-  getActiveProvider() {
-
-    return this.activeProvider;
-
-  },
-
+  /* --------------------------------------------------------
+     ZOOM IN
+  -------------------------------------------------------- */
 
   zoomIn() {
 
@@ -2397,6 +2515,10 @@ const MapEngine = {
   },
 
 
+  /* --------------------------------------------------------
+     ZOOM OUT
+  -------------------------------------------------------- */
+
   zoomOut() {
 
     if (this.map) {
@@ -2408,214 +2530,32 @@ const MapEngine = {
   },
 
 
+  /* --------------------------------------------------------
+     LOCATE — CURRENT GPS
+  -------------------------------------------------------- */
+
   locate() {
 
-    if (!this.map) {
+    if (
+      GPSState.available
+    ) {
+
+      this.showGPSPosition(
+
+        [
+          GPSState.latitude,
+          GPSState.longitude
+        ]
+
+      );
+
 
       return;
 
     }
 
 
-    this.map.flyTo(
-
-      this.defaultLocation,
-
-      19,
-
-      {
-
-        duration:
-          1
-
-      }
-
-    );
-
-  },
-
-
-  addGISLayer(
-    layerId,
-    leafletLayer
-  ) {
-
-    const registry =
-      GISLayerRegistry[
-        layerId
-      ];
-
-
-    if (!registry) {
-
-      console.error(
-        "TGS GIS: Unknown GIS layer:",
-        layerId
-      );
-
-
-      return false;
-
-    }
-
-
-    if (!leafletLayer) {
-
-      console.error(
-        "TGS GIS: Invalid Leaflet layer:",
-        layerId
-      );
-
-
-      return false;
-
-    }
-
-
-    registry.layer =
-      leafletLayer;
-
-
-    if (
-      registry.visible &&
-      this.map
-    ) {
-
-      leafletLayer.addTo(
-        this.map
-      );
-
-    }
-
-
-    return true;
-
-  },
-
-
-  showGISLayer(layerId) {
-
-    const registry =
-      GISLayerRegistry[
-        layerId
-      ];
-
-
-    if (!registry) {
-
-      return false;
-
-    }
-
-
-    registry.visible =
-      true;
-
-
-    if (
-      registry.layer &&
-      this.map
-    ) {
-
-      if (
-        !this.map.hasLayer(
-          registry.layer
-        )
-      ) {
-
-        registry.layer.addTo(
-          this.map
-        );
-
-      }
-
-    }
-
-
-    return true;
-
-  },
-
-
-  hideGISLayer(layerId) {
-
-    const registry =
-      GISLayerRegistry[
-        layerId
-      ];
-
-
-    if (!registry) {
-
-      return false;
-
-    }
-
-
-    registry.visible =
-      false;
-
-
-    if (
-      registry.layer &&
-      this.map
-    ) {
-
-      if (
-        this.map.hasLayer(
-          registry.layer
-        )
-      ) {
-
-        this.map.removeLayer(
-          registry.layer
-        );
-
-      }
-
-    }
-
-
-    return true;
-
-  },
-
-
-  toggleGISLayer(layerId) {
-
-    const registry =
-      GISLayerRegistry[
-        layerId
-      ];
-
-
-    if (!registry) {
-
-      console.error(
-        "TGS GIS: Unknown GIS layer:",
-        layerId
-      );
-
-
-      return false;
-
-    }
-
-
-    if (
-      registry.visible
-    ) {
-
-      return this.hideGISLayer(
-        layerId
-      );
-
-    }
-
-
-    return this.showGISLayer(
-      layerId
-    );
+    GPSManager.acquire();
 
   }
 
@@ -2628,6 +2568,10 @@ const MapEngine = {
 
 const MapLayerControl = {
 
+
+  /* --------------------------------------------------------
+     BASE MAP
+  -------------------------------------------------------- */
 
   bindBaseMapControls() {
 
@@ -2649,8 +2593,7 @@ const MapLayerControl = {
 
 
             if (
-              providerId ===
-              "arcgis"
+              providerId === "arcgis"
             ) {
 
               MapEngine.setBaseMap(
@@ -2675,6 +2618,10 @@ const MapLayerControl = {
 
   },
 
+
+  /* --------------------------------------------------------
+     GIS LAYERS
+  -------------------------------------------------------- */
 
   bindGISLayerControls() {
 
@@ -2714,9 +2661,7 @@ const MapLayerControl = {
 
 
             console.log(
-
               "TGS GIS Layer:",
-
               layerId,
 
               GISLayerRegistry[
@@ -2737,6 +2682,10 @@ const MapLayerControl = {
 
   },
 
+
+  /* --------------------------------------------------------
+     SYNC UI
+  -------------------------------------------------------- */
 
   syncUI() {
 
@@ -2770,6 +2719,10 @@ const MapLayerControl = {
   },
 
 
+  /* --------------------------------------------------------
+     INITIALIZE
+  -------------------------------------------------------- */
+
   initialize() {
 
     this.bindBaseMapControls();
@@ -2784,7 +2737,7 @@ const MapLayerControl = {
 
 
 /* ==========================================================
-   BUTTON EVENT
+   BUTTON EVENTS
 ========================================================== */
 
 function bindButtons() {
@@ -2803,7 +2756,11 @@ function bindButtons() {
     btnStart.onclick =
       () => {
 
-        openProjectHome();
+        updateProjectHome();
+
+        show(
+          "screenProject"
+        );
 
       };
 
@@ -2821,7 +2778,31 @@ function bindButtons() {
   if (btnNewProject) {
 
     btnNewProject.onclick =
-      openNewProject;
+      () => {
+
+        resetProjectForm();
+
+        show(
+          "screenProject"
+        );
+
+      };
+
+  }
+
+
+  /* --------------------------------------------------------
+     RESUME PROJECT
+  -------------------------------------------------------- */
+
+  const btnResumeProject =
+    $("btnResumeProject");
+
+
+  if (btnResumeProject) {
+
+    btnResumeProject.onclick =
+      resumeProject;
 
   }
 
@@ -2837,39 +2818,15 @@ function bindButtons() {
   if (btnOpenSavedProjects) {
 
     btnOpenSavedProjects.onclick =
-      openSavedProjectPanel;
+      () => {
 
-  }
+        updateProjectHome();
 
+        show(
+          "screenProject"
+        );
 
-  /* --------------------------------------------------------
-     CLOSE SAVED PROJECTS
-  -------------------------------------------------------- */
-
-  const btnCloseSavedProjects =
-    $("btnCloseSavedProjects");
-
-
-  if (btnCloseSavedProjects) {
-
-    btnCloseSavedProjects.onclick =
-      closeSavedProjectPanel;
-
-  }
-
-
-  /* --------------------------------------------------------
-     RESUME DRAFT
-  -------------------------------------------------------- */
-
-  const btnResumeProject =
-    $("btnResumeProject");
-
-
-  if (btnResumeProject) {
-
-    btnResumeProject.onclick =
-      resumeDraftProject;
+      };
 
   }
 
@@ -2886,70 +2843,6 @@ function bindButtons() {
 
     btnCreateProject.onclick =
       createProject;
-
-  }
-
-
-  /* --------------------------------------------------------
-     COMPLETE PROJECT
-  -------------------------------------------------------- */
-
-  const btnCompleteProject =
-    $("btnCompleteProject");
-
-
-  if (btnCompleteProject) {
-
-    btnCompleteProject.onclick =
-      completeProject;
-
-  }
-
-
-  /* --------------------------------------------------------
-     SAVE PROJECT
-  -------------------------------------------------------- */
-
-  const btnSaveProject =
-    $("btnSaveProject");
-
-
-  if (btnSaveProject) {
-
-    btnSaveProject.onclick =
-      saveProject;
-
-  }
-
-
-  /* --------------------------------------------------------
-     BACK TO SURVEY
-  -------------------------------------------------------- */
-
-  const btnBackToSurvey =
-    $("btnBackToSurvey");
-
-
-  if (btnBackToSurvey) {
-
-    btnBackToSurvey.onclick =
-      backToSurveyFromCompletion;
-
-  }
-
-
-  /* --------------------------------------------------------
-     CONTINUE PROJECT
-  -------------------------------------------------------- */
-
-  const btnContinueProject =
-    $("btnContinueProject");
-
-
-  if (btnContinueProject) {
-
-    btnContinueProject.onclick =
-      backToSurveyFromCompletion;
 
   }
 
@@ -2999,28 +2892,60 @@ function bindButtons() {
 
 
   /* --------------------------------------------------------
-     PROJECT HOME BACK
+     COMPLETE PROJECT
   -------------------------------------------------------- */
 
-  const btnBackProjectHome =
-    $("btnBackProjectHome");
+  const btnCompleteProject =
+    $("btnCompleteProject");
 
 
-  if (btnBackProjectHome) {
+  if (btnCompleteProject) {
 
-    btnBackProjectHome.onclick =
-      openProjectHome;
+    btnCompleteProject.onclick =
+      completeProject;
 
   }
 
 
   /* --------------------------------------------------------
-     POINT / LINEAR BACK
+     SAVE PROJECT
+  -------------------------------------------------------- */
+
+  const btnSaveProject =
+    $("btnSaveProject");
+
+
+  if (btnSaveProject) {
+
+    btnSaveProject.onclick =
+      saveProject;
+
+  }
+
+
+  /* --------------------------------------------------------
+     CONTINUE PROJECT
+  -------------------------------------------------------- */
+
+  const btnContinueProject =
+    $("btnContinueProject");
+
+
+  if (btnContinueProject) {
+
+    btnContinueProject.onclick =
+      backToSurveyFromCompletion;
+
+  }
+
+
+  /* --------------------------------------------------------
+     BACK BUTTON
   -------------------------------------------------------- */
 
   document
     .querySelectorAll(
-      "#screenPoint .back-btn, #screenLinear .back-btn"
+      ".back-btn"
     )
     .forEach(
       btn => {
@@ -3039,7 +2964,7 @@ function bindButtons() {
 
 
   /* --------------------------------------------------------
-     MAP ZOOM
+     MAP ZOOM IN
   -------------------------------------------------------- */
 
   const btnZoomIn =
@@ -3057,6 +2982,10 @@ function bindButtons() {
 
   }
 
+
+  /* --------------------------------------------------------
+     MAP ZOOM OUT
+  -------------------------------------------------------- */
 
   const btnZoomOut =
     $("btnZoomOut");
@@ -3087,7 +3016,7 @@ function bindButtons() {
     btnLocate.onclick =
       () => {
 
-        MapEngine.locate();
+        GPSManager.acquire();
 
       };
 
@@ -3095,7 +3024,7 @@ function bindButtons() {
 
 
   /* --------------------------------------------------------
-     FIRST GPS
+     FIRST GPS — REAL GPS
   -------------------------------------------------------- */
 
   const btnFirstGPS =
@@ -3107,9 +3036,7 @@ function bindButtons() {
     btnFirstGPS.onclick =
       () => {
 
-        alert(
-          "REV07 sẽ lấy GPS thật của thiết bị."
-        );
+        GPSManager.acquire();
 
       };
 
@@ -3119,205 +3046,28 @@ function bindButtons() {
 
 
 /* ==========================================================
-   LOAD PROJECT STATE
-========================================================== */
-
-async function loadProjectState() {
-
-  /*
-     Read ALL projects.
-  */
-
-  allProjects =
-    await DB.getAllProjects();
-
-
-  /*
-     Newest first.
-  */
-
-  allProjects.sort(
-    (a, b) => {
-
-      return (
-        getProjectTime(b) -
-        getProjectTime(a)
-      );
-
-    }
-  );
-
-
-  /*
-     Reset lifecycle collections.
-  */
-
-  draftProject =
-    null;
-
-
-  savedProjects =
-    [];
-
-
-  /*
-     Find the most recently updated unfinished project.
-
-     This includes:
-
-     - DRAFT
-     - IN_PROGRESS
-     - COMPLETED but not saved
-  */
-
-  for (
-    const project of allProjects
-  ) {
-
-    if (
-      isDraftProject(project)
-    ) {
-
-      if (
-        !draftProject
-      ) {
-
-        draftProject =
-          project;
-
-      }
-
-    }
-
-  }
-
-
-  /*
-     Build saved collection.
-
-     IMPORTANT:
-     COMPLETED / isSaved=false does NOT
-     enter this list.
-  */
-
-  allProjects.forEach(
-    project => {
-
-      if (
-        isSavedProject(project)
-      ) {
-
-        savedProjects.push(
-          project
-        );
-
-      }
-
-    }
-  );
-
-
-  /*
-     Newest saved projects first.
-  */
-
-  savedProjects.sort(
-    (a, b) => {
-
-      return (
-        getProjectTime(b) -
-        getProjectTime(a)
-      );
-
-    }
-  );
-
-
-  updateProjectHome();
-
-
-  console.log(
-
-    "TGS Project Lifecycle:",
-
-    {
-
-      totalProjects:
-        allProjects.length,
-
-      draftProject:
-        draftProject
-          ? {
-
-              name:
-                draftProject.projectName,
-
-              status:
-                draftProject.status,
-
-              isSaved:
-                draftProject.isSaved
-
-            }
-          : null,
-
-      savedProjects:
-        savedProjects.map(
-          project => ({
-
-            name:
-              project.projectName,
-
-            status:
-              project.status
-
-          })
-        )
-
-    }
-
-  );
-
-}
-
-
-/* ==========================================================
    BOOT
 ========================================================== */
 
 window.addEventListener(
-
   "load",
-
   async () => {
-
-
-    /* ------------------------------------------------------
-       SPLASH
-    ------------------------------------------------------ */
 
     show(
       "screenSplash"
     );
 
 
-    /* ------------------------------------------------------
-       BUTTONS
-    ------------------------------------------------------ */
-
     bindButtons();
 
-
-    /* ------------------------------------------------------
-       MAP LAYER CONTROL
-    ------------------------------------------------------ */
 
     MapLayerControl.initialize();
 
 
-    /* ------------------------------------------------------
-       DATABASE
-    ------------------------------------------------------ */
+    GPSManager.reset();
+
+    GPSManager.updateHUD();
+
 
     try {
 
@@ -3328,21 +3078,34 @@ window.addEventListener(
         true;
 
 
-      /*
-         Load complete project state.
-      */
-
       await loadProjectState();
+
+
+      console.log(
+        "TGS WebApp boot:",
+        {
+
+          database:
+            "READY",
+
+          projectMode:
+            "REAL_PROJECT",
+
+          syntheticGIS:
+            false,
+
+          gps:
+            "READY_FOR_REAL_DEVICE_TEST"
+
+        }
+      );
 
 
     } catch (error) {
 
       console.error(
-
         "TGS Offline Database Error:",
-
         error
-
       );
 
 
@@ -3353,5 +3116,4 @@ window.addEventListener(
     }
 
   }
-
 );
