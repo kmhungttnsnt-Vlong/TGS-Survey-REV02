@@ -82,10 +82,7 @@
 
 
 <!-- =====================================================
-     PROJECT START / PROJECT HOME
-     
-     Đây là màn hình quản lý hồ sơ công trình khi
-     người dùng bước vào ứng dụng.
+     PROJECT HOME
 ====================================================== -->
 
 <section
@@ -112,10 +109,6 @@
 
     <!-- =================================================
          UNSAVED / IN-PROGRESS NOTICE
-         
-         Mặc định ẩn.
-         app.js sẽ hiển thị khi phát hiện công trình
-         chưa hoàn thành hoặc chưa lưu.
     ================================================== -->
 
     <div
@@ -216,10 +209,6 @@
 
     <!-- =================================================
          SAVED PROJECT LIST
-         
-         Mặc định ẩn.
-         app.js sẽ sử dụng vùng này khi triển khai
-         danh sách hồ sơ đã lưu.
     ================================================== -->
 
     <div
@@ -257,8 +246,6 @@
 
 <!-- =====================================================
      PROJECT INFORMATION
-     
-     Màn hình tạo hồ sơ công trình mới.
 ====================================================== -->
 
 <section
@@ -439,6 +426,164 @@
 
     </div>
 
+
+    <!-- =================================================
+         PROJECT COMPLETION
+
+         Chỉ hiển thị khi người dùng muốn kết thúc
+         công trình.
+
+         app.js sẽ điều khiển trạng thái.
+    ================================================== -->
+
+    <div
+        class="project-completion-card"
+        id="projectCompletionCard"
+    >
+
+        <div class="project-completion-icon">
+            ✓
+        </div>
+
+
+        <div class="project-completion-content">
+
+            <h3>
+                Hoàn thành công trình
+            </h3>
+
+            <p>
+                Khi đã hoàn tất khảo sát, xác nhận hoàn thành
+                để chuyển sang bước lưu hồ sơ công trình.
+            </p>
+
+        </div>
+
+
+        <button
+            id="btnCompleteProject"
+            class="completion-btn"
+            type="button"
+        >
+            Hoàn thành khảo sát
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
+     PROJECT COMPLETE / SAVE
+     
+     Màn hình này chỉ xuất hiện sau khi người dùng
+     xác nhận hoàn thành.
+====================================================== -->
+
+<section
+    id="screenProjectComplete"
+    class="screen"
+>
+
+    <header class="topbar">
+
+        <button
+            id="btnBackToSurvey"
+            class="back-btn"
+            aria-label="Quay lại khảo sát"
+        >
+            ←
+        </button>
+
+
+        <div>
+
+            <h2>
+                Hoàn thành công trình
+            </h2>
+
+            <small id="completeProjectTitle">
+                Công trình
+            </small>
+
+        </div>
+
+    </header>
+
+
+    <div class="completion-summary-card">
+
+        <div class="completion-success-icon">
+            ✓
+        </div>
+
+
+        <h3>
+            Khảo sát đã hoàn thành
+        </h3>
+
+
+        <p>
+            Hồ sơ công trình đã được hoàn thành trên thiết bị.
+            Hãy bấm <strong>Lưu công trình</strong> để xác nhận
+            hồ sơ đã hoàn tất.
+        </p>
+
+
+        <div class="completion-project-info">
+
+            <div>
+
+                <small>
+                    Công trình
+                </small>
+
+                <strong
+                    id="completeProjectName"
+                >
+                    --
+                </strong>
+
+            </div>
+
+
+            <div>
+
+                <small>
+                    Mã công trình
+                </small>
+
+                <strong
+                    id="completeProjectCode"
+                >
+                    --
+                </strong>
+
+            </div>
+
+
+        </div>
+
+
+        <button
+            id="btnSaveProject"
+            class="save-project-btn"
+            type="button"
+        >
+            Lưu công trình
+        </button>
+
+
+        <button
+            id="btnContinueProject"
+            class="secondary-btn"
+            type="button"
+        >
+            Quay lại công trình
+        </button>
+
+    </div>
+
 </section>
 
 
@@ -559,10 +704,6 @@
 
         <!-- =============================================
              MAP LAYER CONTROL
-
-             Native HTML control for this sprint.
-             Actual provider/layer switching is handled
-             by TGS Map Engine in app.js.
         ============================================== -->
 
         <details
