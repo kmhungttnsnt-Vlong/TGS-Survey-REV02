@@ -82,7 +82,183 @@
 
 
 <!-- =====================================================
+     PROJECT START / PROJECT HOME
+     
+     Đây là màn hình quản lý hồ sơ công trình khi
+     người dùng bước vào ứng dụng.
+====================================================== -->
+
+<section
+    id="screenProjectHome"
+    class="screen"
+>
+
+    <header class="topbar">
+
+        <div>
+
+            <h2>
+                Hồ sơ công trình
+            </h2>
+
+            <small>
+                TGS Survey
+            </small>
+
+        </div>
+
+    </header>
+
+
+    <!-- =================================================
+         UNSAVED / IN-PROGRESS NOTICE
+         
+         Mặc định ẩn.
+         app.js sẽ hiển thị khi phát hiện công trình
+         chưa hoàn thành hoặc chưa lưu.
+    ================================================== -->
+
+    <div
+        id="projectDraftNotice"
+        class="draft-notice"
+        hidden
+    >
+
+        <strong>
+            ⚠️ Bạn có công trình chưa hoàn thành hoặc chưa lưu
+        </strong>
+
+        <p>
+            Bạn có thể tiếp tục công trình đang thực hiện
+            hoặc tạo một công trình mới.
+        </p>
+
+
+        <button
+            id="btnResumeProject"
+            class="primary-btn"
+        >
+            Tiếp tục công trình
+        </button>
+
+    </div>
+
+
+    <!-- =================================================
+         CREATE NEW PROJECT
+    ================================================== -->
+
+    <div class="project-action-card">
+
+        <div class="project-action-icon">
+            ＋
+        </div>
+
+
+        <div class="project-action-content">
+
+            <h3>
+                Tạo công trình mới
+            </h3>
+
+            <p>
+                Tạo hồ sơ khảo sát mới và bắt đầu khảo sát
+                hiện trạng.
+            </p>
+
+        </div>
+
+
+        <button
+            id="btnNewProject"
+            class="primary-btn"
+        >
+            Tạo công trình mới
+        </button>
+
+    </div>
+
+
+    <!-- =================================================
+         OPEN SAVED PROJECT
+    ================================================== -->
+
+    <div class="project-action-card">
+
+        <div class="project-action-icon">
+            📂
+        </div>
+
+
+        <div class="project-action-content">
+
+            <h3>
+                Mở lại công trình đã lưu
+            </h3>
+
+            <p>
+                Mở hồ sơ công trình đã hoàn thành và lưu
+                trên thiết bị.
+            </p>
+
+        </div>
+
+
+        <button
+            id="btnOpenSavedProjects"
+            class="secondary-btn"
+        >
+            Mở lại công trình đã lưu
+        </button>
+
+    </div>
+
+
+    <!-- =================================================
+         SAVED PROJECT LIST
+         
+         Mặc định ẩn.
+         app.js sẽ sử dụng vùng này khi triển khai
+         danh sách hồ sơ đã lưu.
+    ================================================== -->
+
+    <div
+        id="savedProjectList"
+        class="saved-project-list"
+        hidden
+    >
+
+        <div class="section-title">
+
+            <h3>
+                Công trình đã lưu
+            </h3>
+
+            <button
+                id="btnCloseSavedProjects"
+                class="back-btn"
+                aria-label="Đóng danh sách công trình"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            id="savedProjectItems"
+        >
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =====================================================
      PROJECT INFORMATION
+     
+     Màn hình tạo hồ sơ công trình mới.
 ====================================================== -->
 
 <section
@@ -92,9 +268,26 @@
 
     <header class="topbar">
 
-        <h2>
-            Tạo hồ sơ công trình
-        </h2>
+        <button
+            id="btnBackProjectHome"
+            class="back-btn"
+            aria-label="Quay lại"
+        >
+            ←
+        </button>
+
+
+        <div>
+
+            <h2>
+                Tạo hồ sơ công trình
+            </h2>
+
+            <small>
+                Công trình mới
+            </small>
+
+        </div>
 
     </header>
 
@@ -109,6 +302,7 @@
             id="projectName"
             type="text"
             placeholder="VD: Trạm CN A"
+            autocomplete="off"
         >
 
 
@@ -120,6 +314,7 @@
             id="projectCode"
             type="text"
             placeholder="TGS-001"
+            autocomplete="off"
         >
 
 
@@ -131,6 +326,7 @@
             id="projectLocation"
             type="text"
             placeholder="Xã / Huyện / Tỉnh"
+            autocomplete="off"
         >
 
 
@@ -142,6 +338,7 @@
             id="organization"
             type="text"
             placeholder="Công ty khảo sát"
+            autocomplete="organization"
         >
 
 
@@ -362,7 +559,7 @@
 
         <!-- =============================================
              MAP LAYER CONTROL
-             
+
              Native HTML control for this sprint.
              Actual provider/layer switching is handled
              by TGS Map Engine in app.js.
