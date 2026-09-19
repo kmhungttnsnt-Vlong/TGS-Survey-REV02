@@ -2,42 +2,46 @@
    TGS Platform Genesis 2.0
    TGS02-WEB-LINEAR-004
    app.js
-   REV06
+   REV07
 
    PROJECT LIFECYCLE + GIS LAB
 
-   REV06 CHANGE
+   REV07 CHANGE
    ----------------------------------------------------------
-   1. Use DB.getAllProjects().
-   2. Detect unfinished project from all projects.
-   3. Load ALL saved projects.
-   4. Support legacy projects without status.
-   5. Keep current GIS / ArcGIS implementation unchanged.
-   6. Keep D001.
-   7. Keep GIS Layer Control.
-   8. Keep GIS LAB demo layers.
-   9. Do not delete or reset existing projects.
+   1. Project lifecycle is now fully implemented.
+   2. IN_PROGRESS -> COMPLETED -> SAVED.
+   3. COMPLETED but not SAVED remains an unfinished project.
+   4. Added "Hoàn thành khảo sát" workflow.
+   5. Added "Lưu công trình" workflow.
+   6. Added completion screen handling.
+   7. Existing saved projects remain readable.
+   8. Legacy projects without lifecycle fields remain SAVED.
+   9. Existing ArcGIS / GIS Lab / D001 behavior preserved.
+  10. No database reset.
+  11. No project deletion.
 
    PROJECT LIFECYCLE
 
-      APP OPEN
-         │
-         └── Hồ sơ công trình
-                │
-                ├── Công trình đang dở
-                │      └── Tiếp tục
-                │
-                ├── Tạo công trình mới
-                │
-                └── Mở lại công trình đã lưu
-                       └── Danh sách tất cả hồ sơ
+      CREATE
+        ↓
+      IN_PROGRESS
+        ↓
+      HOÀN THÀNH KHẢO SÁT
+        ↓
+      COMPLETED / NOT SAVED
+        ↓
+      LƯU CÔNG TRÌNH
+        ↓
+      SAVED
+        ↓
+      MỞ LẠI CÔNG TRÌNH ĐÃ LƯU
 
    IMPORTANT
 
-   - Legacy projects without status are treated as SAVED.
-   - New projects are created as IN_PROGRESS.
-   - No automatic project opening.
-   - GIS LAB data remains TEST DATA.
+   - "COMPLETED" does NOT mean saved.
+   - Only "SAVED" is displayed in saved-project list.
+   - A COMPLETED but unsaved project remains resumable.
+   - Legacy projects without status are treated as saved.
 ========================================================== */
 
 
@@ -100,6 +104,8 @@ const screens = [
   "screenProject",
 
   "screenSurveyHome",
+
+  "screenProjectComplete",
 
   "screenPoint",
 
@@ -171,6 +177,19 @@ const ProjectStatus = {
    PROJECT STATUS HELPERS
 ========================================================== */
 
+/*
+   A project is considered unfinished when:
+
+   - DRAFT
+   - IN_PROGRESS
+   - COMPLETED but not yet saved
+   - isSaved === false
+
+   This is important because:
+
+   COMPLETED != SAVED
+*/
+
 function isDraftProject(project) {
 
   if (!project) {
@@ -194,6 +213,20 @@ function isDraftProject(project) {
   }
 
 
+  /*
+     Completed but not saved.
+  */
+
+  if (
+    status === ProjectStatus.COMPLETED &&
+    project.isSaved !== true
+  ) {
+
+    return true;
+
+  }
+
+
   if (
     project.isSaved === false
   ) {
@@ -204,8 +237,7 @@ function isDraftProject(project) {
 
 
   if (
-    project.completed === false &&
-    project.status
+    project.completed === false
   ) {
 
     return true;
@@ -218,14 +250,14 @@ function isDraftProject(project) {
 }
 
 
-/* ----------------------------------------------------------
-   Legacy projects:
+/*
+   Only SAVED projects belong to:
 
-   Nếu project cũ không có status/isSaved/completed,
-   project vẫn được coi là hồ sơ đã lưu.
+   "Mở lại công trình đã lưu"
 
-   Điều này bảo vệ dữ liệu Tân An và các hồ sơ cũ.
----------------------------------------------------------- */
+   Legacy projects without lifecycle fields are
+   still considered saved for backward compatibility.
+*/
 
 function isSavedProject(project) {
 
@@ -236,26 +268,26 @@ function isSavedProject(project) {
   }
 
 
-  if (isDraftProject(project)) {
+  /*
+     Never put unfinished projects in saved list.
+  */
+
+  if (
+    isDraftProject(project)
+  ) {
 
     return false;
 
   }
 
 
-  if (
-    project.status === ProjectStatus.SAVED ||
-    project.status === ProjectStatus.COMPLETED
-  ) {
-
-    return true;
-
-  }
-
+  /*
+     Explicit SAVED state.
+  */
 
   if (
-    project.isSaved === true ||
-    project.completed === true
+    project.status ===
+    ProjectStatus.SAVED
   ) {
 
     return true;
@@ -264,11 +296,55 @@ function isSavedProject(project) {
 
 
   /*
-     Legacy project:
-     no lifecycle fields.
+     Explicit saved flag.
   */
 
-  return true;
+  if (
+    project.isSaved === true
+  ) {
+
+    return true;
+
+  }
+
+
+  /*
+     Legacy project.
+
+     Old projects may not contain:
+
+     - status
+     - isSaved
+     - completed
+
+     They are preserved as saved projects.
+  */
+
+  const hasLifecycleField =
+    Object.prototype.hasOwnProperty.call(
+      project,
+      "status"
+    ) ||
+    Object.prototype.hasOwnProperty.call(
+      project,
+      "isSaved"
+    ) ||
+    Object.prototype.hasOwnProperty.call(
+      project,
+      "completed"
+    );
+
+
+  if (
+    !hasLifecycleField
+  ) {
+
+    return true;
+
+  }
+
+
+  return false;
 
 }
 
@@ -292,7 +368,9 @@ function getProjectTime(project) {
 
 
   const time =
-    new Date(value || 0).getTime();
+    new Date(
+      value || 0
+    ).getTime();
 
 
   return Number.isNaN(time)
@@ -325,25 +403,24 @@ function updateProjectHome() {
     notice
   ) {
 
-    notice.hidden = false;
+    notice.hidden =
+      false;
 
 
     if (resumeButton) {
 
-      resumeButton.hidden = false;
+      resumeButton.hidden =
+        false;
 
     }
 
   } else if (notice) {
 
-    notice.hidden = true;
+    notice.hidden =
+      true;
 
   }
 
-
-  /*
-     Saved project area
-  */
 
   updateSavedProjectHome();
 
@@ -351,7 +428,7 @@ function updateProjectHome() {
 
 
 /* ==========================================================
-   RENDER ALL SAVED PROJECTS
+   RENDER SAVED PROJECTS
 ========================================================== */
 
 function updateSavedProjectHome() {
@@ -379,7 +456,9 @@ function updateSavedProjectHome() {
   ) {
 
     const empty =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
 
     empty.className =
@@ -404,125 +483,126 @@ function updateSavedProjectHome() {
      Render every saved project
   */
 
-  savedProjects.forEach(project => {
+  savedProjects.forEach(
+    project => {
 
-    const card =
-      document.createElement("div");
-
-
-    card.className =
-      "saved-project-item";
-
-
-    /*
-       Project name
-    */
-
-    const name =
-      document.createElement("strong");
-
-
-    name.textContent =
-      project.projectName ||
-      "Công trình chưa đặt tên";
-
-
-    /*
-       Project code
-    */
-
-    const code =
-      document.createElement("small");
-
-
-    code.textContent =
-      project.projectCode
-        ? `Mã: ${project.projectCode}`
-        : "Chưa có mã công trình";
-
-
-    /*
-       Project location
-    */
-
-    const location =
-      document.createElement("small");
-
-
-    if (project.location) {
-
-      location.textContent =
-        `Địa điểm: ${project.location}`;
-
-    } else {
-
-      location.textContent =
-        "Địa điểm: Chưa cập nhật";
-
-    }
-
-
-    /*
-       Open button
-    */
-
-    const openButton =
-      document.createElement("button");
-
-
-    openButton.type =
-      "button";
-
-
-    openButton.className =
-      "primary-btn";
-
-
-    openButton.textContent =
-      "Mở công trình";
-
-
-    openButton.addEventListener(
-      "click",
-      () => {
-
-        openSavedProject(
-          project.projectId
+      const card =
+        document.createElement(
+          "div"
         );
 
-      }
-    );
+
+      card.className =
+        "saved-project-item";
 
 
-    /*
-       Append
-    */
+      /*
+         Project name
+      */
 
-    card.appendChild(
-      name
-    );
-
-
-    card.appendChild(
-      code
-    );
+      const name =
+        document.createElement(
+          "strong"
+        );
 
 
-    card.appendChild(
-      location
-    );
+      name.textContent =
+        project.projectName ||
+        "Công trình chưa đặt tên";
 
 
-    card.appendChild(
-      openButton
-    );
+      /*
+         Project code
+      */
+
+      const code =
+        document.createElement(
+          "small"
+        );
 
 
-    items.appendChild(
-      card
-    );
+      code.textContent =
+        project.projectCode
+          ? `Mã: ${project.projectCode}`
+          : "Chưa có mã công trình";
 
-  });
+
+      /*
+         Project location
+      */
+
+      const location =
+        document.createElement(
+          "small"
+        );
+
+
+      location.textContent =
+        project.location
+          ? `Địa điểm: ${project.location}`
+          : "Địa điểm: Chưa cập nhật";
+
+
+      /*
+         Open button
+      */
+
+      const openButton =
+        document.createElement(
+          "button"
+        );
+
+
+      openButton.type =
+        "button";
+
+
+      openButton.className =
+        "primary-btn";
+
+
+      openButton.textContent =
+        "Mở công trình";
+
+
+      openButton.addEventListener(
+        "click",
+        () => {
+
+          openSavedProject(
+            project.projectId
+          );
+
+        }
+      );
+
+
+      card.appendChild(
+        name
+      );
+
+
+      card.appendChild(
+        code
+      );
+
+
+      card.appendChild(
+        location
+      );
+
+
+      card.appendChild(
+        openButton
+      );
+
+
+      items.appendChild(
+        card
+      );
+
+    }
+  );
 
 }
 
@@ -580,11 +660,64 @@ function updateHome() {
 
   }
 
+
+  updateCompletionUI();
+
 }
 
 
 /* ==========================================================
-   PROJECT FORM RESET
+   COMPLETION UI
+========================================================== */
+
+function updateCompletionUI() {
+
+  const card =
+    $("projectCompletionCard");
+
+
+  if (!card) {
+
+    return;
+
+  }
+
+
+  /*
+     Saved project:
+
+     The project has already been stored as completed.
+     Do not present "Hoàn thành khảo sát" again.
+  */
+
+  if (
+    currentProject &&
+    currentProject.status ===
+    ProjectStatus.SAVED
+  ) {
+
+    card.hidden =
+      true;
+
+    return;
+
+  }
+
+
+  /*
+     New / in-progress / completed-but-unsaved
+
+     Keep completion action available.
+  */
+
+  card.hidden =
+    false;
+
+}
+
+
+/* ==========================================================
+   RESET PROJECT FORM
 ========================================================== */
 
 function resetProjectForm() {
@@ -602,19 +735,22 @@ function resetProjectForm() {
   ];
 
 
-  fields.forEach(id => {
+  fields.forEach(
+    id => {
 
-    const field =
-      $(id);
+      const field =
+        $(id);
 
 
-    if (field) {
+      if (field) {
 
-      field.value = "";
+        field.value =
+          "";
+
+      }
 
     }
-
-  });
+  );
 
 }
 
@@ -731,10 +867,6 @@ async function createProject() {
       });
 
 
-    /*
-       Explicit lifecycle state.
-    */
-
     currentProject.status =
       ProjectStatus.IN_PROGRESS;
 
@@ -762,16 +894,8 @@ async function createProject() {
     }
 
 
-    /*
-       Refresh project collection.
-    */
-
     await loadProjectState();
 
-
-    /*
-       Current project becomes the draft.
-    */
 
     draftProject =
       currentProject;
@@ -845,9 +969,7 @@ function openSavedProject(
   projectId
 ) {
 
-  if (
-    !projectId
-  ) {
+  if (!projectId) {
 
     alert(
       "Không xác định được công trình."
@@ -886,16 +1008,8 @@ function openSavedProject(
   updateHome();
 
 
-  /*
-     Close saved project panel.
-  */
-
   closeSavedProjectPanel();
 
-
-  /*
-     Open project survey home.
-  */
 
   show(
     "screenSurveyHome"
@@ -920,12 +1034,6 @@ function openSavedProjectPanel() {
 
   }
 
-
-  /*
-     Always refresh the list before displaying it.
-     This ensures a newly saved project appears
-     immediately.
-  */
 
   updateSavedProjectHome();
 
@@ -953,19 +1061,407 @@ function closeSavedProjectPanel() {
 
 
 /* ==========================================================
+   COMPLETE PROJECT
+========================================================== */
+
+async function completeProject() {
+
+  if (!currentProject) {
+
+    alert(
+      "Chưa có công trình đang thực hiện."
+    );
+
+
+    return;
+
+  }
+
+
+  /*
+     If already saved, there is nothing to complete.
+  */
+
+  if (
+    currentProject.status ===
+    ProjectStatus.SAVED
+  ) {
+
+    alert(
+      "Công trình này đã được lưu."
+    );
+
+
+    return;
+
+  }
+
+
+  const confirmed =
+    window.confirm(
+
+      "Xác nhận đã hoàn thành khảo sát công trình?\n\n" +
+      "Sau bước này hồ sơ sẽ chuyển sang trạng thái " +
+      "\"Đã hoàn thành\" và chờ bạn bấm \"Lưu công trình\"."
+
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  try {
+
+    /*
+       IMPORTANT:
+
+       COMPLETED is NOT SAVED.
+
+       The project remains resumable until the
+       user explicitly presses "Lưu công trình".
+    */
+
+    currentProject.status =
+      ProjectStatus.COMPLETED;
+
+
+    currentProject.completed =
+      true;
+
+
+    currentProject.isSaved =
+      false;
+
+
+    currentProject.completedAt =
+      new Date().toISOString();
+
+
+    currentProject.updatedAt =
+      new Date().toISOString();
+
+
+    await DB.updateProject(
+      currentProject
+    );
+
+
+    /*
+       Refresh all project state.
+
+       Because isSaved === false,
+       this project remains in draftProject.
+    */
+
+    await loadProjectState();
+
+
+    /*
+       Keep current project reference after refresh.
+    */
+
+    const refreshedProject =
+      allProjects.find(
+        project =>
+          project.projectId ===
+          currentProject.projectId
+      );
+
+
+    if (refreshedProject) {
+
+      currentProject =
+        refreshedProject;
+
+    }
+
+
+    /*
+       Update completion screen.
+    */
+
+    updateCompletionScreen();
+
+
+    show(
+      "screenProjectComplete"
+    );
+
+
+    console.log(
+      "TGS Project Status:",
+      "COMPLETED / NOT SAVED"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+
+      "TGS Complete Project Error:",
+
+      error
+
+    );
+
+
+    alert(
+      "Không thể hoàn thành hồ sơ công trình."
+    );
+
+  }
+
+}
+
+
+/* ==========================================================
+   COMPLETION SCREEN
+========================================================== */
+
+function updateCompletionScreen() {
+
+  if (!currentProject) {
+
+    return;
+
+  }
+
+
+  const title =
+    $("completeProjectTitle");
+
+
+  const name =
+    $("completeProjectName");
+
+
+  const code =
+    $("completeProjectCode");
+
+
+  if (title) {
+
+    title.textContent =
+      currentProject.projectName ||
+      "Công trình";
+
+  }
+
+
+  if (name) {
+
+    name.textContent =
+      currentProject.projectName ||
+      "--";
+
+  }
+
+
+  if (code) {
+
+    code.textContent =
+      currentProject.projectCode ||
+      "--";
+
+  }
+
+}
+
+
+/* ==========================================================
+   BACK FROM COMPLETION
+========================================================== */
+
+function backToSurveyFromCompletion() {
+
+  if (!currentProject) {
+
+    openProjectHome();
+
+    return;
+
+  }
+
+
+  /*
+     Do NOT change status.
+
+     If the project is COMPLETED but not saved,
+     it remains COMPLETED / NOT SAVED.
+  */
+
+  updateHome();
+
+
+  show(
+    "screenSurveyHome"
+  );
+
+}
+
+
+/* ==========================================================
+   SAVE PROJECT
+========================================================== */
+
+async function saveProject() {
+
+  if (!currentProject) {
+
+    alert(
+      "Không có công trình để lưu."
+    );
+
+
+    return;
+
+  }
+
+
+  /*
+     Only a completed project can be saved.
+  */
+
+  if (
+    currentProject.status !==
+      ProjectStatus.COMPLETED &&
+    currentProject.completed !== true
+  ) {
+
+    alert(
+      "Hãy hoàn thành khảo sát trước khi lưu công trình."
+    );
+
+
+    return;
+
+  }
+
+
+  const confirmed =
+    window.confirm(
+
+      "Lưu công trình này vào hồ sơ đã hoàn thành?"
+
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  try {
+
+    /*
+       Final lifecycle transition.
+    */
+
+    currentProject.status =
+      ProjectStatus.SAVED;
+
+
+    currentProject.completed =
+      true;
+
+
+    currentProject.isSaved =
+      true;
+
+
+    currentProject.savedAt =
+      new Date().toISOString();
+
+
+    currentProject.updatedAt =
+      new Date().toISOString();
+
+
+    await DB.updateProject(
+      currentProject
+    );
+
+
+    /*
+       Reload complete project state.
+
+       This removes the project from draftProject
+       and places it into savedProjects.
+    */
+
+    await loadProjectState();
+
+
+    /*
+       Refresh current reference.
+    */
+
+    const savedReference =
+      allProjects.find(
+        project =>
+          project.projectId ===
+          currentProject.projectId
+      );
+
+
+    if (savedReference) {
+
+      currentProject =
+        savedReference;
+
+    }
+
+
+    /*
+       Return to project home.
+    */
+
+    openProjectHome();
+
+
+    console.log(
+      "TGS Project Status:",
+      "SAVED"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+
+      "TGS Save Project Error:",
+
+      error
+
+    );
+
+
+    alert(
+      "Không thể lưu công trình."
+    );
+
+  }
+
+}
+
+
+/* ==========================================================
    MAP PROVIDERS
 ========================================================== */
 
 const MapProviders = {
 
 
-  /* --------------------------------------------------------
-     ARC GIS
-  -------------------------------------------------------- */
-
   arcgis: {
 
-    id: "arcgis",
+    id:
+      "arcgis",
 
     name:
       "ArcGIS World Street Map",
@@ -991,10 +1487,6 @@ const MapProviders = {
 
   },
 
-
-  /* --------------------------------------------------------
-     GOOGLE
-  -------------------------------------------------------- */
 
   google: {
 
@@ -1730,50 +2222,54 @@ const MapEngine = {
 
     Object.keys(
       GISLayerRegistry
-    ).forEach(layerId => {
+    ).forEach(
+      layerId => {
 
-      const registry =
-        GISLayerRegistry[layerId];
-
-
-      if (!registry.layer) {
-
-        return;
-
-      }
+        const registry =
+          GISLayerRegistry[layerId];
 
 
-      if (registry.visible) {
+        if (!registry.layer) {
 
-        if (
-          !this.map.hasLayer(
-            registry.layer
-          )
-        ) {
-
-          registry.layer.addTo(
-            this.map
-          );
+          return;
 
         }
 
-      } else {
 
         if (
-          this.map.hasLayer(
-            registry.layer
-          )
+          registry.visible
         ) {
 
-          this.map.removeLayer(
-            registry.layer
-          );
+          if (
+            !this.map.hasLayer(
+              registry.layer
+            )
+          ) {
+
+            registry.layer.addTo(
+              this.map
+            );
+
+          }
+
+        } else {
+
+          if (
+            this.map.hasLayer(
+              registry.layer
+            )
+          ) {
+
+            this.map.removeLayer(
+              registry.layer
+            );
+
+          }
 
         }
 
       }
-
-    });
+    );
 
   },
 
@@ -1793,7 +2289,9 @@ const MapEngine = {
 
 
     const provider =
-      MapProviders[providerId];
+      MapProviders[
+        providerId
+      ];
 
 
     if (!provider) {
@@ -1943,7 +2441,9 @@ const MapEngine = {
   ) {
 
     const registry =
-      GISLayerRegistry[layerId];
+      GISLayerRegistry[
+        layerId
+      ];
 
 
     if (!registry) {
@@ -1996,7 +2496,9 @@ const MapEngine = {
   showGISLayer(layerId) {
 
     const registry =
-      GISLayerRegistry[layerId];
+      GISLayerRegistry[
+        layerId
+      ];
 
 
     if (!registry) {
@@ -2038,7 +2540,9 @@ const MapEngine = {
   hideGISLayer(layerId) {
 
     const registry =
-      GISLayerRegistry[layerId];
+      GISLayerRegistry[
+        layerId
+      ];
 
 
     if (!registry) {
@@ -2080,7 +2584,9 @@ const MapEngine = {
   toggleGISLayer(layerId) {
 
     const registry =
-      GISLayerRegistry[layerId];
+      GISLayerRegistry[
+        layerId
+      ];
 
 
     if (!registry) {
@@ -2096,7 +2602,9 @@ const MapEngine = {
     }
 
 
-    if (registry.visible) {
+    if (
+      registry.visible
+    ) {
 
       return this.hideGISLayer(
         layerId
@@ -2129,38 +2637,41 @@ const MapLayerControl = {
       );
 
 
-    controls.forEach(control => {
+    controls.forEach(
+      control => {
 
-      control.addEventListener(
-        "change",
-        () => {
+        control.addEventListener(
+          "change",
+          () => {
 
-          const providerId =
-            control.value;
+            const providerId =
+              control.value;
 
 
-          if (
-            providerId === "arcgis"
-          ) {
-
-            MapEngine.setBaseMap(
+            if (
+              providerId ===
               "arcgis"
+            ) {
+
+              MapEngine.setBaseMap(
+                "arcgis"
+              );
+
+
+              return;
+
+            }
+
+
+            console.log(
+              "TGS GIS: Google provider is prepared but not activated."
             );
 
-
-            return;
-
           }
+        );
 
-
-          console.log(
-            "TGS GIS: Google provider is prepared but not activated."
-          );
-
-        }
-      );
-
-    });
+      }
+    );
 
   },
 
@@ -2173,50 +2684,56 @@ const MapLayerControl = {
       );
 
 
-    controls.forEach(control => {
+    controls.forEach(
+      control => {
 
-      const option =
-        control.closest(
-          "[data-layer]"
-        );
-
-
-      if (!option) {
-
-        return;
-
-      }
-
-
-      const layerId =
-        option.dataset.layer;
-
-
-      control.addEventListener(
-        "change",
-        () => {
-
-          MapEngine.toggleGISLayer(
-            layerId
+        const option =
+          control.closest(
+            "[data-layer]"
           );
 
 
-          console.log(
+        if (!option) {
 
-            "TGS GIS Layer:",
-
-            layerId,
-
-            GISLayerRegistry[layerId]
-              ? GISLayerRegistry[layerId].visible
-              : null
-
-          );
+          return;
 
         }
-      );
 
-    });
+
+        const layerId =
+          option.dataset.layer;
+
+
+        control.addEventListener(
+          "change",
+          () => {
+
+            MapEngine.toggleGISLayer(
+              layerId
+            );
+
+
+            console.log(
+
+              "TGS GIS Layer:",
+
+              layerId,
+
+              GISLayerRegistry[
+                layerId
+              ]
+                ? GISLayerRegistry[
+                    layerId
+                  ].visible
+                : null
+
+            );
+
+          }
+        );
+
+      }
+    );
 
   },
 
@@ -2225,26 +2742,30 @@ const MapLayerControl = {
 
     Object.keys(
       GISLayerRegistry
-    ).forEach(layerId => {
+    ).forEach(
+      layerId => {
 
-      const registry =
-        GISLayerRegistry[layerId];
-
-
-      const option =
-        document.querySelector(
-          `[data-layer="${layerId}"] input[type="checkbox"]`
-        );
+        const registry =
+          GISLayerRegistry[
+            layerId
+          ];
 
 
-      if (option) {
+        const option =
+          document.querySelector(
+            `[data-layer="${layerId}"] input[type="checkbox"]`
+          );
 
-        option.checked =
-          registry.visible;
+
+        if (option) {
+
+          option.checked =
+            registry.visible;
+
+        }
 
       }
-
-    });
+    );
 
   },
 
@@ -2281,12 +2802,6 @@ function bindButtons() {
 
     btnStart.onclick =
       () => {
-
-        /*
-           Always enter Project Home.
-
-           Never automatically open an existing project.
-        */
 
         openProjectHome();
 
@@ -2376,6 +2891,70 @@ function bindButtons() {
 
 
   /* --------------------------------------------------------
+     COMPLETE PROJECT
+  -------------------------------------------------------- */
+
+  const btnCompleteProject =
+    $("btnCompleteProject");
+
+
+  if (btnCompleteProject) {
+
+    btnCompleteProject.onclick =
+      completeProject;
+
+  }
+
+
+  /* --------------------------------------------------------
+     SAVE PROJECT
+  -------------------------------------------------------- */
+
+  const btnSaveProject =
+    $("btnSaveProject");
+
+
+  if (btnSaveProject) {
+
+    btnSaveProject.onclick =
+      saveProject;
+
+  }
+
+
+  /* --------------------------------------------------------
+     BACK TO SURVEY
+  -------------------------------------------------------- */
+
+  const btnBackToSurvey =
+    $("btnBackToSurvey");
+
+
+  if (btnBackToSurvey) {
+
+    btnBackToSurvey.onclick =
+      backToSurveyFromCompletion;
+
+  }
+
+
+  /* --------------------------------------------------------
+     CONTINUE PROJECT
+  -------------------------------------------------------- */
+
+  const btnContinueProject =
+    $("btnContinueProject");
+
+
+  if (btnContinueProject) {
+
+    btnContinueProject.onclick =
+      backToSurveyFromCompletion;
+
+  }
+
+
+  /* --------------------------------------------------------
      POINT SURVEY
   -------------------------------------------------------- */
 
@@ -2443,18 +3022,20 @@ function bindButtons() {
     .querySelectorAll(
       "#screenPoint .back-btn, #screenLinear .back-btn"
     )
-    .forEach(btn => {
+    .forEach(
+      btn => {
 
-      btn.onclick =
-        () => {
+        btn.onclick =
+          () => {
 
-          show(
-            "screenSurveyHome"
-          );
+            show(
+              "screenSurveyHome"
+            );
 
-        };
+          };
 
-    });
+      }
+    );
 
 
   /* --------------------------------------------------------
@@ -2527,7 +3108,7 @@ function bindButtons() {
       () => {
 
         alert(
-          "REV06 sẽ lấy GPS thật của thiết bị."
+          "REV07 sẽ lấy GPS thật của thiết bị."
         );
 
       };
@@ -2544,8 +3125,7 @@ function bindButtons() {
 async function loadProjectState() {
 
   /*
-     REV06:
-     Read ALL projects instead of only the latest project.
+     Read ALL projects.
   */
 
   allProjects =
@@ -2553,7 +3133,7 @@ async function loadProjectState() {
 
 
   /*
-     Sort newest first.
+     Newest first.
   */
 
   allProjects.sort(
@@ -2569,22 +3149,25 @@ async function loadProjectState() {
 
 
   /*
-     Reset state.
+     Reset lifecycle collections.
   */
 
   draftProject =
     null;
 
 
-  savedProjects = [];
+  savedProjects =
+    [];
 
 
   /*
-     Find unfinished project.
+     Find the most recently updated unfinished project.
 
-     If multiple unfinished projects exist,
-     use the most recently updated one
-     for the primary Resume action.
+     This includes:
+
+     - DRAFT
+     - IN_PROGRESS
+     - COMPLETED but not saved
   */
 
   for (
@@ -2610,9 +3193,11 @@ async function loadProjectState() {
 
 
   /*
-     Build saved project collection.
+     Build saved collection.
 
-     Legacy projects without status are included.
+     IMPORTANT:
+     COMPLETED / isSaved=false does NOT
+     enter this list.
   */
 
   allProjects.forEach(
@@ -2633,7 +3218,7 @@ async function loadProjectState() {
 
 
   /*
-     Newest first.
+     Newest saved projects first.
   */
 
   savedProjects.sort(
@@ -2662,13 +3247,31 @@ async function loadProjectState() {
 
       draftProject:
         draftProject
-          ? draftProject.projectName
+          ? {
+
+              name:
+                draftProject.projectName,
+
+              status:
+                draftProject.status,
+
+              isSaved:
+                draftProject.isSaved
+
+            }
           : null,
 
       savedProjects:
         savedProjects.map(
-          project =>
-            project.projectName
+          project => ({
+
+            name:
+              project.projectName,
+
+            status:
+              project.status
+
+          })
         )
 
     }
@@ -2726,7 +3329,7 @@ window.addEventListener(
 
 
       /*
-         Load complete project collection.
+         Load complete project state.
       */
 
       await loadProjectState();
