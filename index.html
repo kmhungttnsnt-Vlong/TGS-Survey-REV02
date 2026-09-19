@@ -74,6 +74,7 @@
     <button
         id="btnStart"
         class="primary-btn"
+        type="button"
     >
         Bắt đầu
     </button>
@@ -83,6 +84,19 @@
 
 <!-- =====================================================
      PROJECT HOME
+     
+     Đây là màn hình đầu tiên sau Splash.
+     
+     Không phải form tạo công trình.
+     
+     Flow:
+     
+     Bắt đầu
+        ↓
+     Hồ sơ công trình
+        ├── Tạo công trình mới
+        ├── Mở lại công trình đã lưu
+        └── Tiếp tục công trình chưa hoàn thành
 ====================================================== -->
 
 <section
@@ -130,6 +144,7 @@
         <button
             id="btnResumeProject"
             class="primary-btn"
+            type="button"
         >
             Tiếp tục công trình
         </button>
@@ -165,6 +180,7 @@
         <button
             id="btnNewProject"
             class="primary-btn"
+            type="button"
         >
             Tạo công trình mới
         </button>
@@ -200,6 +216,7 @@
         <button
             id="btnOpenSavedProjects"
             class="secondary-btn"
+            type="button"
         >
             Mở lại công trình đã lưu
         </button>
@@ -226,6 +243,7 @@
             <button
                 id="btnCloseSavedProjects"
                 class="back-btn"
+                type="button"
                 aria-label="Đóng danh sách công trình"
             >
                 ×
@@ -246,6 +264,9 @@
 
 <!-- =====================================================
      PROJECT INFORMATION
+     
+     Chỉ mở khi người dùng bấm:
+     "Tạo công trình mới"
 ====================================================== -->
 
 <section
@@ -258,7 +279,8 @@
         <button
             id="btnBackProjectHome"
             class="back-btn"
-            aria-label="Quay lại"
+            type="button"
+            aria-label="Quay lại hồ sơ công trình"
         >
             ←
         </button>
@@ -332,6 +354,7 @@
         <button
             id="btnCreateProject"
             class="primary-btn"
+            type="button"
         >
             Tiếp tục
         </button>
@@ -387,6 +410,7 @@
         <button
             id="btnPoint"
             class="survey-card point"
+            type="button"
         >
 
             <div class="icon">
@@ -407,6 +431,7 @@
         <button
             id="btnLinear"
             class="survey-card linear"
+            type="button"
         >
 
             <div class="icon">
@@ -429,11 +454,6 @@
 
     <!-- =================================================
          PROJECT COMPLETION
-
-         Chỉ hiển thị khi người dùng muốn kết thúc
-         công trình.
-
-         app.js sẽ điều khiển trạng thái.
     ================================================== -->
 
     <div
@@ -475,9 +495,6 @@
 
 <!-- =====================================================
      PROJECT COMPLETE / SAVE
-     
-     Màn hình này chỉ xuất hiện sau khi người dùng
-     xác nhận hoàn thành.
 ====================================================== -->
 
 <section
@@ -490,6 +507,7 @@
         <button
             id="btnBackToSurvey"
             class="back-btn"
+            type="button"
             aria-label="Quay lại khảo sát"
         >
             ←
@@ -561,7 +579,6 @@
 
             </div>
 
-
         </div>
 
 
@@ -600,6 +617,7 @@
 
         <button
             class="back-btn"
+            type="button"
             aria-label="Quay lại"
         >
             ←
@@ -646,6 +664,7 @@
 
         <button
             class="back-btn"
+            type="button"
             aria-label="Quay lại"
         >
             ←
@@ -1022,6 +1041,7 @@
                 id="btnLocate"
                 title="Lấy GPS"
                 aria-label="Lấy GPS"
+                type="button"
             >
                 📍
             </button>
@@ -1031,6 +1051,7 @@
                 id="btnSurvey"
                 title="Thiết bị"
                 aria-label="Thiết bị"
+                type="button"
             >
                 🛰️
             </button>
@@ -1040,6 +1061,7 @@
                 id="btnZoomIn"
                 title="Phóng to"
                 aria-label="Phóng to"
+                type="button"
             >
                 +
             </button>
@@ -1049,6 +1071,7 @@
                 id="btnZoomOut"
                 title="Thu nhỏ"
                 aria-label="Thu nhỏ"
+                type="button"
             >
                 −
             </button>
@@ -1108,7 +1131,7 @@
                 </small>
 
                 <strong id="pointCode">
-                    D001
+                    Chưa có
                 </strong>
 
             </div>
@@ -1133,10 +1156,9 @@
         <button
             id="btnFirstGPS"
             class="primary-btn"
+            type="button"
         >
-
             Lấy GPS đầu tiên
-
         </button>
 
 
