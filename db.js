@@ -2,11 +2,12 @@
 // TGS Platform Genesis 2.0
 // TGS02-WEB-LINEAR-004
 // IndexedDB GIS Foundation
-// REV01
+// REV02
 //
 // Purpose:
 // - Preserve existing Project database.
 // - Add unified GIS Object store.
+// - Add complete Project retrieval.
 // - Prepare WebApp GIS Lab for Digital Twin.
 // - Keep GIS objects independent from map provider.
 //
@@ -15,6 +16,10 @@
 // TGS_SURVEY_DB
 //   │
 //   ├── projects
+//   │      ├── DRAFT
+//   │      ├── IN_PROGRESS
+//   │      ├── COMPLETED
+//   │      └── SAVED
 //   │
 //   └── gisObjects
 //          ├── pipe
@@ -23,6 +28,13 @@
 //          ├── elbow
 //          ├── waterStation
 //          └── customerMeter
+//
+// REV02 CHANGE:
+//
+// - Added getAllProjects().
+// - Existing project data is preserved.
+// - Existing database version remains compatible.
+// - No project is deleted or reset.
 //
 // IMPORTANT:
 // - Existing project data is preserved.
@@ -281,9 +293,28 @@ async function createProject(data) {
       data.organization,
 
     surveyMode:
+      data.surveyMode ||
       null,
 
+    status:
+      data.status ||
+      null,
+
+    completed:
+      typeof data.completed === "boolean"
+        ? data.completed
+        : null,
+
+    isSaved:
+      typeof data.isSaved === "boolean"
+        ? data.isSaved
+        : null,
+
     createdAt:
+      new Date().toISOString(),
+
+    updatedAt:
+      data.updatedAt ||
       new Date().toISOString()
 
   };
@@ -335,6 +366,27 @@ async function updateProject(project) {
   await initDatabase();
 
 
+  if (
+    !project ||
+    !project.projectId
+  ) {
+
+    throw new Error(
+      "projectId is required."
+    );
+
+  }
+
+
+  /*
+   * Keep updatedAt synchronized whenever a project
+   * changes state.
+   */
+
+  project.updatedAt =
+    new Date().toISOString();
+
+
   return new Promise(
     (resolve, reject) => {
 
@@ -373,10 +425,25 @@ async function updateProject(project) {
 
 
 /* ======================================================
-   GET LATEST PROJECT
+   GET ALL PROJECTS
+======================================================
+
+   Returns every project stored locally.
+
+   This is the foundation for:
+
+   - Mở lại công trình đã lưu
+   - Danh sách hồ sơ công trình
+   - Resume unfinished project
+   - Project lifecycle management
+
+   IMPORTANT:
+
+   Legacy projects without status are preserved.
+
 ====================================================== */
 
-async function getLatestProject() {
+async function getAllProjects() {
 
   await initDatabase();
 
@@ -401,29 +468,123 @@ async function getLatestProject() {
       request.onsuccess = () => {
 
         const list =
-          request.result;
-
-
-        if (
-          list.length === 0
-        ) {
-
-          resolve(null);
-
-          return;
-
-        }
+          request.result || [];
 
 
         list.sort(
-          (a, b) =>
-            new Date(b.createdAt) -
-            new Date(a.createdAt)
+          (a, b) => {
+
+            const dateA =
+              new Date(
+                a.updatedAt ||
+                a.createdAt ||
+                0
+              );
+
+
+            const dateB =
+              new Date(
+                b.updatedAt ||
+                b.createdAt ||
+                0
+              );
+
+
+            return dateB - dateA;
+
+          }
         );
 
 
         resolve(
-          list[0]
+          list
+        );
+
+      };
+
+
+      request.onerror = () => {
+
+        reject(
+          request.error
+        );
+
+      };
+
+    }
+  );
+
+}
+
+
+/* ======================================================
+   GET LATEST PROJECT
+====================================================== */
+
+async function getLatestProject() {
+
+  const list =
+    await getAllProjects();
+
+
+  if (
+    list.length === 0
+  ) {
+
+    return null;
+
+  }
+
+
+  return list[0];
+
+}
+
+
+/* ======================================================
+   GET PROJECT BY ID
+====================================================== */
+
+async function getProject(
+  projectId
+) {
+
+  await initDatabase();
+
+
+  if (
+    !projectId
+  ) {
+
+    return null;
+
+  }
+
+
+  return new Promise(
+    (resolve, reject) => {
+
+
+      const tx =
+        db.transaction(
+          STORES.PROJECTS,
+          "readonly"
+        );
+
+
+      const request =
+        tx.objectStore(
+          STORES.PROJECTS
+        ).get(
+          projectId
+        );
+
+
+      request.onsuccess = () => {
+
+        resolve(
+          request.result ||
+          null
         );
 
       };
@@ -643,7 +804,9 @@ async function updateGISObject(gisObject) {
    GET GIS OBJECT
 ====================================================== */
 
-async function getGISObject(objectId) {
+async function getGISObject(
+  objectId
+) {
 
   await initDatabase();
 
@@ -662,7 +825,9 @@ async function getGISObject(objectId) {
       const request =
         tx.objectStore(
           STORES.GIS_OBJECTS
-        ).get(objectId);
+        ).get(
+          objectId
+        );
 
 
       request.onsuccess = () => {
@@ -890,6 +1055,10 @@ window.DB = {
   createProject,
 
   updateProject,
+
+  getProject,
+
+  getAllProjects,
 
   getLatestProject,
 
