@@ -1,278 +1,330 @@
-// ======================================================
-// TGS Platform Genesis 2.0
-// TGS02-WEB-LINEAR-004
-// IndexedDB GIS Foundation
-// REV02
-//
-// Purpose:
-// - Preserve existing Project database.
-// - Add unified GIS Object store.
-// - Add complete Project retrieval.
-// - Prepare WebApp GIS Lab for Digital Twin.
-// - Keep GIS objects independent from map provider.
-//
-// Architecture:
-//
-// TGS_SURVEY_DB
-//   │
-//   ├── projects
-//   │      ├── DRAFT
-//   │      ├── IN_PROGRESS
-//   │      ├── COMPLETED
-//   │      └── SAVED
-//   │
-//   └── gisObjects
-//          ├── pipe
-//          ├── valve
-//          ├── tee
-//          ├── elbow
-//          ├── waterStation
-//          └── customerMeter
-//
-// REV02 CHANGE:
-//
-// - Added getAllProjects().
-// - Existing project data is preserved.
-// - Existing database version remains compatible.
-// - No project is deleted or reset.
-//
-// IMPORTANT:
-// - Existing project data is preserved.
-// - GIS objects belong to a project.
-// - layerType determines the GIS class.
-// - geometry is provider-independent.
-// - No real GIS data is inserted automatically.
-// ======================================================
+/* ==========================================================
+   TGS Platform Genesis 2.0
+   TGS02-WEB-LINEAR-003
+   db.js
+   REV03
 
+   GIS-01 — REAL GIS DATA FOUNDATION
+
+   Purpose:
+   - Preserve existing Project Lifecycle data.
+   - Preserve IndexedDB database TGS_SURVEY_DB.
+   - Preserve DB_VERSION 3.
+   - Preserve projects store.
+   - Preserve gisObjects store.
+   - Prepare GIS persistence for REAL field survey data.
+   - No synthetic/demo GIS data is created here.
+   - GIS objects belong to exactly one project through projectId.
+
+   IMPORTANT:
+   - This file only provides data persistence.
+   - It does NOT create fake GIS objects.
+   - It does NOT automatically seed any GIS data.
+   - Real GIS data will be created by explicit survey actions.
+========================================================== */
+
+
+/* ==========================================================
+   DATABASE CONFIGURATION
+========================================================== */
 
 const DB_NAME = "TGS_SURVEY_DB";
 
 const DB_VERSION = 3;
 
-
 let db = null;
 
 
-/* ======================================================
-   STORES
-====================================================== */
+/* ==========================================================
+   OBJECT STORES
+========================================================== */
 
 const STORES = {
 
-  PROJECTS: "projects",
+  PROJECTS:
+    "projects",
 
-  GIS_OBJECTS: "gisObjects"
+  GIS_OBJECTS:
+    "gisObjects"
 
 };
 
 
-/* ======================================================
+/* ==========================================================
    GIS LAYER TYPES
-====================================================== */
+==========================================================
+
+   Registry only.
+
+   These are valid GIS object categories.
+
+   No data is created automatically.
+
+========================================================== */
 
 const GIS_LAYER_TYPES = {
 
-  PIPE: "pipe",
+  SURVEY_POINT:
+    "surveyPoint",
 
-  VALVE: "valve",
+  SURVEY_ROUTE:
+    "surveyRoute",
 
-  TEE: "tee",
+  PIPE:
+    "pipe",
 
-  ELBOW: "elbow",
+  VALVE:
+    "valve",
 
-  WATER_STATION: "waterStation",
+  TEE:
+    "tee",
 
-  CUSTOMER_METER: "customerMeter"
+  ELBOW:
+    "elbow",
+
+  WATER_STATION:
+    "waterStation",
+
+  CUSTOMER_METER:
+    "customerMeter"
 
 };
 
 
-/* ======================================================
-   INIT DATABASE
-====================================================== */
+/* ==========================================================
+   DATABASE INITIALIZATION
+========================================================== */
 
 function initDatabase() {
 
-  return new Promise((resolve, reject) => {
+  return new Promise(
+    (resolve, reject) => {
 
+      /* ----------------------------------------------------
+         Already initialized
+      ---------------------------------------------------- */
 
-    /* --------------------------------------------------
-       Existing connection
-    -------------------------------------------------- */
+      if (db) {
 
-    if (db) {
+        resolve(db);
 
-      resolve(db);
-
-      return;
-
-    }
-
-
-    const request =
-      indexedDB.open(
-        DB_NAME,
-        DB_VERSION
-      );
-
-
-    /* --------------------------------------------------
-       ERROR
-    -------------------------------------------------- */
-
-    request.onerror = () => {
-
-      reject(
-        request.error
-      );
-
-    };
-
-
-    /* --------------------------------------------------
-       UPGRADE
-    -------------------------------------------------- */
-
-    request.onupgradeneeded = (e) => {
-
-      const database =
-        e.target.result;
-
-
-      /* =================================================
-         PROJECTS
-      ================================================= */
-
-      if (
-        !database.objectStoreNames.contains(
-          STORES.PROJECTS
-        )
-      ) {
-
-        const projectStore =
-          database.createObjectStore(
-            STORES.PROJECTS,
-            {
-              keyPath: "projectId"
-            }
-          );
-
-
-        projectStore.createIndex(
-          "createdAt",
-          "createdAt"
-        );
+        return;
 
       }
 
 
-      /* =================================================
-         GIS OBJECTS
-      ================================================= */
-
-      if (
-        !database.objectStoreNames.contains(
-          STORES.GIS_OBJECTS
-        )
-      ) {
-
-        const gisStore =
-          database.createObjectStore(
-            STORES.GIS_OBJECTS,
-            {
-              keyPath: "objectId"
-            }
-          );
-
-
-        /* ------------------------------------------------
-           PROJECT INDEX
-        ------------------------------------------------ */
-
-        gisStore.createIndex(
-          "projectId",
-          "projectId"
+      const request =
+        indexedDB.open(
+          DB_NAME,
+          DB_VERSION
         );
 
 
-        /* ------------------------------------------------
-           LAYER TYPE INDEX
-        ------------------------------------------------ */
+      /* ----------------------------------------------------
+         OPEN ERROR
+      ---------------------------------------------------- */
 
-        gisStore.createIndex(
-          "layerType",
-          "layerType"
+      request.onerror = () => {
+
+        reject(
+          request.error
         );
-
-
-        /* ------------------------------------------------
-           PROJECT + LAYER INDEX
-        ------------------------------------------------ */
-
-        gisStore.createIndex(
-          "projectLayer",
-          [
-            "projectId",
-            "layerType"
-          ]
-        );
-
-
-        /* ------------------------------------------------
-           CREATED AT
-        ------------------------------------------------ */
-
-        gisStore.createIndex(
-          "createdAt",
-          "createdAt"
-        );
-
-      }
-
-    };
-
-
-    /* --------------------------------------------------
-       SUCCESS
-    -------------------------------------------------- */
-
-    request.onsuccess = () => {
-
-      db =
-        request.result;
-
-
-      /*
-       * If another browser tab upgrades the database,
-       * close this connection so the next operation can
-       * reopen it cleanly.
-       */
-
-      db.onversionchange = () => {
-
-        db.close();
-
-        db = null;
 
       };
 
 
-      resolve(db);
+      /* ----------------------------------------------------
+         DATABASE UPGRADE
+      ---------------------------------------------------- */
 
-    };
+      request.onupgradeneeded = (event) => {
 
-  });
+        const database =
+          event.target.result;
+
+
+        /* ==================================================
+           PROJECTS STORE
+        ================================================== */
+
+        if (
+          !database.objectStoreNames.contains(
+            STORES.PROJECTS
+          )
+        ) {
+
+          const projectStore =
+            database.createObjectStore(
+              STORES.PROJECTS,
+              {
+                keyPath:
+                  "projectId"
+              }
+            );
+
+
+          projectStore.createIndex(
+            "createdAt",
+            "createdAt"
+          );
+
+
+          projectStore.createIndex(
+            "updatedAt",
+            "updatedAt"
+          );
+
+
+          projectStore.createIndex(
+            "status",
+            "status"
+          );
+
+
+          projectStore.createIndex(
+            "isSaved",
+            "isSaved"
+          );
+
+        }
+
+
+        /* ==================================================
+           GIS OBJECTS STORE
+        ================================================== */
+
+        if (
+          !database.objectStoreNames.contains(
+            STORES.GIS_OBJECTS
+          )
+        ) {
+
+          const gisStore =
+            database.createObjectStore(
+              STORES.GIS_OBJECTS,
+              {
+                keyPath:
+                  "objectId"
+              }
+            );
+
+
+          /* ----------------------------------------------
+             Project ownership
+          ---------------------------------------------- */
+
+          gisStore.createIndex(
+            "projectId",
+            "projectId"
+          );
+
+
+          /* ----------------------------------------------
+             GIS layer type
+          ---------------------------------------------- */
+
+          gisStore.createIndex(
+            "layerType",
+            "layerType"
+          );
+
+
+          /* ----------------------------------------------
+             Project + layer
+          ---------------------------------------------- */
+
+          gisStore.createIndex(
+            "projectLayer",
+            [
+              "projectId",
+              "layerType"
+            ]
+          );
+
+
+          /* ----------------------------------------------
+             Creation time
+          ---------------------------------------------- */
+
+          gisStore.createIndex(
+            "createdAt",
+            "createdAt"
+          );
+
+
+          /* ----------------------------------------------
+             Update time
+          ---------------------------------------------- */
+
+          gisStore.createIndex(
+            "updatedAt",
+            "updatedAt"
+          );
+
+
+          /* ----------------------------------------------
+             Status
+          ---------------------------------------------- */
+
+          gisStore.createIndex(
+            "status",
+            "status"
+          );
+
+        }
+
+      };
+
+
+      /* ----------------------------------------------------
+         SUCCESS
+      ---------------------------------------------------- */
+
+      request.onsuccess = () => {
+
+        db =
+          request.result;
+
+
+        /* ----------------------------------------------
+           Database connection error
+        ---------------------------------------------- */
+
+        db.onerror = (event) => {
+
+          console.error(
+            "TGS IndexedDB Error:",
+            event.target.error
+          );
+
+        };
+
+
+        resolve(
+          db
+        );
+
+      };
+
+    }
+  );
 
 }
 
 
-/* ======================================================
-   PROJECT
-====================================================== */
+/* ==========================================================
+   PROJECT — CREATE
+========================================================== */
 
-async function createProject(data) {
+async function createProject(
+  data
+) {
 
   await initDatabase();
+
+
+  const now =
+    new Date().toISOString();
 
 
   const project = {
@@ -281,40 +333,108 @@ async function createProject(data) {
       crypto.randomUUID(),
 
     projectCode:
-      data.projectCode,
+      data.projectCode || "",
 
     projectName:
-      data.projectName,
+      data.projectName || "",
 
     location:
-      data.location,
+      data.location || "",
 
     organization:
-      data.organization,
+      data.organization || "",
 
-    surveyMode:
-      data.surveyMode ||
-      null,
+
+    /* ----------------------------------------------------
+       Project lifecycle
+    ---------------------------------------------------- */
 
     status:
       data.status ||
-      null,
+      "IN_PROGRESS",
 
     completed:
-      typeof data.completed === "boolean"
-        ? data.completed
-        : null,
+      data.completed === true,
 
     isSaved:
-      typeof data.isSaved === "boolean"
-        ? data.isSaved
-        : null,
+      data.isSaved === true,
+
+
+    /* ----------------------------------------------------
+       Timestamps
+    ---------------------------------------------------- */
 
     createdAt:
-      new Date().toISOString(),
+      data.createdAt ||
+      now,
 
     updatedAt:
       data.updatedAt ||
+      now
+
+  };
+
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const tx =
+        db.transaction(
+          STORES.PROJECTS,
+          "readwrite"
+        );
+
+
+      const store =
+        tx.objectStore(
+          STORES.PROJECTS
+        );
+
+
+      store.add(
+        project
+      );
+
+
+      tx.oncomplete = () => {
+
+        resolve(
+          project
+        );
+
+      };
+
+
+      tx.onerror = () => {
+
+        reject(
+          tx.error
+        );
+
+      };
+
+    }
+  );
+
+}
+
+
+/* ==========================================================
+   PROJECT — UPDATE
+========================================================== */
+
+async function updateProject(
+  project
+) {
+
+  await initDatabase();
+
+
+  const updatedProject = {
+
+    ...project,
+
+    updatedAt:
       new Date().toISOString()
 
   };
@@ -323,7 +443,6 @@ async function createProject(data) {
   return new Promise(
     (resolve, reject) => {
 
-
       const tx =
         db.transaction(
           STORES.PROJECTS,
@@ -331,14 +450,22 @@ async function createProject(data) {
         );
 
 
-      tx.objectStore(
-        STORES.PROJECTS
-      ).add(project);
+      const store =
+        tx.objectStore(
+          STORES.PROJECTS
+        );
+
+
+      store.put(
+        updatedProject
+      );
 
 
       tx.oncomplete = () => {
 
-        resolve(project);
+        resolve(
+          true
+        );
 
       };
 
@@ -357,91 +484,9 @@ async function createProject(data) {
 }
 
 
-/* ======================================================
-   UPDATE PROJECT
-====================================================== */
-
-async function updateProject(project) {
-
-  await initDatabase();
-
-
-  if (
-    !project ||
-    !project.projectId
-  ) {
-
-    throw new Error(
-      "projectId is required."
-    );
-
-  }
-
-
-  /*
-   * Keep updatedAt synchronized whenever a project
-   * changes state.
-   */
-
-  project.updatedAt =
-    new Date().toISOString();
-
-
-  return new Promise(
-    (resolve, reject) => {
-
-
-      const tx =
-        db.transaction(
-          STORES.PROJECTS,
-          "readwrite"
-        );
-
-
-      tx.objectStore(
-        STORES.PROJECTS
-      ).put(project);
-
-
-      tx.oncomplete = () => {
-
-        resolve(true);
-
-      };
-
-
-      tx.onerror = () => {
-
-        reject(
-          tx.error
-        );
-
-      };
-
-    }
-  );
-
-}
-
-
-/* ======================================================
-   GET ALL PROJECTS
-======================================================
-
-   Returns every project stored locally.
-
-   This is the foundation for:
-
-   - Mở lại công trình đã lưu
-   - Danh sách hồ sơ công trình
-   - Resume unfinished project
-   - Project lifecycle management
-
-   IMPORTANT:
-
-   Legacy projects without status are preserved.
-
-====================================================== */
+/* ==========================================================
+   PROJECT — GET ALL
+========================================================== */
 
 async function getAllProjects() {
 
@@ -451,7 +496,6 @@ async function getAllProjects() {
   return new Promise(
     (resolve, reject) => {
 
-
       const tx =
         db.transaction(
           STORES.PROJECTS,
@@ -459,16 +503,24 @@ async function getAllProjects() {
         );
 
 
-      const request =
+      const store =
         tx.objectStore(
           STORES.PROJECTS
-        ).getAll();
+        );
+
+
+      const request =
+        store.getAll();
 
 
       request.onsuccess = () => {
 
         const list =
-          request.result || [];
+          Array.isArray(
+            request.result
+          )
+            ? request.result
+            : [];
 
 
         list.sort(
@@ -517,18 +569,18 @@ async function getAllProjects() {
 }
 
 
-/* ======================================================
-   GET LATEST PROJECT
-====================================================== */
+/* ==========================================================
+   PROJECT — GET LATEST
+========================================================== */
 
 async function getLatestProject() {
 
-  const list =
+  const projects =
     await getAllProjects();
 
 
   if (
-    list.length === 0
+    projects.length === 0
   ) {
 
     return null;
@@ -536,14 +588,14 @@ async function getLatestProject() {
   }
 
 
-  return list[0];
+  return projects[0];
 
 }
 
 
-/* ======================================================
-   GET PROJECT BY ID
-====================================================== */
+/* ==========================================================
+   PROJECT — GET BY ID
+========================================================== */
 
 async function getProject(
   projectId
@@ -552,18 +604,8 @@ async function getProject(
   await initDatabase();
 
 
-  if (
-    !projectId
-  ) {
-
-    return null;
-
-  }
-
-
   return new Promise(
     (resolve, reject) => {
-
 
       const tx =
         db.transaction(
@@ -572,10 +614,14 @@ async function getProject(
         );
 
 
-      const request =
+      const store =
         tx.objectStore(
           STORES.PROJECTS
-        ).get(
+        );
+
+
+      const request =
+        store.get(
           projectId
         );
 
@@ -583,8 +629,7 @@ async function getProject(
       request.onsuccess = () => {
 
         resolve(
-          request.result ||
-          null
+          request.result || null
         );
 
       };
@@ -604,44 +649,90 @@ async function getProject(
 }
 
 
-/* ======================================================
-   GIS OBJECT
-======================================================
+/* ==========================================================
+   GIS OBJECT — NORMALIZE
+==========================================================
 
-   Generic GIS object.
+   This function prepares the common GIS object envelope.
 
-   Example:
+   Geometry:
+     {
+       type: "Point" | "LineString" | "Polygon",
+       coordinates: [...]
+     }
 
-   {
-     objectId: "...",
-     projectId: "...",
-     layerType: "pipe",
+   All coordinates are expected to use:
+     [longitude, latitude]
 
-     geometry: {
-       type: "LineString",
-       coordinates: [
-         [106.6601, 10.7626],
-         [106.6605, 10.7628]
-       ]
-     },
+   Coordinate-system details and field-survey metadata
+   belong in properties until the dedicated VN2000
+   layer is implemented.
 
-     properties: {
-       code: "P001",
-       name: "Ống DN150"
-     },
+========================================================== */
 
-     createdAt: "...",
-     updatedAt: "..."
-   }
+function normalizeGISObject(
+  data
+) {
 
-====================================================== */
+  const now =
+    new Date().toISOString();
 
-async function createGISObject(data) {
+
+  return {
+
+    objectId:
+      data.objectId ||
+      crypto.randomUUID(),
+
+
+    projectId:
+      data.projectId,
+
+
+    layerType:
+      data.layerType,
+
+
+    geometry:
+      data.geometry || null,
+
+
+    properties:
+      data.properties || {},
+
+
+    status:
+      data.status ||
+      "ACTIVE",
+
+
+    createdAt:
+      data.createdAt ||
+      now,
+
+
+    updatedAt:
+      data.updatedAt ||
+      now
+
+  };
+
+}
+
+
+/* ==========================================================
+   GIS OBJECT — CREATE
+========================================================== */
+
+async function createGISObject(
+  data
+) {
 
   await initDatabase();
 
 
   if (
+    !data ||
     !data.projectId
   ) {
 
@@ -663,43 +754,40 @@ async function createGISObject(data) {
   }
 
 
-  const gisObject = {
+  if (
+    !data.geometry
+  ) {
 
-    objectId:
-      data.objectId ||
-      crypto.randomUUID(),
+    throw new Error(
+      "GIS object requires geometry."
+    );
 
-    projectId:
-      data.projectId,
+  }
 
-    layerType:
-      data.layerType,
 
-    geometry:
-      data.geometry ||
-      null,
+  const project =
+    await getProject(
+      data.projectId
+    );
 
-    properties:
-      data.properties ||
-      {},
 
-    status:
-      data.status ||
-      "ACTIVE",
+  if (!project) {
 
-    createdAt:
-      data.createdAt ||
-      new Date().toISOString(),
+    throw new Error(
+      "Cannot create GIS object: project not found."
+    );
 
-    updatedAt:
-      new Date().toISOString()
+  }
 
-  };
+
+  const gisObject =
+    normalizeGISObject(
+      data
+    );
 
 
   return new Promise(
     (resolve, reject) => {
-
 
       const tx =
         db.transaction(
@@ -708,9 +796,15 @@ async function createGISObject(data) {
         );
 
 
-      tx.objectStore(
-        STORES.GIS_OBJECTS
-      ).add(gisObject);
+      const store =
+        tx.objectStore(
+          STORES.GIS_OBJECTS
+        );
+
+
+      store.add(
+        gisObject
+      );
 
 
       tx.oncomplete = () => {
@@ -736,11 +830,13 @@ async function createGISObject(data) {
 }
 
 
-/* ======================================================
-   UPDATE GIS OBJECT
-====================================================== */
+/* ==========================================================
+   GIS OBJECT — UPDATE
+========================================================== */
 
-async function updateGISObject(gisObject) {
+async function updateGISObject(
+  gisObject
+) {
 
   await initDatabase();
 
@@ -751,19 +847,24 @@ async function updateGISObject(gisObject) {
   ) {
 
     throw new Error(
-      "GIS objectId is required."
+      "GIS object requires objectId."
     );
 
   }
 
 
-  gisObject.updatedAt =
-    new Date().toISOString();
+  const updatedObject = {
+
+    ...gisObject,
+
+    updatedAt:
+      new Date().toISOString()
+
+  };
 
 
   return new Promise(
     (resolve, reject) => {
-
 
       const tx =
         db.transaction(
@@ -772,15 +873,21 @@ async function updateGISObject(gisObject) {
         );
 
 
-      tx.objectStore(
-        STORES.GIS_OBJECTS
-      ).put(gisObject);
+      const store =
+        tx.objectStore(
+          STORES.GIS_OBJECTS
+        );
+
+
+      store.put(
+        updatedObject
+      );
 
 
       tx.oncomplete = () => {
 
         resolve(
-          gisObject
+          updatedObject
         );
 
       };
@@ -800,9 +907,9 @@ async function updateGISObject(gisObject) {
 }
 
 
-/* ======================================================
-   GET GIS OBJECT
-====================================================== */
+/* ==========================================================
+   GIS OBJECT — GET BY ID
+========================================================== */
 
 async function getGISObject(
   objectId
@@ -814,7 +921,6 @@ async function getGISObject(
   return new Promise(
     (resolve, reject) => {
 
-
       const tx =
         db.transaction(
           STORES.GIS_OBJECTS,
@@ -822,10 +928,14 @@ async function getGISObject(
         );
 
 
-      const request =
+      const store =
         tx.objectStore(
           STORES.GIS_OBJECTS
-        ).get(
+        );
+
+
+      const request =
+        store.get(
           objectId
         );
 
@@ -833,8 +943,7 @@ async function getGISObject(
       request.onsuccess = () => {
 
         resolve(
-          request.result ||
-          null
+          request.result || null
         );
 
       };
@@ -854,9 +963,9 @@ async function getGISObject(
 }
 
 
-/* ======================================================
-   GET GIS OBJECTS BY PROJECT
-====================================================== */
+/* ==========================================================
+   GIS OBJECT — GET BY PROJECT
+========================================================== */
 
 async function getGISObjectsByProject(
   projectId
@@ -868,7 +977,6 @@ async function getGISObjectsByProject(
   return new Promise(
     (resolve, reject) => {
 
-
       const tx =
         db.transaction(
           STORES.GIS_OBJECTS,
@@ -876,10 +984,14 @@ async function getGISObjectsByProject(
         );
 
 
-      const index =
+      const store =
         tx.objectStore(
           STORES.GIS_OBJECTS
-        ).index(
+        );
+
+
+      const index =
+        store.index(
           "projectId"
         );
 
@@ -892,8 +1004,30 @@ async function getGISObjectsByProject(
 
       request.onsuccess = () => {
 
+        const list =
+          Array.isArray(
+            request.result
+          )
+            ? request.result
+            : [];
+
+
+        list.sort(
+          (a, b) => {
+
+            return new Date(
+              a.createdAt || 0
+            ) -
+            new Date(
+              b.createdAt || 0
+            );
+
+          }
+        );
+
+
         resolve(
-          request.result
+          list
         );
 
       };
@@ -913,9 +1047,9 @@ async function getGISObjectsByProject(
 }
 
 
-/* ======================================================
-   GET GIS OBJECTS BY LAYER
-====================================================== */
+/* ==========================================================
+   GIS OBJECT — GET BY LAYER
+========================================================== */
 
 async function getGISObjectsByLayer(
   projectId,
@@ -928,7 +1062,6 @@ async function getGISObjectsByLayer(
   return new Promise(
     (resolve, reject) => {
 
-
       const tx =
         db.transaction(
           STORES.GIS_OBJECTS,
@@ -936,10 +1069,14 @@ async function getGISObjectsByLayer(
         );
 
 
-      const index =
+      const store =
         tx.objectStore(
           STORES.GIS_OBJECTS
-        ).index(
+        );
+
+
+      const index =
+        store.index(
           "projectLayer"
         );
 
@@ -956,7 +1093,11 @@ async function getGISObjectsByLayer(
       request.onsuccess = () => {
 
         resolve(
-          request.result
+          Array.isArray(
+            request.result
+          )
+            ? request.result
+            : []
         );
 
       };
@@ -976,9 +1117,9 @@ async function getGISObjectsByLayer(
 }
 
 
-/* ======================================================
-   DELETE GIS OBJECT
-====================================================== */
+/* ==========================================================
+   GIS OBJECT — DELETE
+========================================================== */
 
 async function deleteGISObject(
   objectId
@@ -990,7 +1131,6 @@ async function deleteGISObject(
   return new Promise(
     (resolve, reject) => {
 
-
       const tx =
         db.transaction(
           STORES.GIS_OBJECTS,
@@ -998,16 +1138,22 @@ async function deleteGISObject(
         );
 
 
-      tx.objectStore(
-        STORES.GIS_OBJECTS
-      ).delete(
+      const store =
+        tx.objectStore(
+          STORES.GIS_OBJECTS
+        );
+
+
+      store.delete(
         objectId
       );
 
 
       tx.oncomplete = () => {
 
-        resolve(true);
+        resolve(
+          true
+        );
 
       };
 
@@ -1026,9 +1172,94 @@ async function deleteGISObject(
 }
 
 
-/* ======================================================
-   GET GIS LAYER TYPES
-====================================================== */
+/* ==========================================================
+   GIS OBJECT — DELETE ALL BY PROJECT
+==========================================================
+
+   Administrative function only.
+
+   It is intentionally NOT called automatically by the app.
+
+   This protects real survey data from accidental deletion
+   during normal project opening/loading.
+
+========================================================== */
+
+async function deleteGISObjectsByProject(
+  projectId
+) {
+
+  await initDatabase();
+
+
+  const objects =
+    await getGISObjectsByProject(
+      projectId
+    );
+
+
+  if (
+    objects.length === 0
+  ) {
+
+    return 0;
+
+  }
+
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const tx =
+        db.transaction(
+          STORES.GIS_OBJECTS,
+          "readwrite"
+        );
+
+
+      const store =
+        tx.objectStore(
+          STORES.GIS_OBJECTS
+        );
+
+
+      objects.forEach(
+        object => {
+
+          store.delete(
+            object.objectId
+          );
+
+        }
+      );
+
+
+      tx.oncomplete = () => {
+
+        resolve(
+          objects.length
+        );
+
+      };
+
+
+      tx.onerror = () => {
+
+        reject(
+          tx.error
+        );
+
+      };
+
+    }
+  );
+
+}
+
+
+/* ==========================================================
+   GIS LAYER TYPES
+========================================================== */
 
 function getGISLayerTypes() {
 
@@ -1039,15 +1270,51 @@ function getGISLayerTypes() {
 }
 
 
-/* ======================================================
+/* ==========================================================
+   DATABASE STATUS
+========================================================== */
+
+function getDatabaseInfo() {
+
+  return {
+
+    name:
+      DB_NAME,
+
+    version:
+      DB_VERSION,
+
+    stores: {
+
+      projects:
+        STORES.PROJECTS,
+
+      gisObjects:
+        STORES.GIS_OBJECTS
+
+    },
+
+    gisLayerTypes:
+      {
+        ...GIS_LAYER_TYPES
+      }
+
+  };
+
+}
+
+
+/* ==========================================================
    PUBLIC API
-====================================================== */
+========================================================== */
 
 window.DB = {
 
   /* Database */
 
   initDatabase,
+
+  getDatabaseInfo,
 
 
   /* Project */
@@ -1056,11 +1323,11 @@ window.DB = {
 
   updateProject,
 
-  getProject,
-
   getAllProjects,
 
   getLatestProject,
+
+  getProject,
 
 
   /* GIS */
@@ -1077,6 +1344,33 @@ window.DB = {
 
   deleteGISObject,
 
+  deleteGISObjectsByProject,
+
   getGISLayerTypes
 
 };
+
+
+/* ==========================================================
+   DEBUG
+========================================================== */
+
+console.log(
+  "TGS DB REV03 loaded:",
+  {
+    database:
+      DB_NAME,
+
+    version:
+      DB_VERSION,
+
+    stores:
+      STORES,
+
+    gis:
+      GIS_LAYER_TYPES,
+
+    syntheticData:
+      false
+  }
+);
