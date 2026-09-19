@@ -2,9 +2,9 @@
    TGS Platform Genesis 2.0
    TGS02-WEB-LINEAR-004
    app.js
-   REV04
+   REV05
 
-   GIS LAB - LAYER CONTROL
+   PROJECT LIFECYCLE + GIS LAB
 
    Architecture:
 
@@ -27,20 +27,37 @@
              ├── Water Station
              └── Customer Meter
 
-   REV04 PURPOSE:
+   PROJECT LIFECYCLE:
 
-   1. Connect Base Map control.
-   2. Connect TGS GIS Layer control.
-   3. Create temporary GIS LAB demo objects.
-   4. Verify independent layer visibility.
-   5. Preserve existing Survey / Project behavior.
+      APP OPEN
+         │
+         └── Hồ sơ công trình
+                │
+                ├── Tạo công trình mới
+                │
+                ├── Mở lại công trình đã lưu
+                │
+                └── Công trình đang dở
+                       └── Tiếp tục công trình
+
+   REV05 PURPOSE:
+
+   1. Connect new Project Home screen.
+   2. Stop auto-opening the latest project.
+   3. Detect unfinished / unsaved project.
+   4. Allow resume unfinished project.
+   5. Allow opening latest saved project.
+   6. Create new project as IN_PROGRESS.
+   7. Preserve existing GIS / Map behavior.
+   8. Preserve ArcGIS as default provider.
+   9. Preserve D001 and GIS LAB layers.
 
    IMPORTANT:
 
-   - Demo GIS objects are TEST DATA ONLY.
+   - GIS LAB demo objects are TEST DATA ONLY.
    - They are not real project GIS data.
    - Google provider is intentionally not activated.
-   - GPS / VN2000 are not modified in this revision.
+   - GPS / VN2000 are not modified.
 ========================================================== */
 
 
@@ -49,6 +66,12 @@
 ========================================================== */
 
 let currentProject = null;
+
+let latestProject = null;
+
+let draftProject = null;
+
+let savedProject = null;
 
 let dbReady = false;
 
@@ -82,6 +105,8 @@ L.Icon.Default.mergeOptions({
 const screens = [
 
   "screenSplash",
+
+  "screenProjectHome",
 
   "screenProject",
 
@@ -133,6 +158,684 @@ function show(screenId) {
 
 
 /* ==========================================================
+   PROJECT STATUS
+========================================================== */
+
+const ProjectStatus = {
+
+  DRAFT:
+    "DRAFT",
+
+  IN_PROGRESS:
+    "IN_PROGRESS",
+
+  COMPLETED:
+    "COMPLETED",
+
+  SAVED:
+    "SAVED"
+
+};
+
+
+/* ==========================================================
+   PROJECT STATUS HELPERS
+========================================================== */
+
+/*
+   Legacy project compatibility:
+
+   Các project được tạo bởi REV03 trước đây chưa có
+   trường status.
+
+   Không được coi chúng là project lỗi.
+
+   Project legacy được xem là hồ sơ đã lưu cho đến khi
+   có cơ chế trạng thái mới ghi rõ.
+*/
+
+function isDraftProject(project) {
+
+  if (!project) {
+
+    return false;
+
+  }
+
+
+  const status =
+    project.status;
+
+
+  if (
+    status === ProjectStatus.DRAFT ||
+    status === ProjectStatus.IN_PROGRESS
+  ) {
+
+    return true;
+
+  }
+
+
+  /*
+     Một số phiên bản tương lai có thể dùng:
+     isSaved / completed
+  */
+
+  if (
+    project.isSaved === false
+  ) {
+
+    return true;
+
+  }
+
+
+  if (
+    project.completed === false &&
+    project.status
+  ) {
+
+    return true;
+
+  }
+
+
+  return false;
+
+}
+
+
+function isSavedProject(project) {
+
+  if (!project) {
+
+    return false;
+
+  }
+
+
+  if (isDraftProject(project)) {
+
+    return false;
+
+  }
+
+
+  /*
+     Legacy project không có status:
+     giữ lại và xem như saved để không mất hồ sơ cũ.
+  */
+
+  if (
+    project.status === ProjectStatus.SAVED ||
+    project.status === ProjectStatus.COMPLETED
+  ) {
+
+    return true;
+
+  }
+
+
+  if (
+    project.isSaved === true ||
+    project.completed === true
+  ) {
+
+    return true;
+
+  }
+
+
+  return true;
+
+}
+
+
+/* ==========================================================
+   PROJECT HOME STATE
+========================================================== */
+
+function updateProjectHome() {
+
+  const notice =
+    $("projectDraftNotice");
+
+
+  const resumeButton =
+    $("btnResumeProject");
+
+
+  if (
+    draftProject &&
+    notice
+  ) {
+
+    notice.hidden = false;
+
+    if (resumeButton) {
+
+      resumeButton.hidden = false;
+
+    }
+
+  } else if (notice) {
+
+    notice.hidden = true;
+
+  }
+
+
+  updateSavedProjectHome();
+
+}
+
+
+/* ==========================================================
+   SAVED PROJECT HOME
+========================================================== */
+
+function updateSavedProjectHome() {
+
+  const list =
+    $("savedProjectList");
+
+
+  const items =
+    $("savedProjectItems");
+
+
+  if (!list || !items) {
+
+    return;
+
+  }
+
+
+  items.innerHTML = "";
+
+
+  if (!savedProject) {
+
+    const empty =
+      document.createElement("div");
+
+
+    empty.className =
+      "saved-project-empty";
+
+
+    empty.textContent =
+      "Chưa có công trình đã lưu.";
+
+
+    items.appendChild(
+      empty
+    );
+
+
+    return;
+
+  }
+
+
+  const card =
+    document.createElement("div");
+
+
+  card.className =
+    "saved-project-item";
+
+
+  const name =
+    document.createElement("strong");
+
+
+  name.textContent =
+    savedProject.projectName ||
+    "Công trình chưa đặt tên";
+
+
+  const code =
+    document.createElement("small");
+
+
+  code.textContent =
+    savedProject.projectCode
+      ? `Mã: ${savedProject.projectCode}`
+      : "Chưa có mã công trình";
+
+
+  const openButton =
+    document.createElement("button");
+
+
+  openButton.type =
+    "button";
+
+
+  openButton.className =
+    "primary-btn";
+
+
+  openButton.textContent =
+    "Mở công trình";
+
+
+  openButton.addEventListener(
+    "click",
+    () => {
+
+      openSavedProject();
+
+    }
+  );
+
+
+  card.appendChild(
+    name
+  );
+
+
+  card.appendChild(
+    code
+  );
+
+
+  card.appendChild(
+    openButton
+  );
+
+
+  items.appendChild(
+    card
+  );
+
+}
+
+
+/* ==========================================================
+   PROJECT HOME
+========================================================== */
+
+function openProjectHome() {
+
+  updateProjectHome();
+
+  show(
+    "screenProjectHome"
+  );
+
+}
+
+
+/* ==========================================================
+   PROJECT INFORMATION
+========================================================== */
+
+function updateHome() {
+
+  if (!currentProject) {
+
+    return;
+
+  }
+
+
+  const projectTitle =
+    $("projectTitle");
+
+
+  if (projectTitle) {
+
+    projectTitle.textContent =
+      currentProject.projectName ||
+      "Chưa có công trình";
+
+  }
+
+
+  const linearProject =
+    $("linearProject");
+
+
+  if (linearProject) {
+
+    linearProject.textContent =
+      currentProject.projectName ||
+      "Công trình";
+
+  }
+
+}
+
+
+/* ==========================================================
+   PROJECT FORM RESET
+========================================================== */
+
+function resetProjectForm() {
+
+  const fields = [
+
+    "projectName",
+
+    "projectCode",
+
+    "projectLocation",
+
+    "organization"
+
+  ];
+
+
+  fields.forEach(id => {
+
+    const field =
+      $(id);
+
+
+    if (field) {
+
+      field.value = "";
+
+    }
+
+  });
+
+}
+
+
+/* ==========================================================
+   NEW PROJECT
+========================================================== */
+
+function openNewProject() {
+
+  currentProject =
+    null;
+
+
+  resetProjectForm();
+
+
+  show(
+    "screenProject"
+  );
+
+}
+
+
+/* ==========================================================
+   CREATE PROJECT
+========================================================== */
+
+async function createProject() {
+
+  if (!dbReady) {
+
+    alert(
+      "Offline Database chưa sẵn sàng."
+    );
+
+
+    return;
+
+  }
+
+
+  const name =
+    $("projectName")
+      ? $("projectName").value.trim()
+      : "";
+
+
+  const code =
+    $("projectCode")
+      ? $("projectCode").value.trim()
+      : "";
+
+
+  const location =
+    $("projectLocation")
+      ? $("projectLocation").value.trim()
+      : "";
+
+
+  const organization =
+    $("organization")
+      ? $("organization").value.trim()
+      : "";
+
+
+  if (
+    name === "" ||
+    code === ""
+  ) {
+
+    alert(
+      "Nhập tên và mã công trình."
+    );
+
+
+    return;
+
+  }
+
+
+  try {
+
+    currentProject =
+      await DB.createProject({
+
+        projectName:
+          name,
+
+        projectCode:
+          code,
+
+        location:
+          location,
+
+        organization:
+          organization,
+
+        status:
+          ProjectStatus.IN_PROGRESS,
+
+        completed:
+          false,
+
+        isSaved:
+          false,
+
+        updatedAt:
+          new Date().toISOString()
+
+      });
+
+
+    /*
+       DB REV01 currently creates the project object
+       internally and may not yet copy all optional fields.
+
+       We therefore make the lifecycle state explicit
+       immediately after creation.
+    */
+
+    currentProject.status =
+      ProjectStatus.IN_PROGRESS;
+
+
+    currentProject.completed =
+      false;
+
+
+    currentProject.isSaved =
+      false;
+
+
+    currentProject.updatedAt =
+      new Date().toISOString();
+
+
+    if (
+      DB.updateProject
+    ) {
+
+      await DB.updateProject(
+        currentProject
+      );
+
+    }
+
+
+    draftProject =
+      currentProject;
+
+
+    latestProject =
+      currentProject;
+
+
+    updateHome();
+
+
+    show(
+      "screenSurveyHome"
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "TGS Project Create Error:",
+      error
+    );
+
+
+    alert(
+      "Không thể tạo hồ sơ công trình."
+    );
+
+  }
+
+}
+
+
+/* ==========================================================
+   RESUME DRAFT PROJECT
+========================================================== */
+
+function resumeDraftProject() {
+
+  if (!draftProject) {
+
+    alert(
+      "Không tìm thấy công trình đang thực hiện."
+    );
+
+
+    return;
+
+  }
+
+
+  currentProject =
+    draftProject;
+
+
+  updateHome();
+
+
+  show(
+    "screenSurveyHome"
+  );
+
+}
+
+
+/* ==========================================================
+   OPEN SAVED PROJECT
+========================================================== */
+
+function openSavedProject() {
+
+  if (!savedProject) {
+
+    alert(
+      "Chưa có công trình đã lưu."
+    );
+
+
+    return;
+
+  }
+
+
+  currentProject =
+    savedProject;
+
+
+  updateHome();
+
+
+  show(
+    "screenSurveyHome"
+  );
+
+}
+
+
+/* ==========================================================
+   SAVED PROJECT PANEL
+========================================================== */
+
+function openSavedProjectPanel() {
+
+  const list =
+    $("savedProjectList");
+
+
+  if (!list) {
+
+    openSavedProject();
+
+    return;
+
+  }
+
+
+  if (!savedProject) {
+
+    updateSavedProjectHome();
+
+  }
+
+
+  list.hidden =
+    false;
+
+}
+
+
+function closeSavedProjectPanel() {
+
+  const list =
+    $("savedProjectList");
+
+
+  if (list) {
+
+    list.hidden =
+      true;
+
+  }
+
+}
+
+
+/* ==========================================================
    MAP PROVIDERS
 ========================================================== */
 
@@ -170,15 +873,6 @@ const MapProviders = {
 
   /* --------------------------------------------------------
      GOOGLE
-  --------------------------------------------------------
-
-     Prepared only.
-
-     Google Maps will be integrated through an official
-     Google Maps Platform mechanism in a later sprint.
-
-     Direct Google tile URLs are intentionally NOT used.
-
   -------------------------------------------------------- */
 
   google: {
@@ -208,10 +902,6 @@ const MapProviders = {
 const GISLayerRegistry = {
 
 
-  /* --------------------------------------------------------
-     SURVEY POINT
-  -------------------------------------------------------- */
-
   surveyPoint: {
 
     id: "surveyPoint",
@@ -226,10 +916,6 @@ const GISLayerRegistry = {
 
   },
 
-
-  /* --------------------------------------------------------
-     SURVEY ROUTE
-  -------------------------------------------------------- */
 
   surveyRoute: {
 
@@ -246,10 +932,6 @@ const GISLayerRegistry = {
   },
 
 
-  /* --------------------------------------------------------
-     PIPE
-  -------------------------------------------------------- */
-
   pipe: {
 
     id: "pipe",
@@ -264,10 +946,6 @@ const GISLayerRegistry = {
 
   },
 
-
-  /* --------------------------------------------------------
-     VALVE
-  -------------------------------------------------------- */
 
   valve: {
 
@@ -284,10 +962,6 @@ const GISLayerRegistry = {
   },
 
 
-  /* --------------------------------------------------------
-     TEE
-  -------------------------------------------------------- */
-
   tee: {
 
     id: "tee",
@@ -302,10 +976,6 @@ const GISLayerRegistry = {
 
   },
 
-
-  /* --------------------------------------------------------
-     ELBOW
-  -------------------------------------------------------- */
 
   elbow: {
 
@@ -322,10 +992,6 @@ const GISLayerRegistry = {
   },
 
 
-  /* --------------------------------------------------------
-     WATER STATION
-  -------------------------------------------------------- */
-
   waterStation: {
 
     id: "waterStation",
@@ -340,10 +1006,6 @@ const GISLayerRegistry = {
 
   },
 
-
-  /* --------------------------------------------------------
-     CUSTOMER METER
-  -------------------------------------------------------- */
 
   customerMeter: {
 
@@ -364,30 +1026,10 @@ const GISLayerRegistry = {
 
 /* ==========================================================
    GIS LAB DEMO DATA
-==========================================================
-
-   IMPORTANT:
-
-   These coordinates are synthetic test geometry around
-   the existing D001 location.
-
-   They exist only to prove:
-
-   - layer visibility
-   - layer independence
-   - map interaction
-   - future GIS architecture
-
-   They are NOT real infrastructure data.
-
 ========================================================== */
 
 const GISLabData = {
 
-
-  /* --------------------------------------------------------
-     PIPE
-  -------------------------------------------------------- */
 
   pipe: [
 
@@ -404,10 +1046,6 @@ const GISLabData = {
   ],
 
 
-  /* --------------------------------------------------------
-     VALVE
-  -------------------------------------------------------- */
-
   valve: [
 
     [10.762622, 106.660172],
@@ -417,20 +1055,12 @@ const GISLabData = {
   ],
 
 
-  /* --------------------------------------------------------
-     TEE
-  -------------------------------------------------------- */
-
   tee: [
 
     [10.762850, 106.660350]
 
   ],
 
-
-  /* --------------------------------------------------------
-     ELBOW
-  -------------------------------------------------------- */
 
   elbow: [
 
@@ -439,20 +1069,12 @@ const GISLabData = {
   ],
 
 
-  /* --------------------------------------------------------
-     WATER STATION
-  -------------------------------------------------------- */
-
   waterStation: [
 
     [10.763350, 106.660800]
 
   ],
 
-
-  /* --------------------------------------------------------
-     CUSTOMER METER
-  -------------------------------------------------------- */
 
   customerMeter: [
 
@@ -473,10 +1095,6 @@ const GISLabData = {
 
 const GISLabLayerBuilder = {
 
-
-  /* --------------------------------------------------------
-     PIPE
-  -------------------------------------------------------- */
 
   createPipeLayer() {
 
@@ -500,10 +1118,6 @@ const GISLabLayerBuilder = {
 
   },
 
-
-  /* --------------------------------------------------------
-     VALVE
-  -------------------------------------------------------- */
 
   createValveLayer() {
 
@@ -549,10 +1163,6 @@ const GISLabLayerBuilder = {
   },
 
 
-  /* --------------------------------------------------------
-     TEE
-  -------------------------------------------------------- */
-
   createTeeLayer() {
 
     const group =
@@ -596,10 +1206,6 @@ const GISLabLayerBuilder = {
 
   },
 
-
-  /* --------------------------------------------------------
-     ELBOW
-  -------------------------------------------------------- */
 
   createElbowLayer() {
 
@@ -645,10 +1251,6 @@ const GISLabLayerBuilder = {
   },
 
 
-  /* --------------------------------------------------------
-     WATER STATION
-  -------------------------------------------------------- */
-
   createWaterStationLayer() {
 
     const group =
@@ -692,10 +1294,6 @@ const GISLabLayerBuilder = {
 
   },
 
-
-  /* --------------------------------------------------------
-     CUSTOMER METER
-  -------------------------------------------------------- */
 
   createCustomerMeterLayer() {
 
@@ -749,7 +1347,6 @@ const GISLabLayerBuilder = {
 
 const MapEngine = {
 
-
   map: null,
 
   marker: null,
@@ -766,10 +1363,6 @@ const MapEngine = {
 
   ],
 
-
-  /* --------------------------------------------------------
-     INITIALIZE
-  -------------------------------------------------------- */
 
   initialize() {
 
@@ -794,9 +1387,7 @@ const MapEngine = {
     if (!mapElement) {
 
       console.error(
-
         "TGS GIS: #map element was not found."
-
       );
 
 
@@ -804,10 +1395,6 @@ const MapEngine = {
 
     }
 
-
-    /* ------------------------------------------------------
-       CREATE MAP
-    ------------------------------------------------------ */
 
     this.map =
       L.map(
@@ -829,16 +1416,10 @@ const MapEngine = {
       );
 
 
-    /* ------------------------------------------------------
-       DEFAULT BASE MAP
-    ------------------------------------------------------ */
+    this.setBaseMap(
+      "arcgis"
+    );
 
-    this.setBaseMap("arcgis");
-
-
-    /* ------------------------------------------------------
-       SURVEY POINT D001
-    ------------------------------------------------------ */
 
     this.marker =
       L.marker(
@@ -859,25 +1440,15 @@ const MapEngine = {
 
 
     this.marker.bindPopup(
-
       "D001 - Điểm đầu tuyến"
-
     );
 
 
     this.marker.openPopup();
 
 
-    /* ------------------------------------------------------
-       CREATE GIS LAB LAYERS
-    ------------------------------------------------------ */
-
     this.createGISLabLayers();
 
-
-    /* ------------------------------------------------------
-       APPLY INITIAL VISIBILITY
-    ------------------------------------------------------ */
 
     this.applyAllGISLayerVisibility();
 
@@ -888,7 +1459,8 @@ const MapEngine = {
 
       {
 
-        engine: "Leaflet",
+        engine:
+          "Leaflet",
 
         provider:
           this.activeProvider,
@@ -904,10 +1476,6 @@ const MapEngine = {
 
   },
 
-
-  /* --------------------------------------------------------
-     CREATE GIS LAB LAYERS
-  -------------------------------------------------------- */
 
   createGISLabLayers() {
 
@@ -954,10 +1522,6 @@ const MapEngine = {
 
   },
 
-
-  /* --------------------------------------------------------
-     APPLY ALL GIS LAYER VISIBILITY
-  -------------------------------------------------------- */
 
   applyAllGISLayerVisibility() {
 
@@ -1011,19 +1575,14 @@ const MapEngine = {
   },
 
 
-  /* --------------------------------------------------------
-     SET BASE MAP
-  -------------------------------------------------------- */
-
   setBaseMap(providerId) {
 
     if (!this.map) {
 
       console.warn(
-
         "TGS GIS: Map has not been initialized."
-
       );
+
 
       return false;
 
@@ -1037,11 +1596,8 @@ const MapEngine = {
     if (!provider) {
 
       console.error(
-
         "TGS GIS: Unknown map provider:",
-
         providerId
-
       );
 
 
@@ -1053,9 +1609,7 @@ const MapEngine = {
     if (provider.enabled === false) {
 
       console.warn(
-
         `TGS GIS: Provider "${providerId}" is not active yet.`
-
       );
 
 
@@ -1064,26 +1618,18 @@ const MapEngine = {
     }
 
 
-    /* ------------------------------------------------------
-       REMOVE CURRENT BASE MAP
-    ------------------------------------------------------ */
-
     if (this.baseLayer) {
 
       this.map.removeLayer(
-
         this.baseLayer
-
       );
 
-      this.baseLayer = null;
+
+      this.baseLayer =
+        null;
 
     }
 
-
-    /* ------------------------------------------------------
-       TILE PROVIDER
-    ------------------------------------------------------ */
 
     if (provider.type === "tile") {
 
@@ -1098,9 +1644,7 @@ const MapEngine = {
 
 
       this.baseLayer.addTo(
-
         this.map
-
       );
 
 
@@ -1109,11 +1653,8 @@ const MapEngine = {
 
 
       console.log(
-
         "TGS GIS Base Map:",
-
         provider.name
-
       );
 
 
@@ -1123,11 +1664,8 @@ const MapEngine = {
 
 
     console.warn(
-
       "TGS GIS: Provider type not implemented:",
-
       provider.type
-
     );
 
 
@@ -1136,20 +1674,12 @@ const MapEngine = {
   },
 
 
-  /* --------------------------------------------------------
-     GET ACTIVE PROVIDER
-  -------------------------------------------------------- */
-
   getActiveProvider() {
 
     return this.activeProvider;
 
   },
 
-
-  /* --------------------------------------------------------
-     ZOOM IN
-  -------------------------------------------------------- */
 
   zoomIn() {
 
@@ -1162,10 +1692,6 @@ const MapEngine = {
   },
 
 
-  /* --------------------------------------------------------
-     ZOOM OUT
-  -------------------------------------------------------- */
-
   zoomOut() {
 
     if (this.map) {
@@ -1176,10 +1702,6 @@ const MapEngine = {
 
   },
 
-
-  /* --------------------------------------------------------
-     LOCATE
-  -------------------------------------------------------- */
 
   locate() {
 
@@ -1207,10 +1729,6 @@ const MapEngine = {
   },
 
 
-  /* --------------------------------------------------------
-     ADD GIS LAYER
-  -------------------------------------------------------- */
-
   addGISLayer(
     layerId,
     leafletLayer
@@ -1223,11 +1741,8 @@ const MapEngine = {
     if (!registry) {
 
       console.error(
-
         "TGS GIS: Unknown GIS layer:",
-
         layerId
-
       );
 
 
@@ -1239,11 +1754,8 @@ const MapEngine = {
     if (!leafletLayer) {
 
       console.error(
-
         "TGS GIS: Invalid Leaflet layer:",
-
         layerId
-
       );
 
 
@@ -1272,10 +1784,6 @@ const MapEngine = {
 
   },
 
-
-  /* --------------------------------------------------------
-     SHOW GIS LAYER
-  -------------------------------------------------------- */
 
   showGISLayer(layerId) {
 
@@ -1319,10 +1827,6 @@ const MapEngine = {
   },
 
 
-  /* --------------------------------------------------------
-     HIDE GIS LAYER
-  -------------------------------------------------------- */
-
   hideGISLayer(layerId) {
 
     const registry =
@@ -1365,10 +1869,6 @@ const MapEngine = {
   },
 
 
-  /* --------------------------------------------------------
-     TOGGLE GIS LAYER
-  -------------------------------------------------------- */
-
   toggleGISLayer(layerId) {
 
     const registry =
@@ -1378,11 +1878,8 @@ const MapEngine = {
     if (!registry) {
 
       console.error(
-
         "TGS GIS: Unknown GIS layer:",
-
         layerId
-
       );
 
 
@@ -1416,10 +1913,6 @@ const MapEngine = {
 const MapLayerControl = {
 
 
-  /* --------------------------------------------------------
-     BASE MAP CONTROL
-  -------------------------------------------------------- */
-
   bindBaseMapControls() {
 
     const controls =
@@ -1446,15 +1939,14 @@ const MapLayerControl = {
               "arcgis"
             );
 
+
             return;
 
           }
 
 
           console.log(
-
             "TGS GIS: Google provider is prepared but not activated."
-
           );
 
         }
@@ -1464,10 +1956,6 @@ const MapLayerControl = {
 
   },
 
-
-  /* --------------------------------------------------------
-     GIS LAYER CONTROL
-  -------------------------------------------------------- */
 
   bindGISLayerControls() {
 
@@ -1525,10 +2013,6 @@ const MapLayerControl = {
   },
 
 
-  /* --------------------------------------------------------
-     SYNC UI WITH REGISTRY
-  -------------------------------------------------------- */
-
   syncUI() {
 
     Object.keys(
@@ -1557,10 +2041,6 @@ const MapLayerControl = {
   },
 
 
-  /* --------------------------------------------------------
-     INITIALIZE
-  -------------------------------------------------------- */
-
   initialize() {
 
     this.bindBaseMapControls();
@@ -1572,120 +2052,6 @@ const MapLayerControl = {
   }
 
 };
-
-
-/* ==========================================================
-   PROJECT
-========================================================== */
-
-function updateHome() {
-
-  if (!currentProject) {
-
-    return;
-
-  }
-
-
-  const projectTitle =
-    $("projectTitle");
-
-
-  if (projectTitle) {
-
-    projectTitle.textContent =
-      currentProject.projectName;
-
-  }
-
-
-  const linearProject =
-    $("linearProject");
-
-
-  if (linearProject) {
-
-    linearProject.textContent =
-      currentProject.projectName;
-
-  }
-
-}
-
-
-/* ==========================================================
-   CREATE PROJECT
-========================================================== */
-
-async function createProject() {
-
-  if (!dbReady) {
-
-    alert(
-
-      "Offline Database chưa sẵn sàng."
-
-    );
-
-
-    return;
-
-  }
-
-
-  const name =
-    $("projectName").value.trim();
-
-
-  const code =
-    $("projectCode").value.trim();
-
-
-  if (
-    name === "" ||
-    code === ""
-  ) {
-
-    alert(
-
-      "Nhập tên và mã công trình."
-
-    );
-
-
-    return;
-
-  }
-
-
-  currentProject =
-    await DB.createProject({
-
-      projectName:
-        name,
-
-      projectCode:
-        code,
-
-      location:
-        $("projectLocation").value.trim(),
-
-      organization:
-        $("organization").value.trim()
-
-    });
-
-
-  updateHome();
-
-
-  show(
-
-    "screenSurveyHome"
-
-  );
-
-}
 
 
 /* ==========================================================
@@ -1708,23 +2074,85 @@ function bindButtons() {
     btnStart.onclick =
       () => {
 
-        if (currentProject) {
+        /*
+           IMPORTANT:
 
-          updateHome();
+           Không tự động mở currentProject.
 
-          show(
-            "screenSurveyHome"
-          );
+           Người dùng luôn đi qua Project Home để
+           lựa chọn:
+             - Tạo mới
+             - Mở lại
+             - Tiếp tục project đang dở
+        */
 
-        } else {
-
-          show(
-            "screenProject"
-          );
-
-        }
+        openProjectHome();
 
       };
+
+  }
+
+
+  /* --------------------------------------------------------
+     NEW PROJECT
+  -------------------------------------------------------- */
+
+  const btnNewProject =
+    $("btnNewProject");
+
+
+  if (btnNewProject) {
+
+    btnNewProject.onclick =
+      openNewProject;
+
+  }
+
+
+  /* --------------------------------------------------------
+     OPEN SAVED PROJECTS
+  -------------------------------------------------------- */
+
+  const btnOpenSavedProjects =
+    $("btnOpenSavedProjects");
+
+
+  if (btnOpenSavedProjects) {
+
+    btnOpenSavedProjects.onclick =
+      openSavedProjectPanel;
+
+  }
+
+
+  /* --------------------------------------------------------
+     CLOSE SAVED PROJECTS
+  -------------------------------------------------------- */
+
+  const btnCloseSavedProjects =
+    $("btnCloseSavedProjects");
+
+
+  if (btnCloseSavedProjects) {
+
+    btnCloseSavedProjects.onclick =
+      closeSavedProjectPanel;
+
+  }
+
+
+  /* --------------------------------------------------------
+     RESUME DRAFT
+  -------------------------------------------------------- */
+
+  const btnResumeProject =
+    $("btnResumeProject");
+
+
+  if (btnResumeProject) {
+
+    btnResumeProject.onclick =
+      resumeDraftProject;
 
   }
 
@@ -1782,12 +2210,33 @@ function bindButtons() {
 
 
   /* --------------------------------------------------------
-     BACK BUTTON
+     PROJECT HOME BACK
+  -------------------------------------------------------- */
+
+  const btnBackProjectHome =
+    $("btnBackProjectHome");
+
+
+  if (btnBackProjectHome) {
+
+    btnBackProjectHome.onclick =
+      openProjectHome;
+
+  }
+
+
+  /* --------------------------------------------------------
+     BACK BUTTONS
+  --------------------------------------------------------
+
+     Các back button của Survey / Point / Linear
+     vẫn quay về Survey Home.
+
   -------------------------------------------------------- */
 
   document
     .querySelectorAll(
-      ".back-btn"
+      "#screenPoint .back-btn, #screenLinear .back-btn"
     )
     .forEach(btn => {
 
@@ -1857,14 +2306,69 @@ function bindButtons() {
       () => {
 
         alert(
-
           "REV05 sẽ lấy GPS thật của thiết bị."
-
         );
 
       };
 
   }
+
+}
+
+
+/* ==========================================================
+   LOAD PROJECT STATE
+========================================================== */
+
+async function loadProjectState() {
+
+  latestProject =
+    await DB.getLatestProject();
+
+
+  currentProject =
+    null;
+
+
+  draftProject =
+    null;
+
+
+  savedProject =
+    null;
+
+
+  if (!latestProject) {
+
+    updateProjectHome();
+
+    return;
+
+  }
+
+
+  if (
+    isDraftProject(
+      latestProject
+    )
+  ) {
+
+    draftProject =
+      latestProject;
+
+  } else if (
+    isSavedProject(
+      latestProject
+    )
+  ) {
+
+    savedProject =
+      latestProject;
+
+  }
+
+
+  updateProjectHome();
 
 }
 
@@ -1916,15 +2420,33 @@ window.addEventListener(
         true;
 
 
-      currentProject =
-        await DB.getLatestProject();
+      await loadProjectState();
 
 
-      if (currentProject) {
+      console.log(
 
-        updateHome();
+        "TGS Project Lifecycle:",
 
-      }
+        {
+
+          latestProject:
+            latestProject
+              ? latestProject.projectName
+              : null,
+
+          draftProject:
+            draftProject
+              ? draftProject.projectName
+              : null,
+
+          savedProject:
+            savedProject
+              ? savedProject.projectName
+              : null
+
+        }
+
+      );
 
 
     } catch (err) {
@@ -1939,9 +2461,7 @@ window.addEventListener(
 
 
       alert(
-
         "Không thể khởi tạo bộ nhớ Offline."
-
       );
 
     }
