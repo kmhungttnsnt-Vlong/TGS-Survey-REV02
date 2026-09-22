@@ -1,90 +1,59 @@
 /* ==========================================================
-TGS Platform Genesis 2.0
-TGS02-WEB-LINEAR-004
-app.js
-REV09
+   TGS Platform Genesis 2.0
+   TGS02-WEB-LINEAR-004
+   app.js
+   REV10
 
-GIS-02.1 — REAL GPS READ
-
-Purpose:
-
-* Preserve verified Project Lifecycle.
-* Preserve ArcGIS default base map.
-* Preserve GIS Layer Control.
-* Preserve clean real-project map.
-* Read REAL device GPS.
-* Display GPS position / accuracy / altitude / time.
-* DO NOT save GPS to IndexedDB in this revision.
-* DO NOT create GIS Object in this revision.
-* DO NOT create demo/synthetic GIS data.
-
-GIS-02.1 flow:
-
-```
-   Device GPS
-        ↓
-   Browser Geolocation API
-        ↓
-   GPSManager
-        ↓
-   GPS HUD
-        ↓
-   QA
-```
-
-Later:
-
-```
-   GPS
-    ↓
-   Confirm
-    ↓
-   GIS Object
-    ↓
-   IndexedDB
-```
-
-========================================================== */
-
-/* ==========================================================
-GLOBAL STATE
+   QA BASELINE REV10
+   -----------------------------------------------
+   ✓ Startup Home
+   ✓ Resume Project
+   ✓ Saved Project
+   ✓ ArcGIS Default
+   ✓ Real GPS
+   ✓ GIS Layer Registry
 ========================================================== */
 
 let currentProject = null;
-
-let draftProject = null;
-
-let savedProjects = [];
-
 let dbReady = false;
-
-/* ==========================================================
-DOM HELPER
-========================================================== */
 
 const $ = (id) => document.getElementById(id);
 
 /* ==========================================================
-LEAFLET DEFAULT ICON
+   PROJECT STATE
+========================================================== */
+
+const PROJECT_STATUS = {
+  DRAFT: "draft",
+  COMPLETED: "completed"
+};
+
+/* ==========================================================
+   STARTUP STATE
+========================================================== */
+
+let startupState = {
+  draftProject: null,
+  savedProjects: []
+};
+
+/* ==========================================================
+   LEAFLET DEFAULT ICON
 ========================================================== */
 
 delete L.Icon.Default.prototype._getIconUrl;
 
 L.Icon.Default.mergeOptions({
-
-iconRetinaUrl:
-"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-
-iconUrl:
-"https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-
-shadowUrl:
-"https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
-
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
 });
 
 /* ==========================================================
-SCREEN MANAGER
+   SCREEN MANAGER
 ========================================================== */
 
 const screens = [
@@ -99,3095 +68,854 @@ const screens = [
 
 function show(screenId) {
 
-screens.forEach(id => {
-
-```
-const el = $(id);
-
-if (el) {
-
-  el.classList.remove("active");
-
-}
-```
-
-});
-
-const target = $(screenId);
-
-if (target) {
-
-```
-target.classList.add("active");
-```
-
-}
-
-if (screenId === "screenLinear") {
-
-```
-setTimeout(() => {
-
-  MapEngine.initialize();
-
-}, 200);
-```
-
-}
-
-}
-
-/* ==========================================================
-MAP PROVIDERS
-========================================================== */
-
-const MapProviders = {
-
-arcgis: {
-
-```
-id:
-  "arcgis",
-
-name:
-  "ArcGIS World Street Map",
-
-type:
-  "tile",
-
-enabled:
-  true,
-
-url:
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-
-options: {
-
-  maxZoom:
-    22,
-
-  attribution:
-    "Tiles © Esri — Sources: Esri, HERE, Garmin, Intermap, increment P Corp., GEBCO, USGS, FAO, NPS, NRCAN, GeoBase, IGN, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), OpenStreetMap contributors and the GIS User Community"
-
-}
-```
-
-},
-
-google: {
-
-```
-id:
-  "google",
-
-name:
-  "Google Maps",
-
-type:
-  "google-maps-platform",
-
-enabled:
-  false,
-
-status:
-  "PLANNED",
-
-note:
-  "Google Maps integration will use the official Google Maps Platform mechanism."
-```
-
-}
-
-};
-
-/* ==========================================================
-GIS LAYER REGISTRY
-========================================================== */
-
-const GISLayerRegistry = {
-
-surveyPoint: {
-
-```
-id:
-  "surveyPoint",
-
-name:
-  "Điểm khảo sát",
-
-category:
-  "survey",
-
-visible:
-  true,
-
-layer:
-  null
-```
-
-},
-
-surveyRoute: {
-
-```
-id:
-  "surveyRoute",
-
-name:
-  "Tuyến khảo sát",
-
-category:
-  "survey",
-
-visible:
-  true,
-
-layer:
-  null
-```
-
-},
-
-pipe: {
-
-```
-id:
-  "pipe",
-
-name:
-  "Ống",
-
-category:
-  "network",
-
-visible:
-  false,
-
-layer:
-  null
-```
-
-},
-
-valve: {
-
-```
-id:
-  "valve",
-
-name:
-  "Van",
-
-category:
-  "network",
-
-visible:
-  false,
-
-layer:
-  null
-```
-
-},
-
-tee: {
-
-```
-id:
-  "tee",
-
-name:
-  "Tê",
-
-category:
-  "network",
-
-visible:
-  false,
-
-layer:
-  null
-```
-
-},
-
-elbow: {
-
-```
-id:
-  "elbow",
-
-name:
-  "Cút",
-
-category:
-  "network",
-
-visible:
-  false,
-
-layer:
-  null
-```
-
-},
-
-waterStation: {
-
-```
-id:
-  "waterStation",
-
-name:
-  "Trạm cấp nước",
-
-category:
-  "facility",
-
-visible:
-  false,
-
-layer:
-  null
-```
-
-},
-
-customerMeter: {
-
-```
-id:
-  "customerMeter",
-
-name:
-  "Đồng hồ khách hàng",
-
-category:
-  "customer",
-
-visible:
-  false,
-
-layer:
-  null
-```
-
-}
-
-};
-
-/* ==========================================================
-RESET GIS LAYER REGISTRY
-========================================================== */
-
-function resetGISLayerRegistry() {
-
-Object.keys(
-GISLayerRegistry
-).forEach(layerId => {
-
-```
-GISLayerRegistry[layerId].layer =
-  null;
-```
-
-});
-
-}
-
-/* ==========================================================
-GPS STATE
-========================================================== */
-
-const GPSState = {
-
-available:
-false,
-
-acquiring:
-false,
-
-latitude:
-null,
-
-longitude:
-null,
-
-accuracy:
-null,
-
-altitude:
-null,
-
-altitudeAccuracy:
-null,
-
-heading:
-null,
-
-speed:
-null,
-
-timestamp:
-null,
-
-error:
-null
-
-};
-
-/* ==========================================================
-GPS MANAGER
-========================================================== */
-
-const GPSManager = {
-
-/* --------------------------------------------------------
-CHECK BROWSER SUPPORT
--------------------------------------------------------- */
-
-isSupported() {
-
-```
-return (
-  "geolocation" in navigator
-);
-```
-
-},
-
-/* --------------------------------------------------------
-RESET
--------------------------------------------------------- */
-
-reset() {
-
-```
-GPSState.available =
-  false;
-
-GPSState.acquiring =
-  false;
-
-GPSState.latitude =
-  null;
-
-GPSState.longitude =
-  null;
-
-GPSState.accuracy =
-  null;
-
-GPSState.altitude =
-  null;
-
-GPSState.altitudeAccuracy =
-  null;
-
-GPSState.heading =
-  null;
-
-GPSState.speed =
-  null;
-
-GPSState.timestamp =
-  null;
-
-GPSState.error =
-  null;
-```
-
-},
-
-/* --------------------------------------------------------
-FORMAT NUMBER
--------------------------------------------------------- */
-
-formatNumber(
-value,
-decimals = 6
-) {
-
-```
-if (
-  value === null ||
-  value === undefined ||
-  Number.isNaN(value)
-) {
-
-  return "--";
-
-}
-
-
-return Number(value)
-  .toFixed(decimals);
-```
-
-},
-
-/* --------------------------------------------------------
-FORMAT ACCURACY
--------------------------------------------------------- */
-
-formatAccuracy(
-accuracy
-) {
-
-```
-if (
-  accuracy === null ||
-  accuracy === undefined ||
-  Number.isNaN(accuracy)
-) {
-
-  return "--";
-
-}
-
-
-return `${Math.round(accuracy)} m`;
-```
-
-},
-
-/* --------------------------------------------------------
-FORMAT ALTITUDE
--------------------------------------------------------- */
-
-formatAltitude(
-altitude
-) {
-
-```
-if (
-  altitude === null ||
-  altitude === undefined ||
-  Number.isNaN(altitude)
-) {
-
-  return "--";
-
-}
-
-
-return `${altitude.toFixed(1)} m`;
-```
-
-},
-
-/* --------------------------------------------------------
-UPDATE HUD
--------------------------------------------------------- */
-
-updateHUD() {
-
-```
-const gpsText =
-  $("gpsText");
-
-
-if (!gpsText) {
-
-  return;
-
-}
-
-
-if (
-  GPSState.acquiring
-) {
-
-  gpsText.textContent =
-    "Đang lấy GPS...";
-
-  return;
-
-}
-
-
-if (
-  GPSState.error
-) {
-
-  gpsText.textContent =
-    `GPS lỗi: ${GPSState.error}`;
-
-  return;
-
-}
-
-
-if (
-  !GPSState.available
-) {
-
-  gpsText.textContent =
-    "GPS chưa lấy";
-
-  return;
-
-}
-
-
-gpsText.textContent =
-  [
-    `Lat ${this.formatNumber(GPSState.latitude, 6)}`,
-    `Lon ${this.formatNumber(GPSState.longitude, 6)}`,
-    `±${this.formatAccuracy(GPSState.accuracy)}`
-  ].join(" • ");
-```
-
-},
-
-/* --------------------------------------------------------
-UPDATE MAP
--------------------------------------------------------- */
-
-updateMap() {
-
-```
-if (
-  !GPSState.available
-) {
-
-  return;
-
-}
-
-
-if (
-  !MapEngine.map
-) {
-
-  return;
-
-}
-
-
-const lat =
-  GPSState.latitude;
-
-
-const lon =
-  GPSState.longitude;
-
-
-if (
-  lat === null ||
-  lon === null
-) {
-
-  return;
-
-}
-
-
-const position =
-  [
-    lat,
-    lon
-  ];
-
-
-/*
- * IMPORTANT:
- *
- * This is ONLY a temporary GPS position marker.
- *
- * It is NOT a GIS Object.
- * It is NOT saved to IndexedDB.
- * It is NOT a survey point.
- *
- * The marker will be replaced by the real
- * survey-object workflow in GIS-02.2.
- */
-
-MapEngine.showGPSPosition(
-  position
-);
-```
-
-},
-
-/* --------------------------------------------------------
-SUCCESS
--------------------------------------------------------- */
-
-handleSuccess(
-position
-) {
-
-```
-const coords =
-  position.coords;
-
-
-GPSState.available =
-  true;
-
-GPSState.acquiring =
-  false;
-
-GPSState.error =
-  null;
-
-
-GPSState.latitude =
-  coords.latitude;
-
-
-GPSState.longitude =
-  coords.longitude;
-
-
-GPSState.accuracy =
-  coords.accuracy;
-
-
-GPSState.altitude =
-  coords.altitude;
-
-
-GPSState.altitudeAccuracy =
-  coords.altitudeAccuracy;
-
-
-GPSState.heading =
-  coords.heading;
-
-
-GPSState.speed =
-  coords.speed;
-
-
-GPSState.timestamp =
-  position.timestamp;
-
-
-this.updateHUD();
-
-this.updateMap();
-
-
-console.log(
-  "TGS GPS — REAL POSITION:",
-  {
-    latitude:
-      GPSState.latitude,
-
-    longitude:
-      GPSState.longitude,
-
-    accuracy:
-      GPSState.accuracy,
-
-    altitude:
-      GPSState.altitude,
-
-    timestamp:
-      new Date(
-        GPSState.timestamp
-      ).toISOString()
-  }
-);
-```
-
-},
-
-/* --------------------------------------------------------
-ERROR
--------------------------------------------------------- */
-
-handleError(
-error
-) {
-
-```
-GPSState.acquiring =
-  false;
-
-GPSState.available =
-  false;
-
-
-let message =
-  "Không xác định";
-
-
-switch (
-  error.code
-) {
-
-  case 1:
-
-    message =
-      "Bạn chưa cấp quyền vị trí.";
-
-    break;
-
-
-  case 2:
-
-    message =
-      "Thiết bị không xác định được vị trí.";
-
-    break;
-
-
-  case 3:
-
-    message =
-      "GPS hết thời gian chờ.";
-
-    break;
-
-
-  default:
-
-    message =
-      error.message ||
-      "Không xác định";
-
-    break;
-
-}
-
-
-GPSState.error =
-  message;
-
-
-this.updateHUD();
-
-
-console.error(
-  "TGS GPS Error:",
-  error
-);
-```
-
-},
-
-/* --------------------------------------------------------
-ACQUIRE CURRENT POSITION
--------------------------------------------------------- */
-
-acquire() {
-
-```
-if (
-  !this.isSupported()
-) {
-
-  GPSState.error =
-    "Trình duyệt không hỗ trợ GPS.";
-
-  this.updateHUD();
-
-  alert(
-    "Thiết bị/trình duyệt không hỗ trợ GPS."
-  );
-
-  return;
-
-}
-
-
-if (
-  GPSState.acquiring
-) {
-
-  return;
-
-}
-
-
-GPSState.acquiring =
-  true;
-
-GPSState.error =
-  null;
-
-
-this.updateHUD();
-
-
-navigator.geolocation.getCurrentPosition(
-
-  position => {
-
-    this.handleSuccess(
-      position
-    );
-
-  },
-
-  error => {
-
-    this.handleError(
-      error
-    );
-
-  },
-
-  {
-
-    enableHighAccuracy:
-      true,
-
-    timeout:
-      20000,
-
-    maximumAge:
-      0
-
-  }
-
-);
-```
-
-}
-
-};
-
-/* ==========================================================
-PROJECT LIFECYCLE HELPERS
-========================================================== */
-
-function isDraftProject(
-project
-) {
-
-if (!project) {
-
-```
-return false;
-```
-
-}
-
-if (
-project.status === "DRAFT" ||
-project.status === "IN_PROGRESS"
-) {
-
-```
-return true;
-```
-
-}
-
-if (
-project.status === "COMPLETED" &&
-project.isSaved !== true
-) {
-
-```
-return true;
-```
-
-}
-
-if (
-project.isSaved === false
-) {
-
-```
-return true;
-```
-
-}
-
-if (
-project.completed === false &&
-project.isSaved !== true
-) {
-
-```
-return true;
-```
-
-}
-
-return false;
-
-}
-
-function isSavedProject(
-project
-) {
-
-if (!project) {
-
-```
-return false;
-```
-
-}
-
-if (
-project.status === "SAVED"
-) {
-
-```
-return true;
-```
-
-}
-
-if (
-project.isSaved === true
-) {
-
-```
-return true;
-```
-
-}
-
-const hasLifecycleFields =
-
-```
-Object.prototype.hasOwnProperty.call(
-  project,
-  "status"
-) ||
-
-Object.prototype.hasOwnProperty.call(
-  project,
-  "isSaved"
-) ||
-
-Object.prototype.hasOwnProperty.call(
-  project,
-  "completed"
-);
-```
-
-if (
-!hasLifecycleFields
-) {
-
-```
-return true;
-```
-
-}
-
-return false;
-
-}
-
-/* ==========================================================
-PROJECT HOME
-========================================================== */
-
-function updateProjectHome() {
-
-const notice =
-$("projectDraftNotice");
-
-const resumeButton =
-$("btnResumeProject");
-
-const savedList =
-$("savedProjectList");
-
-const savedItems =
-$("savedProjectItems");
-
-if (notice) {
-
-```
-notice.style.display =
-  draftProject
-    ? ""
-    : "none";
-```
-
-}
-
-if (resumeButton) {
-
-```
-resumeButton.style.display =
-  draftProject
-    ? ""
-    : "none";
-```
-
-}
-
-if (savedList) {
-
-```
-savedList.style.display =
-  savedProjects.length > 0
-    ? ""
-    : "none";
-```
-
-}
-
-if (!savedItems) {
-
-```
-return;
-```
-
-}
-
-savedItems.innerHTML =
-"";
-
-if (
-savedProjects.length === 0
-) {
-
-```
-const empty =
-  document.createElement(
-    "div"
-  );
-
-
-empty.className =
-  "empty";
-
-
-empty.textContent =
-  "Chưa có công trình đã lưu.";
-
-
-savedItems.appendChild(
-  empty
-);
-
-
-return;
-```
-
-}
-
-savedProjects.forEach(
-project => {
-
-```
-  const button =
-    document.createElement(
-      "button"
-    );
-
-
-  button.type =
-    "button";
-
-
-  button.className =
-    "saved-project-item";
-
-
-  button.dataset.projectId =
-    project.projectId;
-
-
-  const name =
-    document.createElement(
-      "strong"
-    );
-
-
-  name.textContent =
-    project.projectName ||
-    "Công trình chưa đặt tên";
-
-
-  const meta =
-    document.createElement(
-      "small"
-    );
-
-
-  meta.textContent =
-    [
-      project.projectCode,
-      project.location
-    ]
-      .filter(Boolean)
-      .join(" • ");
-
-
-  button.appendChild(
-    name
-  );
-
-
-  button.appendChild(
-    meta
-  );
-
-
-  button.onclick =
-    () =>
-      openSavedProject(
-        project.projectId
-      );
-
-
-  savedItems.appendChild(
-    button
-  );
-
-}
-```
-
-);
-
-}
-
-/* ==========================================================
-LOAD PROJECT STATE
-========================================================== */
-
-async function loadProjectState() {
-
-if (!dbReady) {
-
-```
-return;
-```
-
-}
-
-try {
-
-```
-let projects =
-  await DB.getAllProjects();
-
-
-if (
-  !Array.isArray(projects)
-) {
-
-  projects = [];
-
-}
-
-
-draftProject =
-  projects.find(
-    project =>
-      isDraftProject(
-        project
-      )
-  ) || null;
-
-
-savedProjects =
-  projects.filter(
-    project =>
-      isSavedProject(
-        project
-      )
-  );
-
-
-updateProjectHome();
-```
-
-} catch (error) {
-
-```
-console.error(
-  "TGS Project State Error:",
-  error
-);
-```
-
-}
-
-}
-
-/* ==========================================================
-UPDATE CURRENT PROJECT UI
-========================================================== */
-
-function updateHome() {
-
-if (!currentProject) {
-
-```
-return;
-```
-
-}
-
-const projectTitle =
-$("projectTitle");
-
-if (projectTitle) {
-
-```
-projectTitle.textContent =
-  currentProject.projectName ||
-  "Chưa có công trình";
-```
-
-}
-
-const linearProject =
-$("linearProject");
-
-if (linearProject) {
-
-```
-linearProject.textContent =
-  currentProject.projectName ||
-  "Công trình";
-```
-
-}
-
-const completeTitle =
-$("completeProjectTitle");
-
-if (completeTitle) {
-
-```
-completeTitle.textContent =
-  "Hoàn thành khảo sát";
-```
-
-}
-
-const completeName =
-$("completeProjectName");
-
-if (completeName) {
-
-```
-completeName.textContent =
-  currentProject.projectName ||
-  "Chưa có công trình";
-```
-
-}
-
-const completeCode =
-$("completeProjectCode");
-
-if (completeCode) {
-
-```
-completeCode.textContent =
-  currentProject.projectCode ||
-  "";
-```
-
-}
-
-}
-
-/* ==========================================================
-PROJECT FORM RESET
-========================================================== */
-
-function resetProjectForm() {
-
-[
-
-```
-"projectName",
-"projectCode",
-"projectLocation",
-"organization"
-```
-
-].forEach(
-id => {
-
-```
-  const input =
-    $(id);
-
-
-  if (input) {
-
-    input.value =
-      "";
-
-  }
-
-}
-```
-
-);
-
-}
-
-/* ==========================================================
-CREATE PROJECT
-========================================================== */
-
-async function createProject() {
-
-if (!dbReady) {
-
-```
-alert(
-  "Offline Database chưa sẵn sàng."
-);
-
-return;
-```
-
-}
-
-const name =
-$("projectName")
-? $("projectName")
-.value
-.trim()
-: "";
-
-const code =
-$("projectCode")
-? $("projectCode")
-.value
-.trim()
-: "";
-
-if (
-name === "" ||
-code === ""
-) {
-
-```
-alert(
-  "Nhập tên và mã công trình."
-);
-
-return;
-```
-
-}
-
-try {
-
-```
-currentProject =
-  await DB.createProject({
-
-    projectName:
-      name,
-
-    projectCode:
-      code,
-
-    location:
-      $("projectLocation")
-        ? $("projectLocation")
-            .value
-            .trim()
-        : "",
-
-    organization:
-      $("organization")
-        ? $("organization")
-            .value
-            .trim()
-        : "",
-
-    status:
-      "IN_PROGRESS",
-
-    completed:
-      false,
-
-    isSaved:
-      false
-
+  screens.forEach(id => {
+    const el = $(id);
+    if (el) el.classList.remove("active");
   });
 
+  const target = $(screenId);
 
-resetGISLayerRegistry();
+  if (target) target.classList.add("active");
 
-GPSManager.reset();
-
-GPSManager.updateHUD();
-
-updateHome();
-
-await loadProjectState();
-
-show(
-  "screenSurveyHome"
-);
-```
-
-} catch (error) {
-
-```
-console.error(
-  "TGS Create Project Error:",
-  error
-);
-
-
-alert(
-  "Không thể tạo công trình."
-);
-```
-
-}
+  if (screenId === "screenLinear") {
+    setTimeout(() => MapEngine.initialize(), 150);
+  }
 
 }
 
 /* ==========================================================
-RESUME PROJECT
-========================================================== */
-
-async function resumeProject() {
-
-if (!draftProject) {
-
-```
-return;
-```
-
-}
-
-currentProject =
-draftProject;
-
-resetGISLayerRegistry();
-
-GPSManager.reset();
-
-GPSManager.updateHUD();
-
-updateHome();
-
-show(
-"screenSurveyHome"
-);
-
-}
-
-/* ==========================================================
-OPEN SAVED PROJECT
-========================================================== */
-
-async function openSavedProject(
-projectId
-) {
-
-if (!dbReady) {
-
-```
-return;
-```
-
-}
-
-try {
-
-```
-const project =
-  await DB.getProject(
-    projectId
-  );
-
-
-if (!project) {
-
-  alert(
-    "Không tìm thấy công trình."
-  );
-
-
-  await loadProjectState();
-
-  return;
-
-}
-
-
-currentProject =
-  project;
-
-
-resetGISLayerRegistry();
-
-GPSManager.reset();
-
-GPSManager.updateHUD();
-
-updateHome();
-
-show(
-  "screenSurveyHome"
-);
-```
-
-} catch (error) {
-
-```
-console.error(
-  "TGS Open Project Error:",
-  error
-);
-
-
-alert(
-  "Không thể mở công trình."
-);
-```
-
-}
-
-}
-
-/* ==========================================================
-COMPLETE PROJECT
-========================================================== */
-
-async function completeProject() {
-
-if (!currentProject) {
-
-```
-return;
-```
-
-}
-
-const confirmed =
-window.confirm(
-"Bạn có chắc chắn muốn hoàn thành khảo sát công trình này?"
-);
-
-if (!confirmed) {
-
-```
-return;
-```
-
-}
-
-currentProject = {
-
-```
-...currentProject,
-
-status:
-  "COMPLETED",
-
-completed:
-  true,
-
-isSaved:
-  false,
-
-completedAt:
-  new Date().toISOString(),
-
-updatedAt:
-  new Date().toISOString()
-```
-
-};
-
-try {
-
-```
-await DB.updateProject(
-  currentProject
-);
-
-
-await loadProjectState();
-
-updateHome();
-
-updateCompletionScreen();
-
-show(
-  "screenProjectComplete"
-);
-```
-
-} catch (error) {
-
-```
-console.error(
-  "TGS Complete Project Error:",
-  error
-);
-
-
-alert(
-  "Không thể hoàn thành công trình."
-);
-```
-
-}
-
-}
-
-/* ==========================================================
-UPDATE COMPLETION SCREEN
-========================================================== */
-
-function updateCompletionScreen() {
-
-if (!currentProject) {
-
-```
-return;
-```
-
-}
-
-const name =
-$("completeProjectName");
-
-if (name) {
-
-```
-name.textContent =
-  currentProject.projectName ||
-  "Chưa có công trình";
-```
-
-}
-
-const code =
-$("completeProjectCode");
-
-if (code) {
-
-```
-code.textContent =
-  currentProject.projectCode ||
-  "";
-```
-
-}
-
-}
-
-/* ==========================================================
-SAVE PROJECT
-========================================================== */
-
-async function saveProject() {
-
-if (!currentProject) {
-
-```
-return;
-```
-
-}
-
-const confirmed =
-window.confirm(
-"Lưu công trình này vào danh sách công trình đã lưu?"
-);
-
-if (!confirmed) {
-
-```
-return;
-```
-
-}
-
-currentProject = {
-
-```
-...currentProject,
-
-status:
-  "SAVED",
-
-completed:
-  true,
-
-isSaved:
-  true,
-
-savedAt:
-  new Date().toISOString(),
-
-updatedAt:
-  new Date().toISOString()
-```
-
-};
-
-try {
-
-```
-await DB.updateProject(
-  currentProject
-);
-
-
-await loadProjectState();
-
-updateHome();
-
-show(
-  "screenProject"
-);
-```
-
-} catch (error) {
-
-```
-console.error(
-  "TGS Save Project Error:",
-  error
-);
-
-
-alert(
-  "Không thể lưu công trình."
-);
-```
-
-}
-
-}
-
-/* ==========================================================
-RETURN TO SURVEY
-========================================================== */
-
-function backToSurveyFromCompletion() {
-
-if (!currentProject) {
-
-```
-return;
-```
-
-}
-
-show(
-"screenSurveyHome"
-);
-
-}
-
-/* ==========================================================
-MAP ENGINE
+   MAP ENGINE
 ========================================================== */
 
 const MapEngine = {
 
-map:
-null,
+  map: null,
+  marker: null,
 
-marker:
-null,
+  baseLayers: {},
+  activeLayer: null,
 
-gpsMarker:
-null,
+  defaultLocation: [10.762622,106.660172],
 
-gpsAccuracyCircle:
-null,
+  initialize(){
 
-baseLayer:
-null,
-
-activeProvider:
-"arcgis",
-
-defaultLocation: [
-
-```
-10.762622,
-106.660172
-```
-
-],
-
-/* --------------------------------------------------------
-INITIALIZE
--------------------------------------------------------- */
-
-initialize() {
-
-```
-if (this.map) {
-
-  setTimeout(
-    () => {
-
+    if(this.map){
       this.map.invalidateSize();
-
-    },
-    50
-  );
-
-
-  return;
-
-}
-
-
-const mapElement =
-  $("map");
-
-
-if (!mapElement) {
-
-  console.error(
-    "TGS GIS: #map element was not found."
-  );
-
-  return;
-
-}
-
-
-resetGISLayerRegistry();
-
-
-this.map =
-  L.map(
-    "map",
-    {
-      zoomControl:
-        false
+      return;
     }
-  )
-  .setView(
-    this.defaultLocation,
-    18
-  );
 
+    this.map=L.map("map",{
+      zoomControl:false
+    }).setView(this.defaultLocation,18);
 
-this.setBaseMap(
-  "arcgis"
-);
+    /* ArcGIS Street */
 
-
-/*
- * IMPORTANT:
- *
- * No demo marker.
- * No D001 marker.
- * No synthetic GIS object.
- *
- * GPS position is created only after the user
- * explicitly requests GPS.
- */
-
-
-this.applyAllGISLayerVisibility();
-
-
-console.log(
-  "TGS GIS initialized:",
-  {
-
-    engine:
-      "Leaflet",
-
-    provider:
-      this.activeProvider,
-
-    projectId:
-      currentProject
-        ? currentProject.projectId
-        : null,
-
-    mode:
-      "REAL_PROJECT",
-
-    syntheticData:
-      false
-
-  }
-);
-```
-
-},
-
-/* --------------------------------------------------------
-SET BASE MAP
--------------------------------------------------------- */
-
-setBaseMap(
-providerId
-) {
-
-```
-if (!this.map) {
-
-  console.warn(
-    "TGS GIS: Map has not been initialized."
-  );
-
-  return false;
-
-}
-
-
-const provider =
-  MapProviders[
-    providerId
-  ];
-
-
-if (!provider) {
-
-  console.error(
-    "TGS GIS: Unknown map provider:",
-    providerId
-  );
-
-  return false;
-
-}
-
-
-if (
-  provider.enabled === false
-) {
-
-  console.warn(
-    `TGS GIS: Provider "${providerId}" is not active yet.`
-  );
-
-  return false;
-
-}
-
-
-if (this.baseLayer) {
-
-  this.map.removeLayer(
-    this.baseLayer
-  );
-
-
-  this.baseLayer =
-    null;
-
-}
-
-
-if (
-  provider.type === "tile"
-) {
-
-  this.baseLayer =
-    L.tileLayer(
-      provider.url,
-      provider.options
-    );
-
-
-  this.baseLayer.addTo(
-    this.map
-  );
-
-
-  this.activeProvider =
-    providerId;
-
-
-  console.log(
-    "TGS GIS Base Map:",
-    provider.name
-  );
-
-
-  return true;
-
-}
-
-
-console.warn(
-  "TGS GIS: Provider type not implemented:",
-  provider.type
-);
-
-
-return false;
-```
-
-},
-
-/* --------------------------------------------------------
-SHOW TEMPORARY GPS POSITION
--------------------------------------------------------- */
-
-showGPSPosition(
-position
-) {
-
-```
-if (!this.map) {
-
-  return;
-
-}
-
-
-const lat =
-  position[0];
-
-
-const lon =
-  position[1];
-
-
-/* ------------------------------------------------------
-   Temporary GPS marker
------------------------------------------------------- */
-
-if (!this.gpsMarker) {
-
-  this.gpsMarker =
-    L.circleMarker(
-      position,
+    this.baseLayers.arcgis=L.tileLayer(
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
       {
-
-        radius:
-          8,
-
-        weight:
-          3,
-
-        fillOpacity:
-          0.85
-
+        maxZoom:22,
+        attribution:"Tiles © Esri"
       }
     );
 
+    this.baseLayers.arcgis.addTo(this.map);
 
-  this.gpsMarker.addTo(
-    this.map
-  );
+    this.activeLayer=this.baseLayers.arcgis;
 
-} else {
+    this.marker=L.marker(this.defaultLocation).addTo(this.map);
 
-  this.gpsMarker.setLatLng(
-    position
-  );
+    this.marker.bindPopup("D001 - Điểm đầu tuyến");
 
-}
+    this.marker.openPopup();
 
+  },
 
-/* ------------------------------------------------------
-   Accuracy circle
------------------------------------------------------- */
+  switchBaseMap(name){
 
-if (
-  GPSState.accuracy !== null &&
-  !Number.isNaN(
-    GPSState.accuracy
-  )
-) {
+    if(!this.map) return;
 
-  if (
-    !this.gpsAccuracyCircle
-  ) {
+    if(this.activeLayer){
+      this.map.removeLayer(this.activeLayer);
+    }
 
-    this.gpsAccuracyCircle =
-      L.circle(
-        position,
-        {
+    if(name==="arcgis"){
+      this.activeLayer=this.baseLayers.arcgis;
+    }
 
-          radius:
-            GPSState.accuracy,
+    this.activeLayer.addTo(this.map);
 
-          weight:
-            1,
+  },
 
-          fillOpacity:
-            0.08
+  zoomIn(){
 
-        }
-      );
+    if(this.map) this.map.zoomIn();
 
+  },
 
-    this.gpsAccuracyCircle.addTo(
-      this.map
-    );
+  zoomOut(){
 
-  } else {
+    if(this.map) this.map.zoomOut();
 
-    this.gpsAccuracyCircle.setLatLng(
-      position
-    );
+  },
 
+  locate(){
 
-    this.gpsAccuracyCircle.setRadius(
-      GPSState.accuracy
-    );
+    GPS.readCurrentLocation();
 
   }
 
-}
+};
 
+/* ==========================================================
+   GPS ENGINE (REAL DEVICE)
+========================================================== */
 
-/* ------------------------------------------------------
-   Move map to GPS position
------------------------------------------------------- */
+const GPS={
 
-this.map.flyTo(
-  position,
-  Math.max(
-    this.map.getZoom(),
-    18
-  ),
-  {
+  watchId:null,
 
-    duration:
-      0.8
+  readCurrentLocation(){
 
-  }
-);
+    if(!navigator.geolocation){
 
-
-console.log(
-  "TGS GPS temporary map position:",
-  {
-    latitude:
-      lat,
-
-    longitude:
-      lon,
-
-    accuracy:
-      GPSState.accuracy
-  }
-);
-```
-
-},
-
-/* --------------------------------------------------------
-GET ACTIVE PROVIDER
--------------------------------------------------------- */
-
-getActiveProvider() {
-
-```
-return this.activeProvider;
-```
-
-},
-
-/* --------------------------------------------------------
-ADD GIS LAYER
--------------------------------------------------------- */
-
-addGISLayer(
-layerId,
-leafletLayer
-) {
-
-```
-const registry =
-  GISLayerRegistry[
-    layerId
-  ];
-
-
-if (!registry) {
-
-  console.error(
-    "TGS GIS: Unknown GIS layer:",
-    layerId
-  );
-
-  return false;
-
-}
-
-
-if (!leafletLayer) {
-
-  console.error(
-    "TGS GIS: Invalid Leaflet layer:",
-    layerId
-  );
-
-  return false;
-
-}
-
-
-registry.layer =
-  leafletLayer;
-
-
-if (
-  registry.visible &&
-  this.map
-) {
-
-  leafletLayer.addTo(
-    this.map
-  );
-
-}
-
-
-return true;
-```
-
-},
-
-/* --------------------------------------------------------
-SHOW GIS LAYER
--------------------------------------------------------- */
-
-showGISLayer(
-layerId
-) {
-
-```
-const registry =
-  GISLayerRegistry[
-    layerId
-  ];
-
-
-if (!registry) {
-
-  return false;
-
-}
-
-
-registry.visible =
-  true;
-
-
-if (
-  registry.layer &&
-  this.map
-) {
-
-  if (
-    !this.map.hasLayer(
-      registry.layer
-    )
-  ) {
-
-    registry.layer.addTo(
-      this.map
-    );
-
-  }
-
-}
-
-
-return true;
-```
-
-},
-
-/* --------------------------------------------------------
-HIDE GIS LAYER
--------------------------------------------------------- */
-
-hideGISLayer(
-layerId
-) {
-
-```
-const registry =
-  GISLayerRegistry[
-    layerId
-  ];
-
-
-if (!registry) {
-
-  return false;
-
-}
-
-
-registry.visible =
-  false;
-
-
-if (
-  registry.layer &&
-  this.map
-) {
-
-  if (
-    this.map.hasLayer(
-      registry.layer
-    )
-  ) {
-
-    this.map.removeLayer(
-      registry.layer
-    );
-
-  }
-
-}
-
-
-return true;
-```
-
-},
-
-/* --------------------------------------------------------
-TOGGLE GIS LAYER
--------------------------------------------------------- */
-
-toggleGISLayer(
-layerId
-) {
-
-```
-const registry =
-  GISLayerRegistry[
-    layerId
-  ];
-
-
-if (!registry) {
-
-  console.error(
-    "TGS GIS: Unknown GIS layer:",
-    layerId
-  );
-
-  return false;
-
-}
-
-
-if (
-  registry.visible
-) {
-
-  return this.hideGISLayer(
-    layerId
-  );
-
-}
-
-
-return this.showGISLayer(
-  layerId
-);
-```
-
-},
-
-/* --------------------------------------------------------
-APPLY GIS VISIBILITY
--------------------------------------------------------- */
-
-applyAllGISLayerVisibility() {
-
-```
-if (!this.map) {
-
-  return;
-
-}
-
-
-Object.keys(
-  GISLayerRegistry
-).forEach(
-  layerId => {
-
-    const registry =
-      GISLayerRegistry[
-        layerId
-      ];
-
-
-    if (!registry.layer) {
+      updateGPSStatus("Thiết bị không hỗ trợ GPS");
 
       return;
 
     }
 
+    navigator.geolocation.getCurrentPosition(
 
-    if (
-      registry.visible
-    ) {
+      this.success,
 
-      if (
-        !this.map.hasLayer(
-          registry.layer
-        )
-      ) {
+      this.error,
 
-        registry.layer.addTo(
-          this.map
-        );
-
+      {
+        enableHighAccuracy:true,
+        timeout:15000,
+        maximumAge:0
       }
 
-    } else {
+    );
 
-      if (
-        this.map.hasLayer(
-          registry.layer
-        )
-      ) {
+  },
 
-        this.map.removeLayer(
-          registry.layer
-        );
+  success(position){
 
+    const lat=position.coords.latitude;
+    const lon=position.coords.longitude;
+    const acc=Math.round(position.coords.accuracy);
+
+    updateGPSStatus(
+      `Lat ${lat.toFixed(6)} · Lon ${lon.toFixed(6)} · ±${acc} m`
+    );
+
+    if($("gpsAccuracy")){
+      $("gpsAccuracy").textContent=`± ${acc} m`;
+    }
+
+    if($("vnCoord")){
+      $("vnCoord").textContent=`${lat.toFixed(4)} / ${lon.toFixed(4)}`;
+    }
+
+    if(MapEngine.map){
+
+      const p=[lat,lon];
+
+      MapEngine.map.flyTo(p,19,{duration:1});
+
+      if(MapEngine.marker){
+        MapEngine.marker.setLatLng(p);
       }
 
     }
 
+  },
+
+  error(err){
+
+    updateGPSStatus("GPS chưa kết nối");
+
+    console.warn(err);
+
   }
-);
-```
 
-},
+};
 
-/* --------------------------------------------------------
-ZOOM IN
--------------------------------------------------------- */
+function updateGPSStatus(text){
 
-zoomIn() {
-
-```
-if (this.map) {
-
-  this.map.zoomIn();
-
-}
-```
-
-},
-
-/* --------------------------------------------------------
-ZOOM OUT
--------------------------------------------------------- */
-
-zoomOut() {
-
-```
-if (this.map) {
-
-  this.map.zoomOut();
-
-}
-```
-
-},
-
-/* --------------------------------------------------------
-LOCATE — CURRENT GPS
--------------------------------------------------------- */
-
-locate() {
-
-```
-if (
-  GPSState.available
-) {
-
-  this.showGPSPosition(
-
-    [
-      GPSState.latitude,
-      GPSState.longitude
-    ]
-
-  );
-
-
-  return;
+  if($("gpsText")){
+    $("gpsText").textContent=text;
+  }
 
 }
 
+/* ==========================================================
+   GIS LAYER REGISTRY
+========================================================== */
 
-GPSManager.acquire();
-```
+const GISLayers={
 
-}
+  point:true,
+  route:true,
+  pipe:true,
+  valve:true,
+  tee:true,
+  elbow:true,
+  station:true,
+  meter:true
 
 };
 
 /* ==========================================================
-MAP LAYER CONTROL
+   STARTUP HOME
 ========================================================== */
 
-const MapLayerControl = {
+async function loadProjectState(){
 
-/* --------------------------------------------------------
-BASE MAP
--------------------------------------------------------- */
+  startupState.draftProject=await DB.getDraftProject();
 
-bindBaseMapControls() {
+  startupState.savedProjects=await DB.getSavedProjects();
 
-```
-const controls =
-  document.querySelectorAll(
-    'input[name="baseMap"]'
-  );
-
-
-controls.forEach(
-  control => {
-
-    control.addEventListener(
-      "change",
-      () => {
-
-        const providerId =
-          control.value;
-
-
-        if (
-          providerId === "arcgis"
-        ) {
-
-          MapEngine.setBaseMap(
-            "arcgis"
-          );
-
-
-          return;
-
-        }
-
-
-        console.log(
-          "TGS GIS: Google provider is prepared but not activated."
-        );
-
-      }
-    );
-
-  }
-);
-```
-
-},
-
-/* --------------------------------------------------------
-GIS LAYERS
--------------------------------------------------------- */
-
-bindGISLayerControls() {
-
-```
-const controls =
-  document.querySelectorAll(
-    "[data-layer] input[type='checkbox']"
-  );
-
-
-controls.forEach(
-  control => {
-
-    const option =
-      control.closest(
-        "[data-layer]"
-      );
-
-
-    if (!option) {
-
-      return;
-
-    }
-
-
-    const layerId =
-      option.dataset.layer;
-
-
-    control.addEventListener(
-      "change",
-      () => {
-
-        MapEngine.toggleGISLayer(
-          layerId
-        );
-
-
-        console.log(
-          "TGS GIS Layer:",
-          layerId,
-
-          GISLayerRegistry[
-            layerId
-          ]
-            ? GISLayerRegistry[
-                layerId
-              ].visible
-            : null
-
-        );
-
-      }
-    );
-
-  }
-);
-```
-
-},
-
-/* --------------------------------------------------------
-SYNC UI
--------------------------------------------------------- */
-
-syncUI() {
-
-```
-Object.keys(
-  GISLayerRegistry
-).forEach(
-  layerId => {
-
-    const registry =
-      GISLayerRegistry[
-        layerId
-      ];
-
-
-    const option =
-      document.querySelector(
-        `[data-layer="${layerId}"] input[type="checkbox"]`
-      );
-
-
-    if (option) {
-
-      option.checked =
-        registry.visible;
-
-    }
-
-  }
-);
-```
-
-},
-
-/* --------------------------------------------------------
-INITIALIZE
--------------------------------------------------------- */
-
-initialize() {
-
-```
-this.bindBaseMapControls();
-
-this.bindGISLayerControls();
-
-this.syncUI();
-```
+  renderStartupHome();
 
 }
 
-};
+function renderStartupHome(){
+
+  const draftCard=$("draftProjectCard");
+
+  if(draftCard){
+
+    if(startupState.draftProject){
+
+      draftCard.style.display="block";
+
+      if($("draftProjectName")){
+        $("draftProjectName").textContent=
+          startupState.draftProject.projectName;
+      }
+
+    }else{
+
+      draftCard.style.display="none";
+
+    }
+
+  }
+
+}
+
+function openDraftProject(){
+
+  currentProject=startupState.draftProject;
+
+  updateProjectHome();
+
+  show("screenSurveyHome");
+
+}
+
+async function openSavedProject(id){
+
+  currentProject=await DB.getProjectById(id);
+
+  updateProjectHome();
+
+  show("screenSurveyHome");
+
+}
 
 /* ==========================================================
-BUTTON EVENTS
+   PROJECT UI
 ========================================================== */
 
-function bindButtons() {
+function updateProjectHome(){
 
-/* --------------------------------------------------------
-START
--------------------------------------------------------- */
+  if(!currentProject) return;
 
-const btnStart =
-$("btnStart");
+  if($("projectTitle")){
+    $("projectTitle").textContent=currentProject.projectName;
+  }
 
-if (btnStart) {
+  if($("linearProject")){
+    $("linearProject").textContent=currentProject.projectName;
+  }
 
-```
-btnStart.onclick =
-  () => {
+  if($("completeProjectName")){
+    $("completeProjectName").textContent=currentProject.projectName;
+  }
 
-    updateProjectHome();
+  if($("completeProjectCode")){
+    $("completeProjectCode").textContent=currentProject.projectCode;
+  }
 
-    show(
-      "screenProject"
-    );
+}
+function resetProjectForm(){
 
-  };
-```
+  if($("projectName")) $("projectName").value="";
+
+  if($("projectCode")) $("projectCode").value="";
+
+  if($("projectLocation")) $("projectLocation").value="";
+
+  if($("organization")) $("organization").value="";
 
 }
 
-/* --------------------------------------------------------
-NEW PROJECT
--------------------------------------------------------- */
+/* ==========================================================
+   CREATE PROJECT
+========================================================== */
 
-const btnNewProject =
-$("btnNewProject");
+async function createProject(){
 
-if (btnNewProject) {
+  if(!dbReady){
+    alert("Offline Database chưa sẵn sàng.");
+    return;
+  }
 
-```
-btnNewProject.onclick =
-  () => {
+  const name=$("projectName").value.trim();
+  const code=$("projectCode").value.trim();
 
-    resetProjectForm();
+  if(name===""||code===""){
+    alert("Vui lòng nhập Tên và Mã công trình.");
+    return;
+  }
 
-    show(
-      "screenProject"
-    );
+  currentProject=await DB.createProject({
 
-  };
-```
+    projectName:name,
 
-}
+    projectCode:code,
 
-/* --------------------------------------------------------
-RESUME PROJECT
--------------------------------------------------------- */
+    location:$("projectLocation").value.trim(),
 
-const btnResumeProject =
-$("btnResumeProject");
+    organization:$("organization").value.trim(),
 
-if (btnResumeProject) {
+    status:PROJECT_STATUS.DRAFT
 
-```
-btnResumeProject.onclick =
-  resumeProject;
-```
+  });
 
-}
+  updateProjectHome();
 
-/* --------------------------------------------------------
-OPEN SAVED PROJECTS
--------------------------------------------------------- */
-
-const btnOpenSavedProjects =
-$("btnOpenSavedProjects");
-
-if (btnOpenSavedProjects) {
-
-```
-btnOpenSavedProjects.onclick =
-  () => {
-
-    updateProjectHome();
-
-    show(
-      "screenProject"
-    );
-
-  };
-```
+  show("screenSurveyHome");
 
 }
 
-/* --------------------------------------------------------
-CREATE PROJECT
--------------------------------------------------------- */
+/* ==========================================================
+   COMPLETE PROJECT
+========================================================== */
 
-const btnCreateProject =
-$("btnCreateProject");
+function completeProject(){
 
-if (btnCreateProject) {
+  if(!currentProject) return;
 
-```
-btnCreateProject.onclick =
-  createProject;
-```
+  updateProjectHome();
+
+  show("screenProjectComplete");
 
 }
 
-/* --------------------------------------------------------
-POINT SURVEY
--------------------------------------------------------- */
+/* ==========================================================
+   SAVE COMPLETED PROJECT
+========================================================== */
 
-const btnPoint =
-$("btnPoint");
+async function saveCompletedProject(){
 
-if (btnPoint) {
+  if(!currentProject) return;
 
-```
-btnPoint.onclick =
-  () => {
+  currentProject.status=PROJECT_STATUS.COMPLETED;
 
-    show(
-      "screenPoint"
-    );
+  currentProject.completedAt=new Date().toISOString();
 
-  };
-```
+  await DB.updateProject(currentProject);
 
-}
+  startupState.draftProject=null;
 
-/* --------------------------------------------------------
-LINEAR SURVEY
--------------------------------------------------------- */
+  startupState.savedProjects=
+    await DB.getSavedProjects();
 
-const btnLinear =
-$("btnLinear");
+  renderSavedProjects();
 
-if (btnLinear) {
+  alert("Đã lưu công trình thành công.");
 
-```
-btnLinear.onclick =
-  () => {
-
-    show(
-      "screenLinear"
-    );
-
-  };
-```
+  show("screenProjectHome");
 
 }
 
-/* --------------------------------------------------------
-COMPLETE PROJECT
--------------------------------------------------------- */
+/* ==========================================================
+   RENDER SAVED PROJECTS
+========================================================== */
 
-const btnCompleteProject =
-$("btnCompleteProject");
+function renderSavedProjects(){
 
-if (btnCompleteProject) {
+  const container=$("savedProjectList");
 
-```
-btnCompleteProject.onclick =
-  completeProject;
-```
+  if(!container) return;
 
-}
+  container.innerHTML="";
 
-/* --------------------------------------------------------
-SAVE PROJECT
--------------------------------------------------------- */
+  if(startupState.savedProjects.length===0){
 
-const btnSaveProject =
-$("btnSaveProject");
+    container.innerHTML=`
+      <div class="empty-project">
+        Chưa có công trình đã lưu
+      </div>
+    `;
 
-if (btnSaveProject) {
+    return;
 
-```
-btnSaveProject.onclick =
-  saveProject;
-```
+  }
 
-}
+  startupState.savedProjects.forEach(project=>{
 
-/* --------------------------------------------------------
-CONTINUE PROJECT
--------------------------------------------------------- */
+    const card=document.createElement("div");
 
-const btnContinueProject =
-$("btnContinueProject");
+    card.className="saved-card";
 
-if (btnContinueProject) {
+    card.innerHTML=`
+      <h4>${project.projectName}</h4>
 
-```
-btnContinueProject.onclick =
-  backToSurveyFromCompletion;
-```
+      <p>Mã: ${project.projectCode}</p>
 
-}
+      <p>${project.location||""}</p>
 
-/* --------------------------------------------------------
-BACK BUTTON
--------------------------------------------------------- */
+      <button class="primary-btn open-project"
+              data-id="${project.projectId}">
+        Mở công trình
+      </button>
+    `;
 
-document
-.querySelectorAll(
-".back-btn"
-)
-.forEach(
-btn => {
+    container.appendChild(card);
 
-```
-    btn.onclick =
-      () => {
+  });
 
-        show(
-          "screenSurveyHome"
-        );
+  container
+    .querySelectorAll(".open-project")
+    .forEach(btn=>{
+
+      btn.onclick=()=>{
+
+        openSavedProject(btn.dataset.id);
 
       };
 
-  }
-);
-```
-
-/* --------------------------------------------------------
-MAP ZOOM IN
--------------------------------------------------------- */
-
-const btnZoomIn =
-$("btnZoomIn");
-
-if (btnZoomIn) {
-
-```
-btnZoomIn.onclick =
-  () => {
-
-    MapEngine.zoomIn();
-
-  };
-```
-
-}
-
-/* --------------------------------------------------------
-MAP ZOOM OUT
--------------------------------------------------------- */
-
-const btnZoomOut =
-$("btnZoomOut");
-
-if (btnZoomOut) {
-
-```
-btnZoomOut.onclick =
-  () => {
-
-    MapEngine.zoomOut();
-
-  };
-```
-
-}
-
-/* --------------------------------------------------------
-MAP LOCATE
--------------------------------------------------------- */
-
-const btnLocate =
-$("btnLocate");
-
-if (btnLocate) {
-
-```
-btnLocate.onclick =
-  () => {
-
-    GPSManager.acquire();
-
-  };
-```
-
-}
-
-/* --------------------------------------------------------
-FIRST GPS — REAL GPS
--------------------------------------------------------- */
-
-const btnFirstGPS =
-$("btnFirstGPS");
-
-if (btnFirstGPS) {
-
-```
-btnFirstGPS.onclick =
-  () => {
-
-    GPSManager.acquire();
-
-  };
-```
-
-}
+    });
 
 }
 
 /* ==========================================================
-BOOT
+   CONTINUE DRAFT
 ========================================================== */
 
-window.addEventListener(
-"load",
-async () => {
+function continueDraftProject(){
 
-```
-show(
-  "screenSplash"
-);
+  if(!startupState.draftProject) return;
+
+  currentProject=startupState.draftProject;
+
+  updateProjectHome();
+
+  show("screenSurveyHome");
+
+}
+
+/* ==========================================================
+   OPEN SAVED PANEL
+========================================================== */
+
+function openSavedProjects(){
+
+  renderSavedProjects();
+
+  const panel=$("savedProjectsPanel");
+
+  if(panel){
+
+    panel.classList.add("active");
+
+  }
+
+}
+
+function closeSavedProjects(){
+
+  const panel=$("savedProjectsPanel");
+
+  if(panel){
+
+    panel.classList.remove("active");
+
+  }
+
+}
+
+/* ==========================================================
+   LOAD SAVED PROJECT
+========================================================== */
+
+async function openSavedProject(projectId){
+
+  const project=await DB.getProjectById(projectId);
+
+  if(!project) return;
+
+  currentProject=project;
+
+  closeSavedProjects();
+
+  updateProjectHome();
+
+  show("screenSurveyHome");
+
+}
+function bindButtons(){
+
+  /* =========================================
+     SPLASH
+  ========================================= */
+
+  const btnStart=$("btnStart");
+
+  if(btnStart){
+
+    btnStart.onclick=async()=>{
+
+      await loadProjectState();
+
+      renderSavedProjects();
+
+      show("screenProjectHome");
+
+    };
+
+  }
+
+  /* =========================================
+     STARTUP HOME
+  ========================================= */
+
+  const btnContinueDraft=$("btnContinueDraft");
+
+  if(btnContinueDraft){
+
+    btnContinueDraft.onclick=()=>{
+
+      continueDraftProject();
+
+    };
+
+  }
+
+  const btnNewProject=$("btnNewProject");
+
+  if(btnNewProject){
+
+    btnNewProject.onclick=()=>{
+
+      resetProjectForm();
+
+      show("screenProject");
+
+    };
+
+  }
+
+  const btnOpenSavedProjects=$("btnOpenSavedProjects");
+
+  if(btnOpenSavedProjects){
+
+    btnOpenSavedProjects.onclick=()=>{
+
+      openSavedProjects();
+
+    };
+
+  }
+
+  const btnCloseSaved=$("btnCloseSaved");
+
+  if(btnCloseSaved){
+
+    btnCloseSaved.onclick=()=>{
+
+      closeSavedProjects();
+
+    };
+
+  }
+
+  /* =========================================
+     PROJECT FORM
+  ========================================= */
+
+  const btnCreateProject=$("btnCreateProject");
+
+  if(btnCreateProject){
+
+    btnCreateProject.onclick=createProject;
+
+  }
+
+  /* =========================================
+     SURVEY HOME
+  ========================================= */
+
+  const btnPoint=$("btnPoint");
+
+  if(btnPoint){
+
+    btnPoint.onclick=()=>show("screenPoint");
+
+  }
+
+  const btnLinear=$("btnLinear");
+
+  if(btnLinear){
+
+    btnLinear.onclick=()=>show("screenLinear");
+
+  }
+
+  const btnFinishProject=$("btnFinishProject");
+
+  if(btnFinishProject){
+
+    btnFinishProject.onclick=()=>{
+
+      completeProject();
+
+    };
+
+  }
+
+  /* =========================================
+     COMPLETE PAGE
+  ========================================= */
+
+  const btnSaveProject=$("btnSaveProject");
+
+  if(btnSaveProject){
+
+    btnSaveProject.onclick=async()=>{
+
+      await saveCompletedProject();
+
+    };
+
+  }
+
+  const btnReturnSurvey=$("btnReturnSurvey");
+
+  if(btnReturnSurvey){
+
+    btnReturnSurvey.onclick=()=>{
+
+      show("screenSurveyHome");
+
+    };
+
+  }
+
+  /* =========================================
+     BACK BUTTONS
+  ========================================= */
+
+  document.querySelectorAll(".back-btn").forEach(btn=>{
+
+    btn.onclick=()=>{
+
+      const target=btn.dataset.back;
+
+      if(target){
+
+        show(target);
+
+      }else{
+
+        show("screenSurveyHome");
+
+      }
+
+    };
+
+  });
+
+  /* =========================================
+     MAP
+  ========================================= */
+
+  const btnLocate=$("btnLocate");
+
+  if(btnLocate){
+
+    btnLocate.onclick=()=>MapEngine.locate();
+
+  }
+
+  const btnZoomIn=$("btnZoomIn");
+
+  if(btnZoomIn){
+
+    btnZoomIn.onclick=()=>MapEngine.zoomIn();
+
+  }
+
+  const btnZoomOut=$("btnZoomOut");
+
+  if(btnZoomOut){
+
+    btnZoomOut.onclick=()=>MapEngine.zoomOut();
+
+  }
+
+  const btnFirstGPS=$("btnFirstGPS");
+
+  if(btnFirstGPS){
+
+    btnFirstGPS.onclick=()=>{
+
+      GPS.readCurrentLocation();
+
+    };
+
+  }
+
+  /* =========================================
+     BASEMAP
+  ========================================= */
+
+  const btnBasemap=$("btnBasemap");
+
+  if(btnBasemap){
+
+    btnBasemap.onclick=()=>{
+
+      const panel=$("basemapPanel");
+
+      if(panel){
+
+        panel.classList.toggle("active");
+
+      }
+
+    };
+
+  }
+
+  document.querySelectorAll("[data-basemap]").forEach(item=>{
+
+    item.onclick=()=>{
+
+      const type=item.dataset.basemap;
+
+      MapEngine.switchBaseMap(type);
+
+      const panel=$("basemapPanel");
+
+      if(panel){
+
+        panel.classList.remove("active");
+
+      }
+
+    };
+
+  });
+
+}
 
 
-bindButtons();
+window.addEventListener("load", async () => {
 
+  /* Splash luôn là màn hình đầu tiên */
 
-MapLayerControl.initialize();
+  show("screenSplash");
 
+  bindButtons();
 
-GPSManager.reset();
+  /* Khởi tạo HUD GPS */
 
-GPSManager.updateHUD();
+  updateGPSStatus("GPS chưa kết nối");
 
+  try{
 
-try {
+    await DB.initDatabase();
 
-  await DB.initDatabase();
+    dbReady = true;
 
+    /* Đọc trạng thái Project */
 
-  dbReady =
-    true;
+    await loadProjectState();
 
+    console.log("================================");
+    console.log("TGS PLATFORM GENESIS REV10");
+    console.log("Startup : READY");
+    console.log("Database: READY");
+    console.log("ArcGIS  : READY");
+    console.log("GPS     : READY");
+    console.log("================================");
+
+  }catch(err){
+
+    console.error(err);
+
+    alert("Không thể khởi tạo cơ sở dữ liệu Offline.");
+
+  }
+
+});
+
+/* ==========================================================
+   STARTUP ENTRY
+========================================================== */
+
+async function enterStartup(){
 
   await loadProjectState();
 
+  renderSavedProjects();
 
-  console.log(
-    "TGS WebApp boot:",
-    {
-
-      database:
-        "READY",
-
-      projectMode:
-        "REAL_PROJECT",
-
-      syntheticGIS:
-        false,
-
-      gps:
-        "READY_FOR_REAL_DEVICE_TEST"
-
-    }
-  );
-
-
-} catch (error) {
-
-  console.error(
-    "TGS Offline Database Error:",
-    error
-  );
-
-
-  alert(
-    "Không thể khởi tạo bộ nhớ Offline."
-  );
+  show("screenProjectHome");
 
 }
-```
+
+/* ==========================================================
+   QA UTILITIES
+========================================================== */
+
+function qaStatus(){
+
+  return {
+
+    revision : "REV10",
+
+    startup  : true,
+
+    database : dbReady,
+
+    gps      : !!navigator.geolocation,
+
+    arcgis   : true,
+
+    draft    : startupState.draftProject,
+
+    saved    : startupState.savedProjects.length
+
+  };
 
 }
-);
+
+window.TGS = {
+
+  qaStatus,
+
+  GPS,
+
+  MapEngine,
+
+  DB
+
+};
+
+console.log("TGS Genesis REV10 Loaded");
