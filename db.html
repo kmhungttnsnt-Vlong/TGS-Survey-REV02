@@ -1,1 +1,1903 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
 
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#1565C0"
+  >
+
+  <title>TGS Database QA</title>
+
+  <style>
+
+    :root {
+      --primary: #1565C0;
+      --primary-dark: #0D47A1;
+
+      --success: #2E7D32;
+      --warning: #EF6C00;
+      --danger: #C62828;
+
+      --text: #17202A;
+      --muted: #66727D;
+
+      --background: #F4F7FA;
+      --surface: #FFFFFF;
+
+      --border: #DCE3E8;
+
+      --radius: 14px;
+    }
+
+
+    * {
+      box-sizing: border-box;
+    }
+
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+
+      min-height: 100%;
+
+      font-family:
+        Inter,
+        "Noto Sans",
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+      color: var(--text);
+
+      background: var(--background);
+    }
+
+
+    body {
+      padding:
+        env(safe-area-inset-top, 0px)
+        env(safe-area-inset-right, 0px)
+        env(safe-area-inset-bottom, 0px)
+        env(safe-area-inset-left, 0px);
+    }
+
+
+    /* ======================================================
+       HEADER
+    ====================================================== */
+
+    .header {
+
+      padding: 22px 18px;
+
+      color: #FFFFFF;
+
+      background:
+        linear-gradient(
+          145deg,
+          var(--primary),
+          var(--primary-dark)
+        );
+    }
+
+
+    .brand {
+
+      font-size: 24px;
+      font-weight: 700;
+
+      letter-spacing: -0.03em;
+    }
+
+
+    .title {
+
+      margin-top: 4px;
+
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+
+    .subtitle {
+
+      margin-top: 4px;
+
+      color: rgba(255,255,255,0.72);
+
+      font-size: 13px;
+    }
+
+
+    /* ======================================================
+       MAIN
+    ====================================================== */
+
+    .container {
+
+      width: 100%;
+      max-width: 720px;
+
+      margin: 0 auto;
+
+      padding: 18px;
+    }
+
+
+    /* ======================================================
+       STATUS
+    ====================================================== */
+
+    .status-card {
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 14px;
+
+      padding: 16px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: var(--radius);
+
+      background: var(--surface);
+
+      box-shadow:
+        0 3px 12px rgba(15,23,42,0.06);
+    }
+
+
+    .status-label {
+
+      color: var(--muted);
+
+      font-size: 13px;
+    }
+
+
+    .status-value {
+
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+
+    .status-value.ready {
+      color: var(--success);
+    }
+
+
+    .status-value.error {
+      color: var(--danger);
+    }
+
+
+    .status-value.warning {
+      color: var(--warning);
+    }
+
+
+    /* ======================================================
+       SECTION
+    ====================================================== */
+
+    .section {
+
+      margin-top: 18px;
+    }
+
+
+    .section-title {
+
+      margin-bottom: 9px;
+
+      color: var(--muted);
+
+      font-size: 12px;
+      font-weight: 700;
+
+      letter-spacing: 0.10em;
+
+      text-transform: uppercase;
+    }
+
+
+    .card {
+
+      padding: 16px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: var(--radius);
+
+      background: var(--surface);
+
+      box-shadow:
+        0 3px 12px rgba(15,23,42,0.05);
+    }
+
+
+    /* ======================================================
+       DATABASE INFO
+    ====================================================== */
+
+    .info-grid {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, minmax(0,1fr));
+
+      gap: 10px;
+    }
+
+
+    .info-item {
+
+      padding: 12px;
+
+      border-radius: 10px;
+
+      background: #F7F9FB;
+    }
+
+
+    .info-item-label {
+
+      margin-bottom: 4px;
+
+      color: var(--muted);
+
+      font-size: 11px;
+    }
+
+
+    .info-item-value {
+
+      color: var(--text);
+
+      font-size: 15px;
+      font-weight: 700;
+
+      word-break: break-word;
+    }
+
+
+    /* ======================================================
+       STORE LIST
+    ====================================================== */
+
+    .store-list {
+
+      display: flex;
+      flex-direction: column;
+
+      gap: 8px;
+    }
+
+
+    .store {
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      min-height: 44px;
+
+      padding:
+        0
+        12px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 10px;
+
+      background: #FAFCFD;
+    }
+
+
+    .store-name {
+
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+
+    .store-status {
+
+      color: var(--success);
+
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+
+    /* ======================================================
+       PROJECTS
+    ====================================================== */
+
+    .project-list {
+
+      display: flex;
+      flex-direction: column;
+
+      gap: 10px;
+    }
+
+
+    .project {
+
+      padding: 13px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 10px;
+
+      background: #FAFCFD;
+    }
+
+
+    .project-name {
+
+      margin-bottom: 3px;
+
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+
+    .project-meta {
+
+      color: var(--muted);
+
+      font-size: 12px;
+
+      line-height: 1.6;
+    }
+
+
+    .badge {
+
+      display: inline-flex;
+      align-items: center;
+
+      min-height: 24px;
+
+      margin-top: 7px;
+
+      padding:
+        0
+        9px;
+
+      border-radius: 999px;
+
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+
+    .badge.draft {
+
+      color: var(--warning);
+
+      background: #FFF3E0;
+    }
+
+
+    .badge.completed {
+
+      color: var(--success);
+
+      background: #E8F5E9;
+    }
+
+
+    /* ======================================================
+       KPI
+    ====================================================== */
+
+    .kpi-grid {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, minmax(0,1fr));
+
+      gap: 10px;
+    }
+
+
+    .kpi {
+
+      padding: 14px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: 10px;
+
+      background: #FAFCFD;
+
+      text-align: center;
+    }
+
+
+    .kpi-value {
+
+      font-size: 23px;
+      font-weight: 700;
+
+      color: var(--primary);
+    }
+
+
+    .kpi-label {
+
+      margin-top: 3px;
+
+      color: var(--muted);
+
+      font-size: 11px;
+    }
+
+
+    /* ======================================================
+       SYNTHETIC DATA CHECK
+    ====================================================== */
+
+    .qa-result {
+
+      display: flex;
+      align-items: flex-start;
+
+      gap: 10px;
+
+      padding: 13px;
+
+      border-radius: 10px;
+
+      background: #E8F5E9;
+    }
+
+
+    .qa-icon {
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+
+      border-radius: 50%;
+
+      color: #FFFFFF;
+
+      background: var(--success);
+
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+
+    .qa-title {
+
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+
+    .qa-description {
+
+      margin-top: 3px;
+
+      color: var(--muted);
+
+      font-size: 12px;
+
+      line-height: 1.5;
+    }
+
+
+    /* ======================================================
+       ACTION
+    ====================================================== */
+
+    .actions {
+
+      display: flex;
+      flex-direction: column;
+
+      gap: 10px;
+
+      margin-top: 22px;
+    }
+
+
+    button {
+
+      width: 100%;
+      min-height: 48px;
+
+      border: 0;
+
+      border-radius: 12px;
+
+      font-size: 14px;
+      font-weight: 700;
+
+      cursor: pointer;
+    }
+
+
+    .primary-button {
+
+      color: #FFFFFF;
+
+      background:
+        linear-gradient(
+          145deg,
+          #1976D2,
+          var(--primary)
+        );
+    }
+
+
+    .secondary-button {
+
+      color: var(--primary);
+
+      background: #E3F2FD;
+    }
+
+
+    /* ======================================================
+       LOG
+    ====================================================== */
+
+    .log {
+
+      margin-top: 18px;
+
+      padding: 13px;
+
+      border-radius: 10px;
+
+      color: #DCE7F0;
+
+      background: #17202A;
+
+      font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+      font-size: 11px;
+
+      line-height: 1.6;
+
+      white-space: pre-wrap;
+
+      word-break: break-word;
+    }
+
+
+    /* ======================================================
+       FOOTER
+    ====================================================== */
+
+    .footer {
+
+      padding:
+        25px
+        18px
+        35px;
+
+      color: var(--muted);
+
+      font-size: 11px;
+
+      text-align: center;
+    }
+
+
+    /* ======================================================
+       SMALL SCREEN
+    ====================================================== */
+
+    @media (max-width: 380px) {
+
+      .container {
+        padding: 14px;
+      }
+
+
+      .info-grid,
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+
+  <!-- ====================================================
+       HEADER
+  ===================================================== -->
+
+  <header class="header">
+
+    <div class="brand">
+      TGS
+    </div>
+
+    <div class="title">
+      Database QA Console
+    </div>
+
+    <div class="subtitle">
+      Genesis 2.0 — Foundation Verification
+    </div>
+
+  </header>
+
+
+  <!-- ====================================================
+       MAIN
+  ===================================================== -->
+
+  <main class="container">
+
+
+    <!-- ==================================================
+         DATABASE STATUS
+    =================================================== -->
+
+    <section>
+
+      <div class="status-card">
+
+        <div>
+
+          <div class="status-label">
+            Database Status
+          </div>
+
+          <div
+            id="dbStatus"
+            class="status-value"
+          >
+            Đang kiểm tra...
+          </div>
+
+        </div>
+
+        <div
+          id="dbStatusIcon"
+          class="qa-icon"
+        >
+          ?
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         DATABASE INFORMATION
+    =================================================== -->
+
+    <section class="section">
+
+      <div class="section-title">
+        Database
+      </div>
+
+      <div class="card">
+
+        <div class="info-grid">
+
+
+          <div class="info-item">
+
+            <div class="info-item-label">
+              Database
+            </div>
+
+            <div
+              id="dbName"
+              class="info-item-value"
+            >
+              —
+            </div>
+
+          </div>
+
+
+          <div class="info-item">
+
+            <div class="info-item-label">
+              Version
+            </div>
+
+            <div
+              id="dbVersion"
+              class="info-item-value"
+            >
+              —
+            </div>
+
+          </div>
+
+
+          <div class="info-item">
+
+            <div class="info-item-label">
+              Store Count
+            </div>
+
+            <div
+              id="storeCount"
+              class="info-item-value"
+            >
+              —
+            </div>
+
+          </div>
+
+
+          <div class="info-item">
+
+            <div class="info-item-label">
+              Ready
+            </div>
+
+            <div
+              id="dbReady"
+              class="info-item-value"
+            >
+              —
+            </div>
+
+          </div>
+
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         STORES
+    =================================================== -->
+
+    <section class="section">
+
+      <div class="section-title">
+        Object Stores
+      </div>
+
+      <div class="card">
+
+        <div
+          id="storeList"
+          class="store-list"
+        >
+
+          <div class="store">
+
+            <span class="store-name">
+              Đang kiểm tra...
+            </span>
+
+            <span class="store-status">
+              ...
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         PROJECTS
+    =================================================== -->
+
+    <section class="section">
+
+      <div class="section-title">
+        Projects
+      </div>
+
+      <div class="card">
+
+        <div
+          id="projectList"
+          class="project-list"
+        >
+
+          <div class="project-meta">
+            Đang đọc dữ liệu...
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         DATA KPI
+    =================================================== -->
+
+    <section class="section">
+
+      <div class="section-title">
+        Data Inventory
+      </div>
+
+      <div class="card">
+
+        <div class="kpi-grid">
+
+
+          <div class="kpi">
+
+            <div
+              id="projectCount"
+              class="kpi-value"
+            >
+              —
+            </div>
+
+            <div class="kpi-label">
+              Projects
+            </div>
+
+          </div>
+
+
+          <div class="kpi">
+
+            <div
+              id="surveyCount"
+              class="kpi-value"
+            >
+              —
+            </div>
+
+            <div class="kpi-label">
+              Surveys
+            </div>
+
+          </div>
+
+
+          <div class="kpi">
+
+            <div
+              id="gisCount"
+              class="kpi-value"
+            >
+              —
+            </div>
+
+            <div class="kpi-label">
+              GIS Objects
+            </div>
+
+          </div>
+
+
+          <div class="kpi">
+
+            <div
+              id="evidenceCount"
+              class="kpi-value"
+            >
+              —
+            </div>
+
+            <div class="kpi-label">
+              Evidence
+            </div>
+
+          </div>
+
+
+          <div class="kpi">
+
+            <div
+              id="timelineCount"
+              class="kpi-value"
+            >
+              —
+            </div>
+
+            <div class="kpi-label">
+              Timeline Events
+            </div>
+
+          </div>
+
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         SYNTHETIC DATA QA
+    =================================================== -->
+
+    <section class="section">
+
+      <div class="section-title">
+        GIS Integrity
+      </div>
+
+      <div
+        id="gisQaResult"
+        class="qa-result"
+      >
+
+        <div class="qa-icon">
+          ?
+        </div>
+
+        <div>
+
+          <div class="qa-title">
+            Đang kiểm tra...
+          </div>
+
+          <div class="qa-description">
+            Kiểm tra dữ liệu GIS có được tự động
+            tạo hay không.
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         ACTIONS
+    =================================================== -->
+
+    <div class="actions">
+
+      <button
+        id="btnRefreshQA"
+        type="button"
+        class="primary-button"
+      >
+        Kiểm tra lại Database
+      </button>
+
+      <button
+        id="btnBackApp"
+        type="button"
+        class="secondary-button"
+      >
+        Mở TGS WebApp
+      </button>
+
+    </div>
+
+
+    <!-- ==================================================
+         QA LOG
+    =================================================== -->
+
+    <section class="section">
+
+      <div class="section-title">
+        QA Log
+      </div>
+
+      <div
+        id="qaLog"
+        class="log"
+      >
+        TGS Database QA Console
+        Đang khởi tạo...
+      </div>
+
+    </section>
+
+
+  </main>
+
+
+  <!-- ====================================================
+       FOOTER
+  ===================================================== -->
+
+  <footer class="footer">
+
+    TGS Platform Genesis 2.0<br>
+
+    Database QA Console REV01<br>
+
+    Read-only verification tool
+
+  </footer>
+
+
+  <!-- ====================================================
+       DATABASE
+  ===================================================== -->
+
+  <script src="db.js"></script>
+
+
+  <!-- ====================================================
+       QA ENGINE
+  ===================================================== -->
+
+  <script>
+
+    "use strict";
+
+
+    /* ====================================================
+       DOM
+    ================================================= */
+
+    const $ = (id) =>
+      document.getElementById(id);
+
+
+    /* ====================================================
+       LOG
+    ================================================= */
+
+    function log(message) {
+
+      const element =
+        $("qaLog");
+
+      if (!element) {
+        return;
+      }
+
+
+      const time =
+        new Date()
+          .toLocaleTimeString();
+
+
+      element.textContent +=
+        `\n[${time}] ${message}`;
+
+    }
+
+
+    function clearLog() {
+
+      const element =
+        $("qaLog");
+
+      if (element) {
+
+        element.textContent =
+          "TGS Database QA Console";
+
+      }
+
+    }
+
+
+    /* ====================================================
+       STATUS
+    ================================================= */
+
+    function setStatus(
+      text,
+      type
+    ) {
+
+      const element =
+        $("dbStatus");
+
+      const icon =
+        $("dbStatusIcon");
+
+
+      if (element) {
+
+        element.textContent =
+          text;
+
+        element.className =
+          `status-value ${type || ""}`;
+
+      }
+
+
+      if (icon) {
+
+        icon.textContent =
+          type === "ready"
+            ? "✓"
+            : type === "error"
+              ? "!"
+              : "?";
+
+      }
+
+    }
+
+
+    /* ====================================================
+       STORE CHECK
+    ================================================= */
+
+    function renderStores(
+      stores
+    ) {
+
+      const container =
+        $("storeList");
+
+
+      if (!container) {
+        return;
+      }
+
+
+      container.innerHTML = "";
+
+
+      const requiredStores = [
+
+        "projects",
+
+        "surveys",
+
+        "gisObjects",
+
+        "evidence",
+
+        "timeline"
+
+      ];
+
+
+      requiredStores.forEach(
+        name => {
+
+          const exists =
+            stores.includes(name);
+
+
+          const row =
+            document.createElement(
+              "div"
+            );
+
+
+          row.className =
+            "store";
+
+
+          row.innerHTML = `
+
+            <span class="store-name">
+              ${name}
+            </span>
+
+            <span
+              class="store-status"
+              style="
+                color:
+                  ${exists
+                    ? "var(--success)"
+                    : "var(--danger)"};
+              "
+            >
+              ${exists ? "✓ READY" : "✕ MISSING"}
+            </span>
+
+          `;
+
+
+          container.appendChild(row);
+
+        }
+      );
+
+    }
+
+
+    /* ====================================================
+       PROJECTS
+    ================================================= */
+
+    function renderProjects(
+      projects
+    ) {
+
+      const container =
+        $("projectList");
+
+
+      if (!container) {
+        return;
+      }
+
+
+      container.innerHTML = "";
+
+
+      if (
+        !projects ||
+        projects.length === 0
+      ) {
+
+        container.innerHTML = `
+
+          <div class="project-meta">
+            Chưa có Project nào trong Database.
+          </div>
+
+        `;
+
+        return;
+
+      }
+
+
+      projects.forEach(
+        project => {
+
+          const card =
+            document.createElement(
+              "div"
+            );
+
+
+          card.className =
+            "project";
+
+
+          const status =
+            project.status ||
+            "unknown";
+
+
+          const badgeClass =
+            status === "completed"
+              ? "completed"
+              : "draft";
+
+
+          card.innerHTML = `
+
+            <div class="project-name">
+              ${escapeHTML(
+                project.projectName ||
+                "Không có tên"
+              )}
+            </div>
+
+            <div class="project-meta">
+
+              Mã:
+              ${escapeHTML(
+                project.projectCode ||
+                "—"
+              )}
+
+              <br>
+
+              ID:
+              ${escapeHTML(
+                project.projectId ||
+                "—"
+              )}
+
+            </div>
+
+            <span
+              class="badge ${badgeClass}"
+            >
+              ${escapeHTML(status)}
+            </span>
+
+          `;
+
+
+          container.appendChild(card);
+
+        }
+      );
+
+    }
+
+
+    /* ====================================================
+       HTML ESCAPE
+    ================================================= */
+
+    function escapeHTML(
+      value
+    ) {
+
+      return String(value)
+        .replace(
+          /&/g,
+          "&amp;"
+        )
+        .replace(
+          /</g,
+          "&lt;"
+        )
+        .replace(
+          />/g,
+          "&gt;"
+        )
+        .replace(
+          /"/g,
+          "&quot;"
+        )
+        .replace(
+          /'/g,
+          "&#039;"
+        );
+
+    }
+
+
+    /* ====================================================
+       DATA INVENTORY
+    ================================================= */
+
+    async function getInventory(
+      projects
+    ) {
+
+      let surveys = [];
+
+      let gisObjects = [];
+
+      let evidence = [];
+
+      let timeline = [];
+
+
+      for (
+        const project
+        of projects
+      ) {
+
+        try {
+
+          const projectSurveys =
+            await DB.getSurveysByProject(
+              project.projectId
+            );
+
+
+          surveys =
+            surveys.concat(
+              projectSurveys
+            );
+
+
+          const projectGIS =
+            await DB.getGISObjectsByProject(
+              project.projectId
+            );
+
+
+          gisObjects =
+            gisObjects.concat(
+              projectGIS
+            );
+
+
+          const projectEvidence =
+            await DB.getEvidenceByProject(
+              project.projectId
+            );
+
+
+          evidence =
+            evidence.concat(
+              projectEvidence
+            );
+
+
+          const projectTimeline =
+            await DB.getTimelineByProject(
+              project.projectId
+            );
+
+
+          timeline =
+            timeline.concat(
+              projectTimeline
+            );
+
+        } catch (error) {
+
+          log(
+            `Inventory error: ${error.message}`
+          );
+
+        }
+
+      }
+
+
+      return {
+
+        surveys,
+
+        gisObjects,
+
+        evidence,
+
+        timeline
+
+      };
+
+    }
+
+
+    /* ====================================================
+       GIS SYNTHETIC DATA CHECK
+    ================================================= */
+
+    function checkSyntheticGIS(
+      gisObjects
+    ) {
+
+      const suspiciousTypes = [
+
+        "D001",
+
+        "demo",
+
+        "test",
+
+        "synthetic"
+
+      ];
+
+
+      const suspicious =
+        gisObjects.filter(
+          object => {
+
+            const layer =
+              String(
+                object.layerType ||
+                ""
+              ).toLowerCase();
+
+
+            const properties =
+              JSON.stringify(
+                object.properties ||
+                {}
+              ).toLowerCase();
+
+
+            return (
+              suspiciousTypes.some(
+                term =>
+                  layer.includes(term)
+              ) ||
+              suspiciousTypes.some(
+                term =>
+                  properties.includes(term)
+              )
+            );
+
+          }
+        );
+
+
+      const container =
+        $("gisQaResult");
+
+
+      if (!container) {
+        return;
+      }
+
+
+      if (
+        suspicious.length === 0
+      ) {
+
+        container.style.background =
+          "#E8F5E9";
+
+
+        container.innerHTML = `
+
+          <div
+            class="qa-icon"
+            style="
+              background:
+                var(--success);
+            "
+          >
+            ✓
+          </div>
+
+          <div>
+
+            <div class="qa-title">
+              GIS Clean
+            </div>
+
+            <div class="qa-description">
+              Không phát hiện dữ liệu GIS
+              synthetic/demo theo kiểm tra cơ bản.
+            </div>
+
+          </div>
+
+        `;
+
+
+        log(
+          "GIS integrity: CLEAN"
+        );
+
+      } else {
+
+        container.style.background =
+          "#FFEBEE";
+
+
+        container.innerHTML = `
+
+          <div
+            class="qa-icon"
+            style="
+              background:
+                var(--danger);
+            "
+          >
+            !
+          </div>
+
+          <div>
+
+            <div class="qa-title">
+              Phát hiện dữ liệu cần REVIEW
+            </div>
+
+            <div class="qa-description">
+              Có ${suspicious.length}
+              GIS object cần kiểm tra.
+            </div>
+
+          </div>
+
+        `;
+
+
+        log(
+          `GIS integrity: ${suspicious.length} suspicious`
+        );
+
+      }
+
+    }
+
+
+    /* ====================================================
+       MAIN QA
+    ================================================= */
+
+    async function runQA() {
+
+      clearLog();
+
+      setStatus(
+        "Đang kiểm tra...",
+        "warning"
+      );
+
+
+      log(
+        "Starting Database QA..."
+      );
+
+
+      try {
+
+        /* ----------------------------------------------
+           DB INFO
+        -------------------------------------------- */
+
+        const info =
+          await DB.getDBInfo();
+
+
+        log(
+          `Database: ${info.name}`
+        );
+
+
+        log(
+          `Version: ${info.version}`
+        );
+
+
+        log(
+          `Ready: ${info.ready}`
+        );
+
+
+        $("dbName").textContent =
+          info.name || "—";
+
+
+        $("dbVersion").textContent =
+          info.version ?? "—";
+
+
+        $("storeCount").textContent =
+          info.stores
+            ? info.stores.length
+            : 0;
+
+
+        $("dbReady").textContent =
+          info.ready
+            ? "YES"
+            : "NO";
+
+
+        renderStores(
+          info.stores || []
+        );
+
+
+        /* ----------------------------------------------
+           PROJECTS
+        -------------------------------------------- */
+
+        const projects =
+          await DB.getAllProjects();
+
+
+        log(
+          `Projects: ${projects.length}`
+        );
+
+
+        $("projectCount").textContent =
+          projects.length;
+
+
+        renderProjects(
+          projects
+        );
+
+
+        /* ----------------------------------------------
+           INVENTORY
+        -------------------------------------------- */
+
+        const inventory =
+          await getInventory(
+            projects
+          );
+
+
+        log(
+          `Surveys: ${inventory.surveys.length}`
+        );
+
+
+        log(
+          `GIS Objects: ${inventory.gisObjects.length}`
+        );
+
+
+        log(
+          `Evidence: ${inventory.evidence.length}`
+        );
+
+
+        log(
+          `Timeline: ${inventory.timeline.length}`
+        );
+
+
+        $("surveyCount").textContent =
+          inventory.surveys.length;
+
+
+        $("gisCount").textContent =
+          inventory.gisObjects.length;
+
+
+        $("evidenceCount").textContent =
+          inventory.evidence.length;
+
+
+        $("timelineCount").textContent =
+          inventory.timeline.length;
+
+
+        /* ----------------------------------------------
+           GIS QA
+        -------------------------------------------- */
+
+        checkSyntheticGIS(
+          inventory.gisObjects
+        );
+
+
+        /* ----------------------------------------------
+           FINAL STATUS
+        -------------------------------------------- */
+
+        const requiredStores = [
+
+          "projects",
+
+          "surveys",
+
+          "gisObjects",
+
+          "evidence",
+
+          "timeline"
+
+        ];
+
+
+        const storesOK =
+          requiredStores.every(
+            store =>
+              info.stores.includes(
+                store
+              )
+          );
+
+
+        if (
+          info.name === "TGS_SURVEY_DB" &&
+          info.version >= 4 &&
+          info.ready === true &&
+          storesOK
+        ) {
+
+          setStatus(
+            "READY",
+            "ready"
+          );
+
+
+          log(
+            "DATABASE QA RESULT: PASS"
+          );
+
+        } else {
+
+          setStatus(
+            "REVIEW",
+            "warning"
+          );
+
+
+          log(
+            "DATABASE QA RESULT: REVIEW"
+          );
+
+        }
+
+      } catch (error) {
+
+        console.error(
+          error
+        );
+
+
+        setStatus(
+          "ERROR",
+          "error"
+        );
+
+
+        log(
+          `ERROR: ${error.message}`
+        );
+
+
+        $("dbReady").textContent =
+          "ERROR";
+
+      }
+
+    }
+
+
+    /* ====================================================
+       EVENTS
+    ================================================= */
+
+    $("btnRefreshQA")
+      .addEventListener(
+        "click",
+        runQA
+      );
+
+
+    $("btnBackApp")
+      .addEventListener(
+        "click",
+        () => {
+
+          window.location.href =
+            "./index.html";
+
+        }
+      );
+
+
+    /* ====================================================
+       START
+    ================================================= */
+
+    window.addEventListener(
+      "load",
+      async () => {
+
+        await runQA();
+
+      }
+    );
+
+  </script>
+
+
+</body>
+</html>
