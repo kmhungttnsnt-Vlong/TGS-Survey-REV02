@@ -1,1195 +1,1302 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
+  <meta charset="UTF-8">
 
-<meta charset="UTF-8">
-
-<meta
+  <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
->
+  >
 
-<title>TGS Platform Survey REV03</title>
-
-<meta
+  <meta
     name="theme-color"
     content="#1565C0"
->
+  >
 
-<meta
+  <meta
+    name="mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
     name="apple-mobile-web-app-capable"
     content="yes"
->
+  >
 
-<link
-    rel="stylesheet"
-    href="style.css"
->
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="default"
+  >
 
-<!-- =====================================================
-     LEAFLET CSS
-====================================================== -->
+  <meta
+    name="apple-mobile-web-app-title"
+    content="TGS Survey"
+  >
 
-<link
+  <meta
+    name="description"
+    content="TGS Platform Genesis 2.0 - Field Survey WebApp"
+  >
+
+  <title>TGS Survey — Genesis 2.0</title>
+
+  <!-- =====================================================
+       LEAFLET
+  ====================================================== -->
+
+  <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
->
+    integrity="sha256-p4NxAoJBhIINfQ3s8d6K0rKf4w5F5X5X5X5X5X5X5X5="
+    crossorigin=""
+  >
+
+  <!-- =====================================================
+       TGS STYLE
+  ====================================================== -->
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
 
 </head>
 
-
 <body>
 
+  <!-- =====================================================
+       APPLICATION ROOT
+  ====================================================== -->
 
-<div id="app">
+  <div
+    id="app"
+    class="app-root"
+  >
+
+    <!-- ===================================================
+         SCREEN 01 — SPLASH
+    ==================================================== -->
+
+    <section
+      id="screenSplash"
+      class="screen screen-splash active"
+      aria-label="TGS Platform"
+    >
+
+      <div class="splash-content">
+
+        <div class="brand-mark">
+          TGS
+        </div>
+
+        <div class="brand-title">
+          TGS Platform
+        </div>
+
+        <div class="brand-subtitle">
+          Genesis 2.0
+        </div>
+
+        <div class="splash-status">
+          Khảo sát & số hóa hiện trường
+        </div>
+
+        <button
+          id="btnStart"
+          type="button"
+          class="primary-btn splash-start-btn"
+        >
+          Bắt đầu
+        </button>
+
+      </div>
+
+    </section>
 
 
-<!-- =====================================================
-     SPLASH
-====================================================== -->
+    <!-- ===================================================
+         SCREEN 02 — PROJECT HOME
+    ==================================================== -->
 
-<section
-    id="screenSplash"
-    class="screen active"
->
+    <section
+      id="screenProjectHome"
+      class="screen"
+      aria-label="Quản lý công trình"
+    >
 
-    <div class="splash-logo">
+      <header class="app-header">
 
-        <div class="logo-circle">
-            TGS
+        <div class="header-brand">
+          <span class="header-brand-main">TGS</span>
+          <span class="header-brand-sub">Survey</span>
+        </div>
+
+        <div class="header-status">
+          Genesis 2.0
+        </div>
+
+      </header>
+
+
+      <main class="screen-content">
+
+        <section class="page-heading">
+
+          <div class="eyebrow">
+            PROJECT
+          </div>
+
+          <h1>
+            Công trình
+          </h1>
+
+          <p>
+            Tạo mới hoặc tiếp tục hồ sơ khảo sát hiện trường.
+          </p>
+
+        </section>
+
+
+        <!-- -----------------------------------------------
+             DRAFT PROJECT
+        ------------------------------------------------ -->
+
+        <section
+          id="draftProjectCard"
+          class="project-card draft-card"
+          hidden
+        >
+
+          <div class="card-badge warning">
+            Chưa hoàn thành
+          </div>
+
+          <div class="card-content">
+
+            <div class="card-label">
+              Công trình đang thực hiện
+            </div>
+
+            <h2
+              id="draftProjectName"
+              class="project-card-title"
+            >
+              —
+            </h2>
+
+            <p
+              id="draftProjectCode"
+              class="project-card-meta"
+            >
+              —
+            </p>
+
+          </div>
+
+          <button
+            id="btnContinueDraft"
+            type="button"
+            class="primary-btn"
+          >
+            Tiếp tục công trình
+          </button>
+
+        </section>
+
+
+        <!-- -----------------------------------------------
+             MAIN PROJECT ACTIONS
+        ------------------------------------------------ -->
+
+        <section class="action-stack">
+
+          <button
+            id="btnNewProject"
+            type="button"
+            class="action-card primary-action"
+          >
+
+            <span class="action-icon">
+              +
+            </span>
+
+            <span class="action-text">
+
+              <strong>
+                Tạo công trình mới
+              </strong>
+
+              <small>
+                Tạo hồ sơ khảo sát mới
+              </small>
+
+            </span>
+
+          </button>
+
+
+          <button
+            id="btnOpenSavedProjects"
+            type="button"
+            class="action-card"
+          >
+
+            <span class="action-icon">
+              ▣
+            </span>
+
+            <span class="action-text">
+
+              <strong>
+                Mở công trình đã lưu
+              </strong>
+
+              <small>
+                Xem các hồ sơ đã hoàn thành
+              </small>
+
+            </span>
+
+          </button>
+
+        </section>
+
+
+        <!-- -----------------------------------------------
+             SYSTEM STATUS
+        ------------------------------------------------ -->
+
+        <section class="system-status-card">
+
+          <div class="status-row">
+
+            <span>
+              Offline Database
+            </span>
+
+            <span
+              id="startupDbStatus"
+              class="status-value"
+            >
+              Chờ kiểm tra
+            </span>
+
+          </div>
+
+          <div class="status-row">
+
+            <span>
+              GPS
+            </span>
+
+            <span
+              id="startupGpsStatus"
+              class="status-value"
+            >
+              Sẵn sàng
+            </span>
+
+          </div>
+
+          <div class="status-row">
+
+            <span>
+              GIS
+            </span>
+
+            <span
+              id="startupGisStatus"
+              class="status-value"
+            >
+              ArcGIS
+            </span>
+
+          </div>
+
+        </section>
+
+      </main>
+
+
+      <!-- -----------------------------------------------
+           SAVED PROJECT PANEL
+      ------------------------------------------------ -->
+
+      <div
+        id="savedProjectsPanel"
+        class="modal-panel"
+        aria-hidden="true"
+      >
+
+        <div class="modal-backdrop"></div>
+
+        <div class="modal-sheet">
+
+          <div class="modal-header">
+
+            <div>
+
+              <div class="eyebrow">
+                SAVED PROJECTS
+              </div>
+
+              <h2>
+                Công trình đã lưu
+              </h2>
+
+            </div>
+
+            <button
+              id="btnCloseSaved"
+              type="button"
+              class="icon-btn"
+              aria-label="Đóng"
+            >
+              ×
+            </button>
+
+          </div>
+
+
+          <div
+            id="savedProjectList"
+            class="saved-project-list"
+          >
+
+            <div class="empty-project">
+              Chưa có công trình đã lưu
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         SCREEN 03 — CREATE PROJECT
+    ==================================================== -->
+
+    <section
+      id="screenProject"
+      class="screen"
+      aria-label="Tạo công trình"
+    >
+
+      <header class="app-header">
+
+        <button
+          type="button"
+          class="back-btn icon-btn"
+          data-back="screenProjectHome"
+          aria-label="Quay lại"
+        >
+          ‹
+        </button>
+
+        <div class="header-title">
+          Công trình mới
+        </div>
+
+        <div class="header-spacer"></div>
+
+      </header>
+
+
+      <main class="screen-content">
+
+        <section class="page-heading">
+
+          <div class="eyebrow">
+            NEW PROJECT
+          </div>
+
+          <h1>
+            Tạo công trình
+          </h1>
+
+          <p>
+            Nhập thông tin cơ bản trước khi bắt đầu khảo sát.
+          </p>
+
+        </section>
+
+
+        <form
+          id="projectForm"
+          class="form-stack"
+          autocomplete="off"
+        >
+
+          <div class="field-group">
+
+            <label for="projectName">
+              Tên công trình
+            </label>
+
+            <input
+              id="projectName"
+              name="projectName"
+              type="text"
+              placeholder="Ví dụ: Trạm cấp nước Tân An"
+              autocomplete="off"
+              required
+            >
+
+          </div>
+
+
+          <div class="field-group">
+
+            <label for="projectCode">
+              Mã công trình
+            </label>
+
+            <input
+              id="projectCode"
+              name="projectCode"
+              type="text"
+              placeholder="Ví dụ: TGS-001"
+              autocomplete="off"
+              required
+            >
+
+          </div>
+
+
+          <div class="field-group">
+
+            <label for="projectLocation">
+              Địa điểm
+            </label>
+
+            <input
+              id="projectLocation"
+              name="projectLocation"
+              type="text"
+              placeholder="Địa chỉ / khu vực công trình"
+              autocomplete="off"
+            >
+
+          </div>
+
+
+          <div class="field-group">
+
+            <label for="organization">
+              Đơn vị
+            </label>
+
+            <input
+              id="organization"
+              name="organization"
+              type="text"
+              placeholder="Đơn vị khảo sát"
+              autocomplete="organization"
+            >
+
+          </div>
+
+
+          <div class="form-info-card">
+
+            <strong>
+              Lưu ý
+            </strong>
+
+            <p>
+              Hồ sơ công trình được lưu Offline trên thiết bị.
+              Bạn có thể tiếp tục khảo sát khi không có Internet.
+            </p>
+
+          </div>
+
+
+          <button
+            id="btnCreateProject"
+            type="submit"
+            class="primary-btn form-submit-btn"
+          >
+            Tạo công trình & tiếp tục
+          </button>
+
+        </form>
+
+      </main>
+
+    </section>
+
+
+    <!-- ===================================================
+         SCREEN 04 — SURVEY HOME
+    ==================================================== -->
+
+    <section
+      id="screenSurveyHome"
+      class="screen"
+      aria-label="Khảo sát công trình"
+    >
+
+      <header class="app-header">
+
+        <button
+          type="button"
+          class="back-btn icon-btn"
+          data-back="screenProjectHome"
+          aria-label="Quay lại"
+        >
+          ‹
+        </button>
+
+        <div class="header-title">
+          Khảo sát
+        </div>
+
+        <div class="header-spacer"></div>
+
+      </header>
+
+
+      <main class="screen-content">
+
+        <section class="project-summary-card">
+
+          <div class="eyebrow">
+            CURRENT PROJECT
+          </div>
+
+          <h1 id="projectTitle">
+            —
+          </h1>
+
+          <div class="project-summary-meta">
+
+            <span id="projectCodeDisplay">
+              —
+            </span>
+
+            <span class="separator">
+              •
+            </span>
+
+            <span id="projectLocationDisplay">
+              —
+            </span>
+
+          </div>
+
+        </section>
+
+
+        <section class="page-heading compact">
+
+          <div class="eyebrow">
+            SURVEY MODE
+          </div>
+
+          <h2>
+            Chọn phương thức khảo sát
+          </h2>
+
+        </section>
+
+
+        <section class="survey-mode-grid">
+
+          <button
+            id="btnPoint"
+            type="button"
+            class="survey-mode-card"
+          >
+
+            <span class="survey-mode-icon">
+              ●
+            </span>
+
+            <span class="survey-mode-title">
+              Khảo sát điểm
+            </span>
+
+            <span class="survey-mode-description">
+              Khảo sát vị trí, công trình,
+              thiết bị và đối tượng điểm.
+            </span>
+
+          </button>
+
+
+          <button
+            id="btnLinear"
+            type="button"
+            class="survey-mode-card"
+          >
+
+            <span class="survey-mode-icon">
+              ━
+            </span>
+
+            <span class="survey-mode-title">
+              Khảo sát tuyến
+            </span>
+
+            <span class="survey-mode-description">
+              Khảo sát tuyến, chiều dài
+              và các đối tượng dọc tuyến.
+            </span>
+
+          </button>
+
+        </section>
+
+
+        <!-- -----------------------------------------------
+             PROJECT COMPLETION
+        ------------------------------------------------ -->
+
+        <section
+          id="projectCompletionCard"
+          class="completion-card"
+        >
+
+          <div class="completion-icon">
+            ✓
+          </div>
+
+          <div class="completion-content">
+
+            <strong>
+              Hoàn thành công trình
+            </strong>
+
+            <span>
+              Đóng hồ sơ khảo sát và lưu công trình.
+            </span>
+
+          </div>
+
+          <button
+            id="btnFinishProject"
+            type="button"
+            class="secondary-btn"
+          >
+            Hoàn thành
+          </button>
+
+        </section>
+
+      </main>
+
+    </section>
+
+
+    <!-- ===================================================
+         SCREEN 05 — POINT SURVEY
+    ==================================================== -->
+
+    <section
+      id="screenPoint"
+      class="screen survey-screen"
+      aria-label="Khảo sát điểm"
+    >
+
+      <header class="survey-header">
+
+        <button
+          type="button"
+          class="back-btn icon-btn dark-icon"
+          data-back="screenSurveyHome"
+          aria-label="Quay lại"
+        >
+          ‹
+        </button>
+
+        <div class="survey-header-title">
+
+          <strong>
+            Khảo sát điểm
+          </strong>
+
+          <span id="pointProjectTitle">
+            —
+          </span>
+
+        </div>
+
+        <div class="header-spacer"></div>
+
+      </header>
+
+
+      <main class="survey-placeholder">
+
+        <div class="survey-placeholder-icon">
+          ●
         </div>
 
         <h1>
-            TGS Platform
+          Khảo sát điểm
         </h1>
 
         <p>
-            Genesis 2.0
+          Module khảo sát điểm sẽ được triển khai
+          sau khi Foundation Baseline PASS.
         </p>
 
-    </div>
-
-
-    <button
-        id="btnStart"
-        class="primary-btn"
-        type="button"
-    >
-        Bắt đầu
-    </button>
-
-</section>
-
-
-<!-- =====================================================
-     PROJECT HOME
-     
-     Đây là màn hình đầu tiên sau Splash.
-     
-     Không phải form tạo công trình.
-     
-     Flow:
-     
-     Bắt đầu
-        ↓
-     Hồ sơ công trình
-        ├── Tạo công trình mới
-        ├── Mở lại công trình đã lưu
-        └── Tiếp tục công trình chưa hoàn thành
-====================================================== -->
-
-<section
-    id="screenProjectHome"
-    class="screen"
->
-
-    <header class="topbar">
-
-        <div>
-
-            <h2>
-                Hồ sơ công trình
-            </h2>
-
-            <small>
-                TGS Survey
-            </small>
-
+        <div class="placeholder-status">
+          GIS-02 — NEXT
         </div>
 
-    </header>
+      </main>
+
+    </section>
 
 
-    <!-- =================================================
-         UNSAVED / IN-PROGRESS NOTICE
-    ================================================== -->
+    <!-- ===================================================
+         SCREEN 06 — LINEAR SURVEY
+    ==================================================== -->
 
-    <div
-        id="projectDraftNotice"
-        class="draft-notice"
-        hidden
+    <section
+      id="screenLinear"
+      class="screen linear-screen"
+      aria-label="Khảo sát tuyến"
     >
 
-        <strong>
-            ⚠️ Bạn có công trình chưa hoàn thành hoặc chưa lưu
-        </strong>
+      <!-- -----------------------------------------------
+           LINEAR HEADER
+      ------------------------------------------------ -->
 
-        <p>
-            Bạn có thể tiếp tục công trình đang thực hiện
-            hoặc tạo một công trình mới.
-        </p>
-
+      <header class="linear-header">
 
         <button
-            id="btnResumeProject"
-            class="primary-btn"
-            type="button"
+          type="button"
+          class="back-btn icon-btn linear-back-btn"
+          data-back="screenSurveyHome"
+          aria-label="Quay lại"
         >
-            Tiếp tục công trình
+          ‹
         </button>
 
-    </div>
+        <div class="linear-header-title">
 
+          <strong>
+            Khảo sát tuyến
+          </strong>
 
-    <!-- =================================================
-         CREATE NEW PROJECT
-    ================================================== -->
-
-    <div class="project-action-card">
-
-        <div class="project-action-icon">
-            ＋
-        </div>
-
-
-        <div class="project-action-content">
-
-            <h3>
-                Tạo công trình mới
-            </h3>
-
-            <p>
-                Tạo hồ sơ khảo sát mới và bắt đầu khảo sát
-                hiện trạng.
-            </p>
+          <span id="linearProject">
+            —
+          </span>
 
         </div>
 
+        <div class="header-spacer"></div>
+
+      </header>
+
+
+      <!-- -----------------------------------------------
+           GPS HUD
+      ------------------------------------------------ -->
+
+      <div
+        id="gpsHud"
+        class="gps-hud"
+      >
+
+        <div class="gps-indicator"></div>
+
+        <div class="gps-hud-content">
+
+          <strong>
+            GPS
+          </strong>
+
+          <span id="gpsText">
+            GPS chưa kết nối
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- -----------------------------------------------
+           MAP
+      ------------------------------------------------ -->
+
+      <div
+        id="map"
+        class="survey-map"
+      ></div>
+
+
+      <!-- -----------------------------------------------
+           MAP CONTROLS
+      ------------------------------------------------ -->
+
+      <div class="map-controls">
 
         <button
-            id="btnNewProject"
-            class="primary-btn"
-            type="button"
+          id="btnLocate"
+          type="button"
+          class="map-control-btn"
+          aria-label="Lấy vị trí hiện tại"
+          title="Lấy vị trí hiện tại"
         >
-            Tạo công trình mới
+          ◎
         </button>
-
-    </div>
-
-
-    <!-- =================================================
-         OPEN SAVED PROJECT
-    ================================================== -->
-
-    <div class="project-action-card">
-
-        <div class="project-action-icon">
-            📂
-        </div>
-
-
-        <div class="project-action-content">
-
-            <h3>
-                Mở lại công trình đã lưu
-            </h3>
-
-            <p>
-                Mở hồ sơ công trình đã hoàn thành và lưu
-                trên thiết bị.
-            </p>
-
-        </div>
-
 
         <button
-            id="btnOpenSavedProjects"
-            class="secondary-btn"
-            type="button"
+          id="btnZoomIn"
+          type="button"
+          class="map-control-btn"
+          aria-label="Phóng to"
+          title="Phóng to"
         >
-            Mở lại công trình đã lưu
+          +
         </button>
 
-    </div>
+        <button
+          id="btnZoomOut"
+          type="button"
+          class="map-control-btn"
+          aria-label="Thu nhỏ"
+          title="Thu nhỏ"
+        >
+          −
+        </button>
+
+      </div>
 
 
-    <!-- =================================================
-         SAVED PROJECT LIST
-    ================================================== -->
+      <!-- -----------------------------------------------
+           BASEMAP
+      ------------------------------------------------ -->
 
-    <div
-        id="savedProjectList"
-        class="saved-project-list"
-        hidden
-    >
+      <div class="map-top-controls">
 
-        <div class="section-title">
-
-            <h3>
-                Công trình đã lưu
-            </h3>
-
-            <button
-                id="btnCloseSavedProjects"
-                class="back-btn"
-                type="button"
-                aria-label="Đóng danh sách công trình"
-            >
-                ×
-            </button>
-
-        </div>
-
+        <button
+          id="btnBasemap"
+          type="button"
+          class="map-tool-btn"
+          aria-label="Bản đồ nền"
+        >
+          Bản đồ
+        </button>
 
         <div
-            id="savedProjectItems"
+          id="basemapPanel"
+          class="map-panel"
+          aria-hidden="true"
         >
-        </div>
 
-    </div>
+          <div class="map-panel-title">
+            Bản đồ nền
+          </div>
 
-</section>
-
-
-<!-- =====================================================
-     PROJECT INFORMATION
-     
-     Chỉ mở khi người dùng bấm:
-     "Tạo công trình mới"
-====================================================== -->
-
-<section
-    id="screenProject"
-    class="screen"
->
-
-    <header class="topbar">
-
-        <button
-            id="btnBackProjectHome"
-            class="back-btn"
+          <button
             type="button"
-            aria-label="Quay lại hồ sơ công trình"
-        >
-            ←
-        </button>
-
-
-        <div>
-
-            <h2>
-                Tạo hồ sơ công trình
-            </h2>
-
-            <small>
-                Công trình mới
-            </small>
-
-        </div>
-
-    </header>
-
-
-    <div class="form-card">
-
-        <label>
-            Tên công trình
-        </label>
-
-        <input
-            id="projectName"
-            type="text"
-            placeholder="VD: Trạm CN A"
-            autocomplete="off"
-        >
-
-
-        <label>
-            Mã công trình
-        </label>
-
-        <input
-            id="projectCode"
-            type="text"
-            placeholder="TGS-001"
-            autocomplete="off"
-        >
-
-
-        <label>
-            Địa điểm
-        </label>
-
-        <input
-            id="projectLocation"
-            type="text"
-            placeholder="Xã / Huyện / Tỉnh"
-            autocomplete="off"
-        >
-
-
-        <label>
-            Đơn vị khảo sát
-        </label>
-
-        <input
-            id="organization"
-            type="text"
-            placeholder="Công ty khảo sát"
-            autocomplete="organization"
-        >
-
-
-        <button
-            id="btnCreateProject"
-            class="primary-btn"
-            type="button"
-        >
-            Tiếp tục
-        </button>
-
-    </div>
-
-</section>
-
-
-<!-- =====================================================
-     SURVEY HOME
-====================================================== -->
-
-<section
-    id="screenSurveyHome"
-    class="screen"
->
-
-    <header class="topbar">
-
-        <div>
-
-            <h2>
-                Khảo sát hiện trạng
-            </h2>
-
-            <small id="projectTitle">
-                Chưa có công trình
-            </small>
-
-        </div>
-
-    </header>
-
-
-    <div class="hero-card">
-
-        <h3>
-            Chọn mô hình khảo sát
-        </h3>
-
-        <p>
-            Một công trình có thể khảo sát theo điểm
-            hoặc khảo sát theo tuyến.
-        </p>
-
-    </div>
-
-
-    <div class="survey-grid">
-
-
-        <button
-            id="btnPoint"
-            class="survey-card point"
-            type="button"
-        >
-
-            <div class="icon">
-                📍
-            </div>
-
-            <h3>
-                Khảo sát điểm
-            </h3>
-
-            <p>
-                Trạm • Nhà máy • Thiết bị
-            </p>
-
-        </button>
-
-
-        <button
-            id="btnLinear"
-            class="survey-card linear"
-            type="button"
-        >
-
-            <div class="icon">
-                🛰️
-            </div>
-
-            <h3>
-                Khảo sát tuyến
-            </h3>
-
-            <p>
-                Đường ống • Cáp • Kênh
-            </p>
-
-        </button>
-
-
-    </div>
-
-
-    <!-- =================================================
-         PROJECT COMPLETION
-    ================================================== -->
-
-    <div
-        class="project-completion-card"
-        id="projectCompletionCard"
-    >
-
-        <div class="project-completion-icon">
-            ✓
-        </div>
-
-
-        <div class="project-completion-content">
-
-            <h3>
-                Hoàn thành công trình
-            </h3>
-
-            <p>
-                Khi đã hoàn tất khảo sát, xác nhận hoàn thành
-                để chuyển sang bước lưu hồ sơ công trình.
-            </p>
-
-        </div>
-
-
-        <button
-            id="btnCompleteProject"
-            class="completion-btn"
-            type="button"
-        >
-            Hoàn thành khảo sát
-        </button>
-
-    </div>
-
-</section>
-
-
-<!-- =====================================================
-     PROJECT COMPLETE / SAVE
-====================================================== -->
-
-<section
-    id="screenProjectComplete"
-    class="screen"
->
-
-    <header class="topbar">
-
-        <button
-            id="btnBackToSurvey"
-            class="back-btn"
-            type="button"
-            aria-label="Quay lại khảo sát"
-        >
-            ←
-        </button>
-
-
-        <div>
-
-            <h2>
-                Hoàn thành công trình
-            </h2>
-
-            <small id="completeProjectTitle">
-                Công trình
-            </small>
-
-        </div>
-
-    </header>
-
-
-    <div class="completion-summary-card">
-
-        <div class="completion-success-icon">
-            ✓
-        </div>
-
-
-        <h3>
-            Khảo sát đã hoàn thành
-        </h3>
-
-
-        <p>
-            Hồ sơ công trình đã được hoàn thành trên thiết bị.
-            Hãy bấm <strong>Lưu công trình</strong> để xác nhận
-            hồ sơ đã hoàn tất.
-        </p>
-
-
-        <div class="completion-project-info">
-
-            <div>
-
-                <small>
-                    Công trình
-                </small>
-
-                <strong
-                    id="completeProjectName"
-                >
-                    --
-                </strong>
-
-            </div>
-
-
-            <div>
-
-                <small>
-                    Mã công trình
-                </small>
-
-                <strong
-                    id="completeProjectCode"
-                >
-                    --
-                </strong>
-
-            </div>
-
-        </div>
-
-
-        <button
-            id="btnSaveProject"
-            class="save-project-btn"
-            type="button"
-        >
-            Lưu công trình
-        </button>
-
-
-        <button
-            id="btnContinueProject"
-            class="secondary-btn"
-            type="button"
-        >
-            Quay lại công trình
-        </button>
-
-    </div>
-
-</section>
-
-
-<!-- =====================================================
-     POINT PLACEHOLDER
-====================================================== -->
-
-<section
-    id="screenPoint"
-    class="screen"
->
-
-    <header class="topbar">
-
-        <button
-            class="back-btn"
-            type="button"
-            aria-label="Quay lại"
-        >
-            ←
-        </button>
-
-
-        <h2>
-            Khảo sát điểm
-        </h2>
-
-    </header>
-
-
-    <div class="coming-card">
-
-        <h3>
-            TGS02-POINT
-        </h3>
-
-        <p>
-            Camera Survey sẽ triển khai ở Sprint POINT.
-        </p>
-
-    </div>
-
-</section>
-
-
-<!-- =====================================================
-     LINEAR SURVEY
-====================================================== -->
-
-<section
-    id="screenLinear"
-    class="screen"
->
-
-
-    <!-- =================================================
-         HEADER
-    ================================================== -->
-
-    <header class="topbar">
-
-        <button
-            class="back-btn"
-            type="button"
-            aria-label="Quay lại"
-        >
-            ←
-        </button>
-
-
-        <div>
-
-            <h2>
-                Khảo sát tuyến
-            </h2>
-
-            <small id="linearProject">
-                Công trình
-            </small>
-
-        </div>
-
-    </header>
-
-
-    <!-- =================================================
-         MAP CARD
-    ================================================== -->
-
-    <div class="linear-map-card">
-
-
-        <!-- =============================================
-             GPS HUD
-        ============================================== -->
-
-        <div
-            class="gps-hud"
-            aria-live="polite"
-        >
-
-            <span class="gps-status"></span>
-
-            <span id="gpsText">
-                GPS: Chưa kết nối
+            class="map-option active"
+            data-basemap="arcgis"
+          >
+            <span>
+              ArcGIS
             </span>
 
+            <span class="map-option-status">
+              Mặc định
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="map-option disabled"
+            data-basemap="google"
+            disabled
+          >
+            <span>
+              Google Maps
+            </span>
+
+            <span class="map-option-status">
+              Chuẩn bị
+            </span>
+          </button>
+
         </div>
 
+      </div>
 
-        <!-- =============================================
-             LEAFLET MAP
-        ============================================== -->
 
-        <div
-            id="map"
-            aria-label="Bản đồ khảo sát tuyến"
-        ></div>
+      <!-- -----------------------------------------------
+           GIS LAYER PANEL
+      ------------------------------------------------ -->
 
+      <aside
+        id="gisLayerPanel"
+        class="gis-layer-panel"
+      >
 
-        <!-- =============================================
-             MAP LAYER CONTROL
-        ============================================== -->
+        <div class="gis-panel-header">
 
-        <details
-            id="mapLayerControl"
-            class="map-layer-control"
-        >
+          <strong>
+            Lớp GIS
+          </strong>
 
-            <summary
-                id="btnMapLayers"
-                title="Lớp bản đồ"
-            >
-                🗺️
-            </summary>
-
-
-            <div class="map-layer-panel">
-
-
-                <!-- =====================================
-                     BASE MAP
-                ====================================== -->
-
-                <div class="map-layer-section">
-
-                    <h4>
-                        Nền bản đồ
-                    </h4>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-provider="arcgis"
-                    >
-
-                        <input
-                            id="baseMapArcGIS"
-                            type="radio"
-                            name="baseMap"
-                            value="arcgis"
-                            checked
-                        >
-
-                        <span>
-                            🗺️ ArcGIS
-                        </span>
-
-                        <small>
-                            Mặc định
-                        </small>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-provider="google-road"
-                    >
-
-                        <input
-                            id="baseMapGoogleRoad"
-                            type="radio"
-                            name="baseMap"
-                            value="google-road"
-                            disabled
-                        >
-
-                        <span>
-                            🛣️ Google Đường phố
-                        </span>
-
-                        <small>
-                            Chuẩn bị
-                        </small>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-provider="google-satellite"
-                    >
-
-                        <input
-                            id="baseMapGoogleSatellite"
-                            type="radio"
-                            name="baseMap"
-                            value="google-satellite"
-                            disabled
-                        >
-
-                        <span>
-                            🛰️ Google Vệ tinh
-                        </span>
-
-                        <small>
-                            Chuẩn bị
-                        </small>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-provider="google-hybrid"
-                    >
-
-                        <input
-                            id="baseMapGoogleHybrid"
-                            type="radio"
-                            name="baseMap"
-                            value="google-hybrid"
-                            disabled
-                        >
-
-                        <span>
-                            🌍 Google Hybrid
-                        </span>
-
-                        <small>
-                            Chuẩn bị
-                        </small>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-provider="google-terrain"
-                    >
-
-                        <input
-                            id="baseMapGoogleTerrain"
-                            type="radio"
-                            name="baseMap"
-                            value="google-terrain"
-                            disabled
-                        >
-
-                        <span>
-                            ⛰️ Google Địa hình
-                        </span>
-
-                        <small>
-                            Chuẩn bị
-                        </small>
-
-                    </label>
-
-                </div>
-
-
-                <!-- =====================================
-                     TGS GIS LAYERS
-                ====================================== -->
-
-                <div class="map-layer-section">
-
-                    <h4>
-                        Lớp GIS TGS
-                    </h4>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-layer="surveyPoint"
-                    >
-
-                        <input
-                            id="layerSurveyPoint"
-                            type="checkbox"
-                            checked
-                        >
-
-                        <span>
-                            📍 Điểm khảo sát
-                        </span>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-layer="surveyRoute"
-                    >
-
-                        <input
-                            id="layerSurveyRoute"
-                            type="checkbox"
-                            checked
-                        >
-
-                        <span>
-                            ━ Tuyến khảo sát
-                        </span>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-layer="pipe"
-                    >
-
-                        <input
-                            id="layerPipe"
-                            type="checkbox"
-                        >
-
-                        <span>
-                            ━ Ống
-                        </span>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-layer="valve"
-                    >
-
-                        <input
-                            id="layerValve"
-                            type="checkbox"
-                        >
-
-                        <span>
-                            ● Van
-                        </span>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-layer="tee"
-                    >
-
-                        <input
-                            id="layerTee"
-                            type="checkbox"
-                        >
-
-                        <span>
-                            ◆ Tê
-                        </span>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-layer="elbow"
-                    >
-
-                        <input
-                            id="layerElbow"
-                            type="checkbox"
-                        >
-
-                        <span>
-                            ◇ Cút
-                        </span>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-layer="waterStation"
-                    >
-
-                        <input
-                            id="layerWaterStation"
-                            type="checkbox"
-                        >
-
-                        <span>
-                            🏭 Trạm cấp nước
-                        </span>
-
-                    </label>
-
-
-                    <label
-                        class="map-layer-option"
-                        data-layer="customerMeter"
-                    >
-
-                        <input
-                            id="layerCustomerMeter"
-                            type="checkbox"
-                        >
-
-                        <span>
-                            ⏱️ Đồng hồ khách hàng
-                        </span>
-
-                    </label>
-
-                </div>
-
-
-            </div>
-
-        </details>
-
-
-        <!-- =============================================
-             MAP TOOLBAR
-        ============================================== -->
-
-        <div class="map-toolbar">
-
-
-            <button
-                id="btnLocate"
-                title="Lấy GPS"
-                aria-label="Lấy GPS"
-                type="button"
-            >
-                📍
-            </button>
-
-
-            <button
-                id="btnSurvey"
-                title="Thiết bị"
-                aria-label="Thiết bị"
-                type="button"
-            >
-                🛰️
-            </button>
-
-
-            <button
-                id="btnZoomIn"
-                title="Phóng to"
-                aria-label="Phóng to"
-                type="button"
-            >
-                +
-            </button>
-
-
-            <button
-                id="btnZoomOut"
-                title="Thu nhỏ"
-                aria-label="Thu nhỏ"
-                type="button"
-            >
-                −
-            </button>
-
+          <span>
+            TGS
+          </span>
 
         </div>
 
 
-    </div>
+        <label class="layer-toggle">
+
+          <input
+            id="layerPoint"
+            type="checkbox"
+            data-layer="point"
+            checked
+          >
+
+          <span>
+            Điểm khảo sát
+          </span>
+
+        </label>
 
 
-    <!-- =================================================
-         SURVEY INFORMATION
-    ================================================== -->
+        <label class="layer-toggle">
 
-    <div class="recent-card">
+          <input
+            id="layerRoute"
+            type="checkbox"
+            data-layer="route"
+            checked
+          >
 
+          <span>
+            Tuyến khảo sát
+          </span>
 
-        <h4>
-            Thông số khảo sát
-        </h4>
-
-
-        <div class="stats-grid">
-
-
-            <div>
-
-                <small>
-                    GPS
-                </small>
-
-                <strong id="gpsAccuracy">
-                    ± --
-                </strong>
-
-            </div>
+        </label>
 
 
-            <div>
+        <label class="layer-toggle">
 
-                <small>
-                    VN2000
-                </small>
+          <input
+            id="layerPipe"
+            type="checkbox"
+            data-layer="pipe"
+            checked
+          >
 
-                <strong id="vnCoord">
-                    X / Y
-                </strong>
+          <span>
+            Ống
+          </span>
 
-            </div>
-
-
-            <div>
-
-                <small>
-                    Điểm
-                </small>
-
-                <strong id="pointCode">
-                    Chưa có
-                </strong>
-
-            </div>
+        </label>
 
 
-            <div>
+        <label class="layer-toggle">
 
-                <small>
-                    Chiều dài
-                </small>
+          <input
+            id="layerValve"
+            type="checkbox"
+            data-layer="valve"
+            checked
+          >
 
-                <strong id="routeLength">
-                    0.000 km
-                </strong>
+          <span>
+            Van
+          </span>
 
-            </div>
+        </label>
 
+
+        <label class="layer-toggle">
+
+          <input
+            id="layerTee"
+            type="checkbox"
+            data-layer="tee"
+            checked
+          >
+
+          <span>
+            Tê
+          </span>
+
+        </label>
+
+
+        <label class="layer-toggle">
+
+          <input
+            id="layerElbow"
+            type="checkbox"
+            data-layer="elbow"
+            checked
+          >
+
+          <span>
+            Cút
+          </span>
+
+        </label>
+
+
+        <label class="layer-toggle">
+
+          <input
+            id="layerStation"
+            type="checkbox"
+            data-layer="station"
+            checked
+          >
+
+          <span>
+            Trạm cấp nước
+          </span>
+
+        </label>
+
+
+        <label class="layer-toggle">
+
+          <input
+            id="layerMeter"
+            type="checkbox"
+            data-layer="meter"
+            checked
+          >
+
+          <span>
+            Đồng hồ khách hàng
+          </span>
+
+        </label>
+
+      </aside>
+
+
+      <!-- -----------------------------------------------
+           SURVEY HUD
+      ------------------------------------------------ -->
+
+      <section class="survey-bottom-panel">
+
+        <div class="survey-stats">
+
+          <div class="survey-stat">
+
+            <span>
+              GPS
+            </span>
+
+            <strong id="gpsAccuracy">
+              —
+            </strong>
+
+          </div>
+
+
+          <div class="survey-stat">
+
+            <span>
+              Tọa độ
+            </span>
+
+            <strong id="vnCoord">
+              Chưa có
+            </strong>
+
+          </div>
+
+
+          <div class="survey-stat">
+
+            <span>
+              Điểm
+            </span>
+
+            <strong id="pointCode">
+              Chưa có
+            </strong>
+
+          </div>
+
+
+          <div class="survey-stat">
+
+            <span>
+              Chiều dài
+            </span>
+
+            <strong id="routeLength">
+              0 m
+            </strong>
+
+          </div>
 
         </div>
 
+
+        <div class="survey-action-row">
+
+          <button
+            id="btnFirstGPS"
+            type="button"
+            class="primary-btn survey-gps-btn"
+          >
+            Lấy GPS
+          </button>
+
+        </div>
+
+      </section>
+
+    </section>
+
+
+    <!-- ===================================================
+         SCREEN 07 — PROJECT COMPLETE
+    ==================================================== -->
+
+    <section
+      id="screenProjectComplete"
+      class="screen"
+      aria-label="Hoàn thành công trình"
+    >
+
+      <header class="app-header">
 
         <button
-            id="btnFirstGPS"
-            class="primary-btn"
-            type="button"
+          id="btnReturnSurvey"
+          type="button"
+          class="back-btn icon-btn"
+          aria-label="Quay lại khảo sát"
         >
-            Lấy GPS đầu tiên
+          ‹
         </button>
 
+        <div class="header-title">
+          Hoàn thành
+        </div>
 
-    </div>
+        <div class="header-spacer"></div>
+
+      </header>
 
 
-</section>
+      <main class="screen-content">
+
+        <section class="completion-page">
+
+          <div class="completion-success-icon">
+            ✓
+          </div>
+
+          <div class="eyebrow">
+            PROJECT COMPLETION
+          </div>
+
+          <h1>
+            Hoàn thành khảo sát
+          </h1>
+
+          <p>
+            Hồ sơ hiện tại sẽ được đóng và lưu trên thiết bị.
+            Việc hoàn thành không đồng nghĩa với đồng bộ Cloud.
+          </p>
 
 
-</div>
+          <div class="completion-project-card">
+
+            <div class="completion-field">
+
+              <span>
+                Công trình
+              </span>
+
+              <strong id="completeProjectName">
+                —
+              </strong>
+
+            </div>
 
 
-<!-- =====================================================
-     JAVASCRIPT
-====================================================== -->
+            <div class="completion-field">
 
-<script
+              <span>
+                Mã công trình
+              </span>
+
+              <strong id="completeProjectCode">
+                —
+              </strong>
+
+            </div>
+
+          </div>
+
+
+          <div class="completion-actions">
+
+            <button
+              id="btnSaveProject"
+              type="button"
+              class="primary-btn"
+            >
+              Lưu công trình
+            </button>
+
+            <button
+              id="btnContinueProject"
+              type="button"
+              class="secondary-btn"
+            >
+              Tiếp tục khảo sát
+            </button>
+
+          </div>
+
+        </section>
+
+      </main>
+
+    </section>
+
+  </div>
+
+
+  <!-- =====================================================
+       LEAFLET JAVASCRIPT
+  ====================================================== -->
+
+  <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-></script>
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
 
 
-<script
-    src="db.js"
-></script>
+  <!-- =====================================================
+       TGS DATABASE
+       db.js sẽ được xây dựng theo contract này
+  ====================================================== -->
+
+  <script src="db.js"></script>
 
 
-<script
-    src="app.js"
-></script>
+  <!-- =====================================================
+       TGS APPLICATION
+       app.js sẽ được xây dựng theo contract này
+  ====================================================== -->
 
+  <script src="app.js"></script>
 
 </body>
-
 </html>
