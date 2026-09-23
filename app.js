@@ -3,18 +3,19 @@
    TGS02-WEB-LINEAR-004
 
    app.js
-   REV11 — RECONCILED BASELINE
+   REV12 — STARTUP / DB BINDING FIX
 
    PURPOSE
    ----------------------------------------------------------
    1. Reconcile app.js with current index.html.
    2. Reconcile Project Lifecycle with DB v4.
    3. Fix START button failure.
-   4. Preserve ArcGIS as default map provider.
-   5. Preserve real-device GPS read/display.
-   6. Remove all synthetic GIS/demo objects.
-   7. Keep GIS layer controls provider-independent.
-   8. Do NOT implement Survey Point persistence yet.
+   4. Ensure UI bindings are independent from DB initialization.
+   5. Preserve ArcGIS as default map provider.
+   6. Preserve real-device GPS read/display.
+   7. Remove all synthetic GIS/demo objects.
+   8. Keep GIS layer controls provider-independent.
+   9. Do NOT implement Survey Point persistence yet.
 
    QA BASELINE
    ----------------------------------------------------------
@@ -3098,7 +3099,22 @@ window.addEventListener(
 
 
         /*
-         * Resolve DB API.
+         * IMPORTANT REV12 STARTUP ORDER
+         *
+         * UI bindings must not depend on IndexedDB
+         * resolution or initialization.
+         *
+         * If the database is unavailable, the START
+         * button must still respond and show a clear
+         * database-not-ready message instead of becoming
+         * a dead button.
+         */
+
+        bindButtons();
+
+
+        /*
+         * Resolve DB API after UI binding.
          */
 
         databaseApi =
@@ -3111,7 +3127,6 @@ window.addEventListener(
                 "TGS: Database API not found."
             );
 
-
             alert(
                 "Không tìm thấy Offline Database."
             );
@@ -3119,13 +3134,6 @@ window.addEventListener(
             return;
 
         }
-
-
-        /*
-         * Bind UI.
-         */
-
-        bindButtons();
 
 
         /*
@@ -3176,7 +3184,7 @@ window.addEventListener(
             );
 
             console.log(
-                "app.js REV11 — RECONCILED"
+                "app.js REV12 — STARTUP / DB BINDING FIX"
             );
 
             console.log(
@@ -3226,6 +3234,18 @@ window.addEventListener(
 
 
 /* ==========================================================
+   REV12 STARTUP FIX
+
+   UI button binding is intentionally independent from
+   IndexedDB API resolution and initialization.
+
+   This revision does NOT change project data, GIS data,
+   GPS persistence, Survey Point persistence, or any
+   subsequent survey implementation gate.
+========================================================== */
+
+
+/* ==========================================================
    QA STATUS
 ========================================================== */
 
@@ -3234,7 +3254,7 @@ function qaStatus() {
     return {
 
         revision:
-            "REV11",
+            "REV12",
 
         database:
             dbReady,
@@ -3315,5 +3335,5 @@ window.TGS = {
 ========================================================== */
 
 console.log(
-    "TGS Genesis 2.0 app.js REV11 Loaded"
+    "TGS Genesis 2.0 app.js REV12 Loaded"
 );
