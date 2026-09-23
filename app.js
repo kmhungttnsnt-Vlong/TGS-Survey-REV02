@@ -1,5067 +1,2922 @@
 /* ==========================================================
    TGS PLATFORM GENESIS 2.0
-   TGS02-WEB-LINEAR-004
+   TGS-SURVEY-REV02
+   style.css
+   REV01
 
-   app.js
-   REV14 — SMART GNSS ACQUISITION
-
-   PURPOSE
+   FOUNDATION UI BASELINE
    ----------------------------------------------------------
-   1. Reconcile app.js with current index.html.
-   2. Reconcile Project Lifecycle with DB v4.
-   3. Fix START button failure.
-   4. Ensure UI bindings are independent from DB initialization.
-   5. Preserve ArcGIS as default map provider.
-   6. Implement Smart GNSS acquisition using watchPosition().
-   7. Remove all synthetic GIS/demo objects.
-   8. Keep GIS layer controls provider-independent.
-   9. Do NOT implement Survey Point persistence yet.
-  10. Do NOT claim phone GNSS equals RTK/GNSS survey equipment.
-
-   QA BASELINE
-   ----------------------------------------------------------
-   ✓ IndexedDB v4
-   ✓ Project lifecycle
-   ✓ Startup Home
-   ✓ Resume Project
-   ✓ Saved Project
-   ✓ ArcGIS Default
-   ✓ Smart GNSS watchPosition
-   ✓ Multi-sample acquisition
-   ✓ Accuracy + stability QA
-   ✓ No synthetic GIS data
-   ✓ Current index.html IDs
-   ✓ Current DB v4 API
-
-   IMPORTANT
-   ----------------------------------------------------------
-   This revision is the Smart GNSS acquisition release.
-
-   It intentionally does NOT:
-   - create survey points
-   - save GPS points
-   - claim centimeter accuracy from smartphone GNSS
-   - perform VN-2000 conversion
-   - create demo GIS objects
-   - create D001
-   - implement VN-2000 conversion
-   - implement GIS export
-   - implement camera survey
-
-   Those belong to subsequent QA gates.
+   Contract:
+   - index.html REV01
+   - Mobile First
+   - Responsive
+   - Material 3 inspired
+   - Field Engineering UX
+   - Safe Area
+   - Touch First
+   - No JavaScript dependency
 ========================================================== */
 
 
 /* ==========================================================
-   GLOBAL STATE
+   01. DESIGN TOKENS
 ========================================================== */
 
-let currentProject = null;
+:root {
 
-let dbReady = false;
+  /* --------------------------------------------------------
+     COLOR
+  -------------------------------------------------------- */
 
-let databaseApi = null;
+  --tgs-primary: #1565C0;
+  --tgs-primary-dark: #0D47A1;
+  --tgs-primary-light: #E3F2FD;
 
-const $ = (id) => {
-    return document.getElementById(id);
-};
+  --tgs-secondary: #455A64;
+  --tgs-secondary-light: #ECEFF1;
 
+  --tgs-success: #2E7D32;
+  --tgs-success-light: #E8F5E9;
 
-/* ==========================================================
-   PROJECT STATUS
-========================================================== */
+  --tgs-warning: #EF6C00;
+  --tgs-warning-light: #FFF3E0;
 
-const TGS_APP_PROJECT_STATUS = {
+  --tgs-danger: #C62828;
+  --tgs-danger-light: #FFEBEE;
 
-    DRAFT: "DRAFT",
+  --tgs-info: #0277BD;
+  --tgs-info-light: #E1F5FE;
 
-    IN_PROGRESS: "IN_PROGRESS",
+  --tgs-text: #17202A;
+  --tgs-text-secondary: #5F6B76;
+  --tgs-text-muted: #87919A;
 
-    COMPLETED: "COMPLETED",
+  --tgs-border: #D9E0E6;
+  --tgs-border-light: #E8EDF1;
 
-    SAVED: "SAVED"
+  --tgs-background: #F5F7FA;
+  --tgs-surface: #FFFFFF;
+  --tgs-surface-soft: #F8FAFC;
 
-};
+  --tgs-overlay: rgba(15, 23, 42, 0.48);
 
 
-/* ==========================================================
-   STARTUP STATE
-========================================================== */
+  /* --------------------------------------------------------
+     TYPOGRAPHY
+  -------------------------------------------------------- */
 
-let startupState = {
+  --font-family:
+    Inter,
+    "Noto Sans",
+    "Segoe UI",
+    Roboto,
+    Arial,
+    sans-serif;
 
-    draftProject: null,
+  --font-size-xs: 0.72rem;
+  --font-size-sm: 0.82rem;
+  --font-size-md: 0.95rem;
+  --font-size-lg: 1.08rem;
+  --font-size-xl: 1.35rem;
+  --font-size-2xl: 1.75rem;
+  --font-size-3xl: 2.2rem;
 
-    savedProjects: []
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
-};
 
+  /* --------------------------------------------------------
+     SPACING
+  -------------------------------------------------------- */
 
-/* ==========================================================
-   GPS STATE
-========================================================== */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
 
-const GPSState = {
 
-    available: false,
+  /* --------------------------------------------------------
+     RADIUS
+  -------------------------------------------------------- */
 
-    acquiring: false,
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-pill: 999px;
 
-    latitude: null,
 
-    longitude: null,
+  /* --------------------------------------------------------
+     SHADOW
+  -------------------------------------------------------- */
 
-    accuracy: null,
+  --shadow-sm:
+    0 1px 3px rgba(15, 23, 42, 0.08);
 
-    altitude: null,
+  --shadow-md:
+    0 6px 20px rgba(15, 23, 42, 0.10);
 
-    timestamp: null,
+  --shadow-lg:
+    0 14px 40px rgba(15, 23, 42, 0.14);
 
-    error: null
+  --shadow-primary:
+    0 10px 24px rgba(21, 101, 192, 0.22);
 
-};
 
+  /* --------------------------------------------------------
+     LAYOUT
+  -------------------------------------------------------- */
 
-/* ==========================================================
-   SMART GNSS STATE
+  --header-height: 64px;
+  --bottom-panel-height: 152px;
 
-   This state is deliberately session-only.
-   No sample is persisted to IndexedDB in REV14.
-========================================================== */
+  --content-max-width: 720px;
+  --wide-content-max-width: 1100px;
 
-const SmartGNSSState = {
+  --touch-target: 48px;
 
-    active: false,
 
-    samples: [],
+  /* --------------------------------------------------------
+     SAFE AREA
+  -------------------------------------------------------- */
 
-    targetSamples: 20,
-
-    minimumSamples: 10,
-
-    maxSamples: 30,
-
-    minSampleIntervalMs: 700,
-
-    lastAcceptedTimestamp: 0,
-
-    watchId: null,
-
-    startedAt: null,
-
-    finishedAt: null,
-
-    medianAccuracy: null,
-
-    stabilityMeters: null,
-
-    representative: null,
-
-    quality: "IDLE",
-
-    qualityLabel: "Chưa đo",
-
-    ready: false,
-
-    error: null
-
-};
-
-
-/* ==========================================================
-   GIS LAYER STATE
-
-   IMPORTANT:
-   These are UI visibility states only.
-
-   They do NOT create synthetic GIS objects.
-========================================================== */
-
-const GISLayerState = {
-
-    surveyPoint: true,
-
-    surveyRoute: true,
-
-    pipe: false,
-
-    valve: false,
-
-    tee: false,
-
-    elbow: false,
-
-    waterStation: false,
-
-    customerMeter: false
-
-};
-
-
-/* ==========================================================
-   DATABASE API RESOLUTION
-
-   DB v4 exposes:
-   - DB
-   - window.TGS_DB
-
-   We intentionally do not invent any new DB API.
-========================================================== */
-
-function resolveDatabaseApi() {
-
-    try {
-
-        if (
-            typeof DB !== "undefined" &&
-            DB
-        ) {
-
-            return DB;
-
-        }
-
-    } catch (error) {
-
-        /* Ignore and continue. */
-
-    }
-
-
-    if (
-        window.TGS_DB
-    ) {
-
-        return window.TGS_DB;
-
-    }
-
-
-    if (
-        window.TGS &&
-        window.TGS.DB
-    ) {
-
-        return window.TGS.DB;
-
-    }
-
-
-    return null;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 
 }
 
 
 /* ==========================================================
-   DATABASE GUARD
+   02. RESET
 ========================================================== */
 
-function requireDatabase() {
-
-    databaseApi =
-        databaseApi ||
-        resolveDatabaseApi();
-
-
-    if (!databaseApi) {
-
-        throw new Error(
-            "TGS Database API không khả dụng."
-        );
-
-    }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 
-    return databaseApi;
+html {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
 
+  font-size: 16px;
+
+  background: var(--tgs-background);
+
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  scroll-behavior: smooth;
+}
+
+
+body {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  margin: 0;
+  padding: 0;
+
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
+
+  line-height: 1.5;
+
+  color: var(--tgs-text);
+  background: var(--tgs-background);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  overflow-x: hidden;
+}
+
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+
+button {
+  border: 0;
+  margin: 0;
+  padding: 0;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+
+input,
+textarea,
+select {
+  color: var(--tgs-text);
+}
+
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: 1.2;
+}
+
+
+a {
+  color: inherit;
 }
 
 
 /* ==========================================================
-   SCREEN MANAGER
+   03. APP ROOT
 ========================================================== */
 
-const screens = [
+.app-root {
+  position: relative;
 
-    "screenSplash",
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
 
-    "screenProjectHome",
-
-    "screenProject",
-
-    "screenSurveyHome",
-
-    "screenPoint",
-
-    "screenLinear",
-
-    "screenProjectComplete"
-
-];
+  overflow: hidden;
+}
 
 
-function show(screenId) {
+/* ==========================================================
+   04. SCREEN SYSTEM
+========================================================== */
 
-    screens.forEach(
-        id => {
+.screen {
+  position: relative;
 
-            const screen = $(id);
+  display: none;
 
-            if (screen) {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
 
-                screen.classList.remove(
-                    "active"
-                );
+  background: var(--tgs-background);
 
-            }
+  overflow-x: hidden;
+}
 
-        }
+
+.screen.active {
+  display: flex;
+  flex-direction: column;
+}
+
+
+.screen[hidden] {
+  display: none !important;
+}
+
+
+/* ==========================================================
+   05. COMMON CONTENT
+========================================================== */
+
+.screen-content {
+
+  width: 100%;
+  max-width: var(--content-max-width);
+
+  margin: 0 auto;
+
+  padding:
+    var(--space-6)
+    var(--space-4)
+    calc(
+      var(--space-8) +
+      var(--safe-bottom)
     );
 
-
-    const target =
-        $(screenId);
-
-
-    if (!target) {
-
-        console.warn(
-            "TGS Screen not found:",
-            screenId
-        );
-
-        return;
-
-    }
+  flex: 1;
+}
 
 
-    target.classList.add(
-        "active"
+.page-heading {
+  margin-bottom: var(--space-6);
+}
+
+
+.page-heading.compact {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+
+.page-heading .eyebrow {
+  margin-bottom: var(--space-2);
+}
+
+
+.page-heading h1 {
+  margin-bottom: var(--space-2);
+
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+
+  letter-spacing: -0.02em;
+}
+
+
+.page-heading h2 {
+  margin-bottom: 0;
+
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.page-heading p {
+  margin-bottom: 0;
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-md);
+}
+
+
+.eyebrow {
+
+  color: var(--tgs-primary);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+
+/* ==========================================================
+   06. SPLASH SCREEN
+========================================================== */
+
+.screen-splash {
+
+  align-items: center;
+  justify-content: center;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  padding:
+    calc(var(--space-8) + var(--safe-top))
+    calc(var(--space-5) + var(--safe-right))
+    calc(var(--space-8) + var(--safe-bottom))
+    calc(var(--space-5) + var(--safe-left));
+
+  background:
+    radial-gradient(
+      circle at 50% 20%,
+      rgba(227, 242, 253, 0.95),
+      rgba(245, 247, 250, 1) 48%
+    );
+}
+
+
+.splash-content {
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  width: 100%;
+  max-width: 420px;
+
+  text-align: center;
+}
+
+
+.brand-mark {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 92px;
+  height: 92px;
+
+  margin-bottom: var(--space-5);
+
+  border-radius: var(--radius-2xl);
+
+  color: #FFFFFF;
+  background:
+    linear-gradient(
+      145deg,
+      var(--tgs-primary),
+      var(--tgs-primary-dark)
     );
 
+  box-shadow: var(--shadow-primary);
 
-    if (
-        screenId ===
-        "screenLinear"
-    ) {
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
 
-        setTimeout(
-            () => {
+  letter-spacing: -0.04em;
+}
 
-                MapEngine.initialize();
 
-                MapLayerControl.initialize();
+.brand-title {
 
-                SmartGNSSUI.ensure();
+  margin-bottom: var(--space-1);
 
-                SmartGNSSUI.update();
+  color: var(--tgs-text);
 
-                updateLinearUI();
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
 
-            },
-            150
-        );
+  letter-spacing: -0.025em;
+}
 
-    }
 
+.brand-subtitle {
+
+  margin-bottom: var(--space-2);
+
+  color: var(--tgs-primary);
+
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.splash-status {
+
+  margin-bottom: var(--space-8);
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-sm);
+}
+
+
+.splash-start-btn {
+  width: 100%;
+  max-width: 360px;
 }
 
 
 /* ==========================================================
-   PROJECT CLASSIFICATION
+   07. HEADER
 ========================================================== */
 
-function isDraftProject(project) {
+.app-header {
 
-    if (!project) {
+  position: relative;
+  z-index: 20;
 
-        return false;
+  display: flex;
+  align-items: center;
 
-    }
+  width: 100%;
+  min-height: var(--header-height);
 
+  padding:
+    var(--space-2)
+    calc(var(--space-4) + var(--safe-right))
+    var(--space-2)
+    calc(var(--space-4) + var(--safe-left));
 
-    if (
-        project.status ===
-        TGS_APP_PROJECT_STATUS.DRAFT
-    ) {
+  background:
+    rgba(255, 255, 255, 0.94);
 
-        return true;
+  border-bottom: 1px solid var(--tgs-border-light);
 
-    }
+  box-shadow:
+    0 1px 6px rgba(15, 23, 42, 0.04);
 
-
-    if (
-        project.status ===
-        TGS_APP_PROJECT_STATUS.IN_PROGRESS
-    ) {
-
-        return true;
-
-    }
-
-
-    if (
-        project.status ===
-        "draft"
-    ) {
-
-        return true;
-
-    }
-
-
-    if (
-        project.status ===
-        "in_progress"
-    ) {
-
-        return true;
-
-    }
-
-
-    if (
-        project.status ===
-        TGS_APP_PROJECT_STATUS.COMPLETED &&
-        project.isSaved !== true
-    ) {
-
-        return true;
-
-    }
-
-
-    if (
-        project.completed === false &&
-        project.isSaved !== true
-    ) {
-
-        return true;
-
-    }
-
-
-    if (
-        project.isSaved === false
-    ) {
-
-        return true;
-
-    }
-
-
-    return false;
-
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 
-function isSavedProject(project) {
+.header-brand {
 
-    if (!project) {
-
-        return false;
-
-    }
-
-
-    if (
-        project.status ===
-        TGS_APP_PROJECT_STATUS.SAVED
-    ) {
-
-        return true;
-
-    }
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
 
 
-    if (
-        project.status ===
-        "saved"
-    ) {
+.header-brand-main {
 
-        return true;
+  color: var(--tgs-primary);
 
-    }
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
 
-
-    if (
-        project.isSaved === true
-    ) {
-
-        return true;
-
-    }
+  letter-spacing: -0.03em;
+}
 
 
-    return false;
+.header-brand-sub {
 
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+
+.header-status {
+
+  margin-left: auto;
+
+  color: var(--tgs-text-muted);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+
+.header-title {
+
+  flex: 1;
+
+  color: var(--tgs-text);
+
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+
+  text-align: center;
+}
+
+
+.header-spacer {
+  width: var(--touch-target);
+  min-width: var(--touch-target);
 }
 
 
 /* ==========================================================
-   PROJECT STATE LOADER
-
-   DB v4 API:
-   - getAllProjects()
+   08. BUTTON SYSTEM
 ========================================================== */
 
-async function loadProjectState() {
+.primary-btn,
+.secondary-btn {
 
-    if (!dbReady) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-        return;
+  min-height: var(--touch-target);
 
-    }
+  padding:
+    0
+    var(--space-5);
 
+  border-radius: var(--radius-md);
 
-    try {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
 
-        const database =
-            requireDatabase();
+  line-height: 1;
 
-
-        let projects =
-            await database.getAllProjects();
-
-
-        if (
-            !Array.isArray(projects)
-        ) {
-
-            projects = [];
-
-        }
-
-
-        projects =
-            projects.filter(
-                project =>
-                    project &&
-                    project.projectId
-            );
-
-
-        projects.sort(
-            (a, b) => {
-
-                const aDate =
-                    new Date(
-                        a.updatedAt ||
-                        a.savedAt ||
-                        a.createdAt ||
-                        0
-                    );
-
-                const bDate =
-                    new Date(
-                        b.updatedAt ||
-                        b.savedAt ||
-                        b.createdAt ||
-                        0
-                    );
-
-                return bDate - aDate;
-
-            }
-        );
-
-
-        startupState.draftProject =
-            projects.find(
-                project =>
-                    isDraftProject(
-                        project
-                    )
-            ) || null;
-
-
-        startupState.savedProjects =
-            projects.filter(
-                project =>
-                    isSavedProject(
-                        project
-                    )
-            );
-
-
-        /*
-         * Compatibility rule:
-         *
-         * Older project records created before
-         * lifecycle fields existed are considered
-         * saved/readable records rather than being
-         * silently discarded.
-         */
-
-        if (
-            startupState.savedProjects.length === 0
-        ) {
-
-            startupState.savedProjects =
-                projects.filter(
-                    project => {
-
-                        const hasLifecycleFields =
-
-                            Object.prototype
-                                .hasOwnProperty
-                                .call(
-                                    project,
-                                    "status"
-                                ) ||
-
-                            Object.prototype
-                                .hasOwnProperty
-                                .call(
-                                    project,
-                                    "isSaved"
-                                ) ||
-
-                            Object.prototype
-                                .hasOwnProperty
-                                .call(
-                                    project,
-                                    "completed"
-                                );
-
-
-                        return (
-                            !hasLifecycleFields &&
-                            project !==
-                            startupState.draftProject
-                        );
-
-                    }
-                );
-
-        }
-
-
-        renderProjectHome();
-
-    } catch (error) {
-
-        console.error(
-            "TGS Project State Error:",
-            error
-        );
-
-    }
-
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease,
+    opacity 140ms ease;
 }
 
 
-/* ==========================================================
-   PROJECT HOME RENDER
-========================================================== */
+.primary-btn {
 
-function renderProjectHome() {
+  color: #FFFFFF;
 
-    const notice =
-        $("projectDraftNotice");
-
-
-    const resumeButton =
-        $("btnContinueDraft");
-
-
-    const savedList =
-        $("savedProjectList");
-
-
-    if (notice) {
-
-        notice.hidden =
-            !startupState.draftProject;
-
-    }
-
-
-    if (resumeButton) {
-
-        resumeButton.style.display =
-            startupState.draftProject
-                ? ""
-                : "none";
-
-    }
-
-
-    if (savedList) {
-
-        savedList.hidden = true;
-
-    }
-
-
-    renderSavedProjectItems();
-
-}
-
-
-/* ==========================================================
-   SAVED PROJECT LIST
-========================================================== */
-
-function renderSavedProjectItems() {
-
-    const container =
-        $("savedProjectItems");
-
-
-    if (!container) {
-
-        return;
-
-    }
-
-
-    container.innerHTML = "";
-
-
-    if (
-        startupState.savedProjects.length ===
-        0
-    ) {
-
-        container.innerHTML = `
-
-            <div class="empty-project">
-
-                Chưa có công trình đã lưu.
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    startupState.savedProjects.forEach(
-        project => {
-
-            const card =
-                document.createElement(
-                    "div"
-                );
-
-
-            card.className =
-                "saved-card";
-
-
-            const name =
-                escapeHtml(
-                    project.projectName ||
-                    "Công trình"
-                );
-
-
-            const code =
-                escapeHtml(
-                    project.projectCode ||
-                    ""
-                );
-
-
-            const location =
-                escapeHtml(
-                    project.location ||
-                    ""
-                );
-
-
-            const projectId =
-                escapeHtml(
-                    project.projectId ||
-                    ""
-                );
-
-
-            card.innerHTML = `
-
-                <h4>
-                    ${name}
-                </h4>
-
-                <p>
-                    Mã: ${code}
-                </p>
-
-                <p>
-                    ${location}
-                </p>
-
-                <button
-                    class="primary-btn open-project"
-                    type="button"
-                    data-project-id="${projectId}"
-                >
-                    Mở công trình
-                </button>
-
-            `;
-
-
-            container.appendChild(
-                card
-            );
-
-        }
+  background:
+    linear-gradient(
+      145deg,
+      #1976D2,
+      var(--tgs-primary)
     );
 
+  box-shadow: var(--shadow-primary);
+}
 
-    container
-        .querySelectorAll(
-            ".open-project"
-        )
-        .forEach(
-            button => {
 
-                button.addEventListener(
-                    "click",
-                    () => {
+.primary-btn:hover {
+  box-shadow:
+    0 12px 28px rgba(21, 101, 192, 0.28);
+}
 
-                        const projectId =
-                            button.dataset.projectId;
 
-                        openSavedProject(
-                            projectId
-                        );
+.primary-btn:active,
+.secondary-btn:active {
+  transform: translateY(1px);
+}
 
-                    }
-                );
 
-            }
-        );
+.primary-btn:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+}
 
+
+.secondary-btn {
+
+  color: var(--tgs-primary);
+
+  background: var(--tgs-primary-light);
+
+  border: 1px solid rgba(21, 101, 192, 0.12);
+}
+
+
+.secondary-btn:hover {
+  background: #D7ECFC;
+}
+
+
+.form-submit-btn {
+  width: 100%;
+  margin-top: var(--space-2);
 }
 
 
 /* ==========================================================
-   HTML ESCAPE
+   09. ICON BUTTON
 ========================================================== */
 
-function escapeHtml(value) {
+.icon-btn {
 
-    return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
+  width: var(--touch-target);
+  height: var(--touch-target);
+  min-width: var(--touch-target);
+
+  border-radius: 50%;
+
+  color: var(--tgs-text);
+
+  background: transparent;
+
+  font-size: 1.8rem;
+  line-height: 1;
+
+  transition:
+    background 140ms ease;
+}
+
+
+.icon-btn:hover {
+  background: var(--tgs-secondary-light);
+}
+
+
+.icon-btn:active {
+  background: var(--tgs-border-light);
+}
+
+
+.back-btn {
+  margin-right: var(--space-2);
 }
 
 
 /* ==========================================================
-   OPEN SAVED PROJECT PANEL
+   10. ACTION CARDS
 ========================================================== */
 
-function openSavedProjects() {
+.action-stack {
 
-    renderSavedProjectItems();
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--space-3);
+
+  margin-bottom: var(--space-6);
+}
 
 
-    const panel =
-        $("savedProjectList");
+.action-card {
+
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+  min-height: 82px;
+
+  padding: var(--space-4);
+
+  text-align: left;
+
+  border: 1px solid var(--tgs-border);
+
+  border-radius: var(--radius-xl);
+
+  color: var(--tgs-text);
+
+  background: var(--tgs-surface);
+
+  box-shadow: var(--shadow-sm);
+
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
 
 
-    if (panel) {
+.action-card:hover {
 
-        panel.hidden = false;
+  border-color: rgba(21, 101, 192, 0.25);
 
-    }
+  box-shadow: var(--shadow-md);
+}
 
+
+.action-card:active {
+  transform: translateY(1px);
+}
+
+
+.action-card.primary-action {
+
+  border-color: rgba(21, 101, 192, 0.18);
+
+  background:
+    linear-gradient(
+      135deg,
+      #FFFFFF,
+      #F3F8FE
+    );
+}
+
+
+.action-icon {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+
+  margin-right: var(--space-4);
+
+  border-radius: var(--radius-lg);
+
+  color: var(--tgs-primary);
+
+  background: var(--tgs-primary-light);
+
+  font-size: 1.6rem;
+  font-weight: var(--font-weight-medium);
+}
+
+
+.action-text {
+
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--space-1);
+
+  min-width: 0;
+}
+
+
+.action-text strong {
+
+  color: var(--tgs-text);
+
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.action-text small {
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-sm);
 }
 
 
 /* ==========================================================
-   CLOSE SAVED PROJECT PANEL
+   11. PROJECT CARD
 ========================================================== */
 
-function closeSavedProjects() {
+.project-card {
 
-    const panel =
-        $("savedProjectList");
+  margin-bottom: var(--space-5);
+
+  padding: var(--space-5);
+
+  border: 1px solid var(--tgs-border);
+
+  border-radius: var(--radius-xl);
+
+  background: var(--tgs-surface);
+
+  box-shadow: var(--shadow-md);
+}
 
 
-    if (panel) {
+.project-card[hidden] {
+  display: none !important;
+}
 
-        panel.hidden = true;
 
-    }
+.draft-card {
 
+  border-color: rgba(239, 108, 0, 0.25);
+
+  background:
+    linear-gradient(
+      145deg,
+      #FFFFFF,
+      #FFF9F3
+    );
+}
+
+
+.card-badge {
+
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 28px;
+
+  margin-bottom: var(--space-3);
+
+  padding:
+    0
+    var(--space-3);
+
+  border-radius: var(--radius-pill);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.card-badge.warning {
+
+  color: var(--tgs-warning);
+
+  background: var(--tgs-warning-light);
+}
+
+
+.card-label {
+
+  margin-bottom: var(--space-1);
+
+  color: var(--tgs-text-muted);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+
+.project-card-title {
+
+  margin-bottom: var(--space-1);
+
+  color: var(--tgs-text);
+
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.project-card-meta {
+
+  margin-bottom: var(--space-4);
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-sm);
 }
 
 
 /* ==========================================================
-   RESUME DRAFT PROJECT
+   12. SYSTEM STATUS
 ========================================================== */
 
-function resumeProject() {
+.system-status-card {
 
-    if (
-        !startupState.draftProject
-    ) {
+  padding: var(--space-4);
 
-        return;
+  border: 1px solid var(--tgs-border-light);
 
-    }
+  border-radius: var(--radius-lg);
 
-
-    currentProject =
-        startupState.draftProject;
+  background: var(--tgs-surface-soft);
+}
 
 
-    updateProjectUI();
+.status-row {
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 38px;
+
+  border-bottom: 1px solid var(--tgs-border-light);
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-sm);
+}
 
 
-    resetGPSState();
+.status-row:last-child {
+  border-bottom: 0;
+}
 
 
-    show(
-        "screenSurveyHome"
+.status-value {
+
+  color: var(--tgs-success);
+
+  font-weight: var(--font-weight-semibold);
+}
+
+
+/* ==========================================================
+   13. MODAL / SAVED PROJECTS
+========================================================== */
+
+.modal-panel {
+
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 100;
+
+  display: none;
+
+  align-items: flex-end;
+
+  padding:
+    var(--safe-top)
+    var(--safe-right)
+    var(--safe-bottom)
+    var(--safe-left);
+}
+
+
+.modal-panel.active {
+  display: flex;
+}
+
+
+.modal-backdrop {
+
+  position: absolute;
+  inset: 0;
+
+  background: var(--tgs-overlay);
+
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+
+.modal-sheet {
+
+  position: relative;
+  z-index: 1;
+
+  width: 100%;
+  max-height: 82vh;
+  max-height: 82dvh;
+
+  padding: var(--space-5);
+
+  border-radius:
+    var(--radius-xl)
+    var(--radius-xl)
+    0
+    0;
+
+  background: var(--tgs-surface);
+
+  box-shadow: var(--shadow-lg);
+
+  overflow-y: auto;
+}
+
+
+.modal-header {
+
+  display: flex;
+  align-items: center;
+
+  margin-bottom: var(--space-5);
+}
+
+
+.modal-header h2 {
+
+  margin-bottom: 0;
+
+  font-size: var(--font-size-xl);
+}
+
+
+.modal-header .icon-btn {
+  margin-left: auto;
+}
+
+
+.saved-project-list {
+
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--space-3);
+}
+
+
+.saved-card {
+
+  padding: var(--space-4);
+
+  border: 1px solid var(--tgs-border);
+
+  border-radius: var(--radius-lg);
+
+  background: var(--tgs-surface-soft);
+}
+
+
+.saved-card h4 {
+
+  margin-bottom: var(--space-1);
+
+  font-size: var(--font-size-md);
+}
+
+
+.saved-card p {
+
+  margin-bottom: var(--space-1);
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-sm);
+}
+
+
+.saved-card .open-project {
+
+  width: 100%;
+
+  margin-top: var(--space-3);
+}
+
+
+.empty-project {
+
+  padding: var(--space-8) var(--space-4);
+
+  border: 1px dashed var(--tgs-border);
+
+  border-radius: var(--radius-lg);
+
+  color: var(--tgs-text-muted);
+
+  background: var(--tgs-surface-soft);
+
+  text-align: center;
+
+  font-size: var(--font-size-sm);
+}
+
+
+/* ==========================================================
+   14. FORM
+========================================================== */
+
+.form-stack {
+
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--space-5);
+}
+
+
+.field-group {
+
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--space-2);
+}
+
+
+.field-group label {
+
+  color: var(--tgs-text);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.field-group input,
+.field-group textarea,
+.field-group select {
+
+  width: 100%;
+  min-height: 52px;
+
+  padding:
+    0
+    var(--space-4);
+
+  border: 1px solid var(--tgs-border);
+
+  border-radius: var(--radius-md);
+
+  outline: none;
+
+  color: var(--tgs-text);
+
+  background: var(--tgs-surface);
+
+  font-size: var(--font-size-md);
+
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+
+.field-group textarea {
+
+  min-height: 120px;
+
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+
+  resize: vertical;
+}
+
+
+.field-group input::placeholder,
+.field-group textarea::placeholder {
+  color: var(--tgs-text-muted);
+}
+
+
+.field-group input:focus,
+.field-group textarea:focus,
+.field-group select:focus {
+
+  border-color: var(--tgs-primary);
+
+  box-shadow:
+    0 0 0 3px rgba(21, 101, 192, 0.12);
+}
+
+
+.form-info-card {
+
+  padding: var(--space-4);
+
+  border: 1px solid rgba(2, 119, 189, 0.12);
+
+  border-radius: var(--radius-lg);
+
+  background: var(--tgs-info-light);
+}
+
+
+.form-info-card strong {
+
+  display: block;
+
+  margin-bottom: var(--space-1);
+
+  color: var(--tgs-info);
+
+  font-size: var(--font-size-sm);
+}
+
+
+.form-info-card p {
+
+  margin-bottom: 0;
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-sm);
+}
+
+
+/* ==========================================================
+   15. PROJECT SUMMARY
+========================================================== */
+
+.project-summary-card {
+
+  margin-bottom: var(--space-6);
+
+  padding: var(--space-5);
+
+  border-radius: var(--radius-xl);
+
+  color: #FFFFFF;
+
+  background:
+    linear-gradient(
+      145deg,
+      var(--tgs-primary),
+      var(--tgs-primary-dark)
     );
 
+  box-shadow: var(--shadow-primary);
+}
+
+
+.project-summary-card .eyebrow {
+
+  color: rgba(255, 255, 255, 0.72);
+
+  margin-bottom: var(--space-2);
+}
+
+
+.project-summary-card h1 {
+
+  margin-bottom: var(--space-2);
+
+  color: #FFFFFF;
+
+  font-size: var(--font-size-xl);
+}
+
+
+.project-summary-meta {
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+
+  gap: var(--space-2);
+
+  color: rgba(255, 255, 255, 0.78);
+
+  font-size: var(--font-size-sm);
+}
+
+
+.separator {
+  opacity: 0.5;
 }
 
 
 /* ==========================================================
-   OPEN SAVED PROJECT
+   16. SURVEY MODE
 ========================================================== */
 
-async function openSavedProject(
-    projectId
+.survey-mode-grid {
+
+  display: grid;
+
+  grid-template-columns: 1fr;
+
+  gap: var(--space-4);
+
+  margin-bottom: var(--space-6);
+}
+
+
+.survey-mode-card {
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  min-height: 180px;
+
+  padding: var(--space-5);
+
+  border: 1px solid var(--tgs-border);
+
+  border-radius: var(--radius-xl);
+
+  color: var(--tgs-text);
+
+  background: var(--tgs-surface);
+
+  box-shadow: var(--shadow-sm);
+
+  text-align: left;
+
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    border-color 140ms ease;
+}
+
+
+.survey-mode-card:hover {
+
+  border-color: rgba(21, 101, 192, 0.3);
+
+  box-shadow: var(--shadow-md);
+}
+
+
+.survey-mode-card:active {
+  transform: translateY(1px);
+}
+
+
+.survey-mode-icon {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 56px;
+  height: 56px;
+
+  margin-bottom: var(--space-4);
+
+  border-radius: var(--radius-lg);
+
+  color: var(--tgs-primary);
+
+  background: var(--tgs-primary-light);
+
+  font-size: 1.8rem;
+}
+
+
+.survey-mode-title {
+
+  margin-bottom: var(--space-2);
+
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.survey-mode-description {
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-sm);
+
+  line-height: 1.55;
+}
+
+
+/* ==========================================================
+   17. COMPLETION CARD
+========================================================== */
+
+.completion-card {
+
+  display: flex;
+  align-items: center;
+
+  gap: var(--space-3);
+
+  padding: var(--space-4);
+
+  border: 1px solid rgba(46, 125, 50, 0.15);
+
+  border-radius: var(--radius-xl);
+
+  background: var(--tgs-success-light);
+}
+
+
+.completion-icon {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+
+  border-radius: 50%;
+
+  color: #FFFFFF;
+
+  background: var(--tgs-success);
+
+  font-weight: var(--font-weight-bold);
+}
+
+
+.completion-content {
+
+  display: flex;
+  flex-direction: column;
+
+  flex: 1;
+
+  min-width: 0;
+}
+
+
+.completion-content strong {
+
+  margin-bottom: var(--space-1);
+
+  color: var(--tgs-text);
+
+  font-size: var(--font-size-sm);
+}
+
+
+.completion-content span {
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-xs);
+}
+
+
+.completion-card .secondary-btn {
+
+  flex-shrink: 0;
+
+  min-height: 42px;
+
+  padding: 0 var(--space-3);
+
+  font-size: var(--font-size-sm);
+}
+
+
+/* ==========================================================
+   18. POINT SURVEY PLACEHOLDER
+========================================================== */
+
+.survey-screen {
+
+  background: #101820;
+}
+
+
+.survey-header {
+
+  position: relative;
+  z-index: 20;
+
+  display: flex;
+  align-items: center;
+
+  min-height: var(--header-height);
+
+  padding:
+    var(--space-2)
+    calc(var(--space-4) + var(--safe-right))
+    var(--space-2)
+    calc(var(--space-4) + var(--safe-left));
+
+  color: #FFFFFF;
+
+  background:
+    rgba(16, 24, 32, 0.94);
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+
+.survey-header-title {
+
+  display: flex;
+  flex-direction: column;
+
+  flex: 1;
+
+  min-width: 0;
+
+  text-align: center;
+}
+
+
+.survey-header-title strong {
+
+  color: #FFFFFF;
+
+  font-size: var(--font-size-md);
+}
+
+
+.survey-header-title span {
+
+  color: rgba(255, 255, 255, 0.58);
+
+  font-size: var(--font-size-xs);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.dark-icon {
+  color: #FFFFFF;
+}
+
+
+.dark-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+
+.survey-placeholder {
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  flex: 1;
+
+  padding:
+    var(--space-8)
+    var(--space-5)
+    calc(var(--space-8) + var(--safe-bottom));
+
+  color: #FFFFFF;
+
+  text-align: center;
+}
+
+
+.survey-placeholder-icon {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 72px;
+  height: 72px;
+
+  margin-bottom: var(--space-5);
+
+  border-radius: 50%;
+
+  color: #FFFFFF;
+
+  background: rgba(21, 101, 192, 0.7);
+
+  font-size: 2rem;
+}
+
+
+.survey-placeholder h1 {
+
+  margin-bottom: var(--space-3);
+
+  font-size: var(--font-size-2xl);
+}
+
+
+.survey-placeholder p {
+
+  max-width: 420px;
+
+  margin-bottom: var(--space-5);
+
+  color: rgba(255, 255, 255, 0.68);
+
+  font-size: var(--font-size-sm);
+}
+
+
+.placeholder-status {
+
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 32px;
+
+  padding: 0 var(--space-3);
+
+  border-radius: var(--radius-pill);
+
+  color: #90CAF9;
+
+  background: rgba(144, 202, 249, 0.12);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+
+  letter-spacing: 0.05em;
+}
+
+
+/* ==========================================================
+   19. LINEAR SURVEY
+========================================================== */
+
+.linear-screen {
+
+  position: relative;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  background: #E9EEF2;
+
+  overflow: hidden;
+}
+
+
+.linear-header {
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+
+  min-height: var(--header-height);
+
+  padding:
+    calc(var(--space-2) + var(--safe-top))
+    calc(var(--space-4) + var(--safe-right))
+    var(--space-2)
+    calc(var(--space-4) + var(--safe-left));
+
+  color: #FFFFFF;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(15, 23, 42, 0.88),
+      rgba(15, 23, 42, 0.68)
+    );
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+
+.linear-header-title {
+
+  display: flex;
+  flex-direction: column;
+
+  flex: 1;
+
+  min-width: 0;
+
+  text-align: center;
+}
+
+
+.linear-header-title strong {
+
+  color: #FFFFFF;
+
+  font-size: var(--font-size-md);
+}
+
+
+.linear-header-title span {
+
+  color: rgba(255, 255, 255, 0.64);
+
+  font-size: var(--font-size-xs);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.linear-back-btn {
+  color: #FFFFFF;
+}
+
+
+.linear-back-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+
+/* ==========================================================
+   20. MAP
+========================================================== */
+
+.survey-map {
+
+  position: absolute;
+  inset: 0;
+
+  z-index: 1;
+
+  width: 100%;
+  height: 100%;
+
+  background: #DCE3E8;
+}
+
+
+.survey-map .leaflet-control-attribution {
+
+  margin-right: 4px;
+  margin-bottom: 4px;
+
+  font-size: 9px;
+
+  opacity: 0.8;
+}
+
+
+.survey-map .leaflet-control-zoom {
+  display: none;
+}
+
+
+/* ==========================================================
+   21. GPS HUD
+========================================================== */
+
+.gps-hud {
+
+  position: absolute;
+
+  top:
+    calc(
+      var(--header-height) +
+      var(--safe-top) +
+      var(--space-3)
+    );
+
+  left:
+    calc(
+      var(--space-3) +
+      var(--safe-left)
+    );
+
+  z-index: 900;
+
+  display: flex;
+  align-items: center;
+
+  max-width: calc(100% - 6rem);
+
+  padding:
+    var(--space-2)
+    var(--space-3);
+
+  border:
+    1px solid rgba(255, 255, 255, 0.22);
+
+  border-radius: var(--radius-pill);
+
+  color: #FFFFFF;
+
+  background:
+    rgba(15, 23, 42, 0.78);
+
+  box-shadow:
+    0 6px 18px rgba(15, 23, 42, 0.18);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+
+.gps-indicator {
+
+  width: 9px;
+  height: 9px;
+  min-width: 9px;
+
+  margin-right: var(--space-2);
+
+  border-radius: 50%;
+
+  background: #90CAF9;
+
+  box-shadow:
+    0 0 0 4px rgba(144, 202, 249, 0.14);
+}
+
+
+.gps-hud-content {
+
+  display: flex;
+  align-items: center;
+
+  gap: var(--space-2);
+
+  min-width: 0;
+}
+
+
+.gps-hud-content strong {
+
+  color: #FFFFFF;
+
+  font-size: var(--font-size-xs);
+}
+
+
+.gps-hud-content span {
+
+  max-width: 230px;
+
+  color: rgba(255, 255, 255, 0.76);
+
+  font-size: 10px;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ==========================================================
+   22. MAP CONTROLS
+========================================================== */
+
+.map-controls {
+
+  position: absolute;
+
+  right:
+    calc(
+      var(--space-3) +
+      var(--safe-right)
+    );
+
+  top:
+    calc(
+      var(--header-height) +
+      var(--safe-top) +
+      var(--space-3)
+    );
+
+  z-index: 900;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--space-2);
+}
+
+
+.map-control-btn {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 46px;
+  height: 46px;
+
+  border: 1px solid rgba(15, 23, 42, 0.08);
+
+  border-radius: var(--radius-md);
+
+  color: var(--tgs-text);
+
+  background:
+    rgba(255, 255, 255, 0.94);
+
+  box-shadow: var(--shadow-md);
+
+  font-size: 1.35rem;
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  transition:
+    transform 120ms ease,
+    background 120ms ease;
+}
+
+
+.map-control-btn:hover {
+  background: #FFFFFF;
+}
+
+
+.map-control-btn:active {
+  transform: scale(0.96);
+}
+
+
+/* ==========================================================
+   23. BASEMAP CONTROL
+========================================================== */
+
+.map-top-controls {
+
+  position: absolute;
+
+  top:
+    calc(
+      var(--header-height) +
+      var(--safe-top) +
+      var(--space-3)
+    );
+
+  left: 50%;
+
+  z-index: 950;
+
+  transform: translateX(-50%);
+}
+
+
+.map-tool-btn {
+
+  min-height: 42px;
+
+  padding:
+    0
+    var(--space-4);
+
+  border:
+    1px solid rgba(15, 23, 42, 0.08);
+
+  border-radius: var(--radius-pill);
+
+  color: var(--tgs-text);
+
+  background:
+    rgba(255, 255, 255, 0.94);
+
+  box-shadow: var(--shadow-md);
+
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+
+.map-panel {
+
+  position: absolute;
+
+  top: calc(100% + var(--space-2));
+  left: 50%;
+
+  display: none;
+
+  width: 230px;
+
+  padding: var(--space-3);
+
+  transform: translateX(-50%);
+
+  border: 1px solid var(--tgs-border);
+
+  border-radius: var(--radius-lg);
+
+  background: rgba(255, 255, 255, 0.97);
+
+  box-shadow: var(--shadow-lg);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+
+.map-panel.active {
+  display: block;
+}
+
+
+.map-panel-title {
+
+  margin-bottom: var(--space-2);
+
+  color: var(--tgs-text-muted);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+
+.map-option {
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+  min-height: 44px;
+
+  padding:
+    0
+    var(--space-3);
+
+  border-radius: var(--radius-md);
+
+  color: var(--tgs-text);
+
+  background: transparent;
+
+  text-align: left;
+
+  font-size: var(--font-size-sm);
+}
+
+
+.map-option:hover {
+  background: var(--tgs-secondary-light);
+}
+
+
+.map-option.active {
+
+  color: var(--tgs-primary);
+
+  background: var(--tgs-primary-light);
+
+  font-weight: var(--font-weight-semibold);
+}
+
+
+.map-option.disabled {
+
+  color: var(--tgs-text-muted);
+
+  opacity: 0.55;
+}
+
+
+.map-option-status {
+
+  font-size: var(--font-size-xs);
+}
+
+
+/* ==========================================================
+   24. GIS LAYER PANEL
+========================================================== */
+
+.gis-layer-panel {
+
+  position: absolute;
+
+  top:
+    calc(
+      var(--header-height) +
+      var(--safe-top) +
+      72px
+    );
+
+  left:
+    calc(
+      var(--space-3) +
+      var(--safe-left)
+    );
+
+  z-index: 850;
+
+  width: 190px;
+
+  padding: var(--space-3);
+
+  border:
+    1px solid rgba(15, 23, 42, 0.08);
+
+  border-radius: var(--radius-lg);
+
+  background:
+    rgba(255, 255, 255, 0.94);
+
+  box-shadow: var(--shadow-md);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+
+.gis-panel-header {
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+
+  border-bottom: 1px solid var(--tgs-border-light);
+}
+
+
+.gis-panel-header strong {
+
+  color: var(--tgs-text);
+
+  font-size: var(--font-size-sm);
+}
+
+
+.gis-panel-header span {
+
+  color: var(--tgs-primary);
+
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+
+.layer-toggle {
+
+  display: flex;
+  align-items: center;
+
+  min-height: 34px;
+
+  gap: var(--space-2);
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-xs);
+
+  cursor: pointer;
+}
+
+
+.layer-toggle input {
+
+  width: 16px;
+  height: 16px;
+
+  margin: 0;
+
+  accent-color: var(--tgs-primary);
+}
+
+
+.layer-toggle span {
+  flex: 1;
+}
+
+
+/* ==========================================================
+   25. SURVEY BOTTOM PANEL
+========================================================== */
+
+.survey-bottom-panel {
+
+  position: absolute;
+
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  z-index: 900;
+
+  padding:
+    var(--space-3)
+    calc(var(--space-3) + var(--safe-right))
+    calc(var(--space-3) + var(--safe-bottom))
+    calc(var(--space-3) + var(--safe-left));
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(15, 23, 42, 0.10),
+      rgba(15, 23, 42, 0.92) 24%
+    );
+
+  pointer-events: none;
+}
+
+
+.survey-stats {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: var(--space-2);
+
+  max-width: 1000px;
+
+  margin:
+    0
+    auto
+    var(--space-3);
+}
+
+
+.survey-stat {
+
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+
+  padding:
+    var(--space-2)
+    var(--space-2);
+
+  border:
+    1px solid rgba(255, 255, 255, 0.10);
+
+  border-radius: var(--radius-md);
+
+  background:
+    rgba(15, 23, 42, 0.70);
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  text-align: center;
+}
+
+
+.survey-stat span {
+
+  margin-bottom: 2px;
+
+  color: rgba(255, 255, 255, 0.58);
+
+  font-size: 9px;
+}
+
+
+.survey-stat strong {
+
+  color: #FFFFFF;
+
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.survey-action-row {
+
+  display: flex;
+  justify-content: center;
+
+  max-width: 1000px;
+
+  margin: 0 auto;
+
+  pointer-events: auto;
+}
+
+
+.survey-gps-btn {
+
+  width: min(100%, 360px);
+
+  min-height: 48px;
+}
+
+
+/* ==========================================================
+   26. COMPLETION PAGE
+========================================================== */
+
+.completion-page {
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding:
+    var(--space-6)
+    0
+    calc(var(--space-8) + var(--safe-bottom));
+
+  text-align: center;
+}
+
+
+.completion-success-icon {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 76px;
+  height: 76px;
+
+  margin-bottom: var(--space-5);
+
+  border-radius: 50%;
+
+  color: #FFFFFF;
+
+  background: var(--tgs-success);
+
+  box-shadow:
+    0 12px 30px rgba(46, 125, 50, 0.20);
+
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
+}
+
+
+.completion-page .eyebrow {
+  margin-bottom: var(--space-2);
+}
+
+
+.completion-page h1 {
+
+  margin-bottom: var(--space-3);
+
+  font-size: var(--font-size-2xl);
+}
+
+
+.completion-page > p {
+
+  max-width: 520px;
+
+  margin-bottom: var(--space-6);
+
+  color: var(--tgs-text-secondary);
+
+  font-size: var(--font-size-md);
+}
+
+
+.completion-project-card {
+
+  width: 100%;
+
+  margin-bottom: var(--space-6);
+
+  padding: var(--space-5);
+
+  border: 1px solid var(--tgs-border);
+
+  border-radius: var(--radius-xl);
+
+  background: var(--tgs-surface);
+
+  box-shadow: var(--shadow-sm);
+
+  text-align: left;
+}
+
+
+.completion-field {
+
+  display: flex;
+  flex-direction: column;
+
+  gap: var(--space-1);
+
+  padding: var(--space-3) 0;
+
+  border-bottom: 1px solid var(--tgs-border-light);
+}
+
+
+.completion-field:first-child {
+  padding-top: 0;
+}
+
+
+.completion-field:last-child {
+
+  padding-bottom: 0;
+
+  border-bottom: 0;
+}
+
+
+.completion-field span {
+
+  color: var(--tgs-text-muted);
+
+  font-size: var(--font-size-xs);
+
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+
+.completion-field strong {
+
+  color: var(--tgs-text);
+
+  font-size: var(--font-size-md);
+}
+
+
+.completion-actions {
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+
+  gap: var(--space-3);
+}
+
+
+.completion-actions .primary-btn,
+.completion-actions .secondary-btn {
+  width: 100%;
+}
+
+
+/* ==========================================================
+   27. FOCUS / ACCESSIBILITY
+========================================================== */
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+
+  outline: 3px solid rgba(21, 101, 192, 0.28);
+
+  outline-offset: 2px;
+}
+
+
+/* ==========================================================
+   28. LEAFLET TOUCH OPTIMIZATION
+========================================================== */
+
+.leaflet-container {
+
+  position: relative;
+
+  font-family: var(--font-family);
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+/* ----------------------------------------------------------
+   LEAFLET TILE ISOLATION
+
+   Global image rules must never resize Leaflet map tiles.
+   Leaflet positions each 256px tile precisely in its own
+   tile grid. A global `img { max-width: 100%; }` rule can
+   override that geometry and produce shifted tiles, gaps,
+   or incorrect map composition.
+---------------------------------------------------------- */
+
+.leaflet-container .leaflet-pane,
+.leaflet-container .leaflet-tile-pane,
+.leaflet-container .leaflet-overlay-pane,
+.leaflet-container .leaflet-shadow-pane,
+.leaflet-container .leaflet-marker-pane,
+.leaflet-container .leaflet-tooltip-pane,
+.leaflet-container .leaflet-popup-pane {
+
+  position: absolute;
+}
+
+
+.leaflet-container .leaflet-tile-container {
+
+  position: absolute;
+
+  left: 0;
+  top: 0;
+
+  width: 256px;
+  height: 256px;
+}
+
+
+.leaflet-container .leaflet-tile {
+
+  display: block;
+
+  width: 256px !important;
+  height: 256px !important;
+
+  max-width: none !important;
+  max-height: none !important;
+
+  object-fit: fill;
+
+  border: 0;
+
+  margin: 0;
+  padding: 0;
+}
+
+
+.leaflet-container .leaflet-tile-container img {
+
+  max-width: none !important;
+  max-height: none !important;
+}
+
+
+.leaflet-container img.leaflet-tile {
+
+  max-width: none !important;
+  max-height: none !important;
+}
+
+
+/* Do not let the global SVG/image reset interfere with
+   Leaflet vector rendering or controls. */
+
+.leaflet-container svg {
+
+  max-width: none;
+}
+
+
+.leaflet-control {
+
+  box-shadow: none;
+}
+
+
+.leaflet-control-attribution {
+
+  background:
+    rgba(255, 255, 255, 0.80) !important;
+
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+
+/* ==========================================================
+   29. TABLET
+========================================================== */
+
+@media (min-width: 600px) {
+
+  .screen-content {
+
+    padding-left: var(--space-6);
+    padding-right: var(--space-6);
+  }
+
+
+  .survey-mode-grid {
+
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+
+  .action-stack {
+
+    gap: var(--space-4);
+  }
+
+
+  .modal-panel {
+
+    align-items: center;
+
+    justify-content: center;
+  }
+
+
+  .modal-sheet {
+
+    width: min(
+      640px,
+      calc(100% - 48px)
+    );
+
+    max-height: 80vh;
+
+    border-radius: var(--radius-xl);
+  }
+
+
+  .completion-actions {
+
+    flex-direction: row;
+  }
+
+
+  .completion-actions .primary-btn,
+  .completion-actions .secondary-btn {
+    width: auto;
+    flex: 1;
+  }
+
+}
+
+
+/* ==========================================================
+   30. LARGE TABLET / DESKTOP
+========================================================== */
+
+@media (min-width: 900px) {
+
+  .screen-content {
+
+    max-width: var(--wide-content-max-width);
+
+    padding:
+      var(--space-8)
+      var(--space-8)
+      calc(
+        var(--space-10) +
+        var(--safe-bottom)
+      );
+  }
+
+
+  .page-heading h1 {
+    font-size: var(--font-size-3xl);
+  }
+
+
+  .survey-mode-card {
+    min-height: 220px;
+  }
+
+
+  .action-card {
+    min-height: 92px;
+  }
+
+
+  .linear-header-title {
+    max-width: 500px;
+  }
+
+
+  .gis-layer-panel {
+    width: 220px;
+  }
+
+}
+
+
+/* ==========================================================
+   31. SMALL MOBILE
+========================================================== */
+
+@media (max-width: 380px) {
+
+  :root {
+
+    --space-5: 1rem;
+    --space-6: 1.25rem;
+
+  }
+
+
+  .screen-content {
+
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+
+  .brand-mark {
+
+    width: 78px;
+    height: 78px;
+
+    font-size: 1.7rem;
+  }
+
+
+  .brand-title {
+    font-size: var(--font-size-xl);
+  }
+
+
+  .survey-stats {
+    gap: 4px;
+  }
+
+
+  .survey-stat {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+
+
+  .survey-stat span {
+    font-size: 8px;
+  }
+
+
+  .survey-stat strong {
+    font-size: 9px;
+  }
+
+
+  .gis-layer-panel {
+
+    width: 166px;
+
+    padding: var(--space-2);
+  }
+
+
+  .layer-toggle {
+    min-height: 30px;
+
+    font-size: 10px;
+  }
+
+
+  .gps-hud {
+    max-width: 68%;
+  }
+
+}
+
+
+/* ==========================================================
+   32. REDUCED MOTION
+========================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  html {
+    scroll-behavior: auto;
+  }
+
+
+  *,
+  *::before,
+  *::after {
+
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+
+    transition-duration: 0.01ms !important;
+  }
+
+}
+
+
+/* ==========================================================
+   33. LANDSCAPE MOBILE
+========================================================== */
+
+@media (
+  orientation: landscape
+) and (
+  max-height: 560px
 ) {
 
-    if (!dbReady) {
+  .screen-content {
 
-        alert(
-            "Offline Database chưa sẵn sàng."
-        );
-
-        return;
-
-    }
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-5);
+  }
 
 
-    try {
+  .screen-splash {
 
-        const database =
-            requireDatabase();
+    justify-content: center;
 
+    padding-top:
+      calc(var(--space-4) + var(--safe-top));
 
-        let project = null;
-
-
-        if (
-            typeof database.getProject ===
-            "function"
-        ) {
-
-            project =
-                await database.getProject(
-                    projectId
-                );
-
-        } else if (
-            typeof database.getProjectById ===
-            "function"
-        ) {
-
-            /*
-             * Compatibility fallback only.
-             * DB v4 should use getProject().
-             */
-
-            project =
-                await database.getProjectById(
-                    projectId
-                );
-
-        }
+    padding-bottom:
+      calc(var(--space-4) + var(--safe-bottom));
+  }
 
 
-        if (!project) {
+  .brand-mark {
 
-            alert(
-                "Không tìm thấy công trình."
-            );
+    width: 64px;
+    height: 64px;
 
-            await loadProjectState();
+    margin-bottom: var(--space-2);
 
-            return;
-
-        }
+    font-size: 1.4rem;
+  }
 
 
-        currentProject =
-            project;
+  .brand-title {
+    font-size: var(--font-size-lg);
+  }
 
 
-        closeSavedProjects();
+  .splash-status {
+    margin-bottom: var(--space-4);
+  }
 
 
-        updateProjectUI();
+  .survey-bottom-panel {
+    padding-top: var(--space-2);
+  }
 
 
-        resetGPSState();
+  .gis-layer-panel {
+    max-height: 52vh;
 
-
-        show(
-            "screenSurveyHome"
-        );
-
-    } catch (error) {
-
-        console.error(
-            "TGS Open Project Error:",
-            error
-        );
-
-
-        alert(
-            "Không thể mở công trình."
-        );
-
-    }
+    overflow-y: auto;
+  }
 
 }
 
 
 /* ==========================================================
-   PROJECT UI
+   34. PRINT
 ========================================================== */
 
-function updateProjectUI() {
+@media print {
 
-    if (!currentProject) {
-
-        return;
-
-    }
+  body {
+    background: #FFFFFF;
+  }
 
 
-    const projectTitle =
-        $("projectTitle");
+  .screen {
+    display: none !important;
+  }
 
 
-    if (projectTitle) {
-
-        projectTitle.textContent =
-            currentProject.projectName ||
-            "Chưa có công trình";
-
-    }
-
-
-    const linearProject =
-        $("linearProject");
-
-
-    if (linearProject) {
-
-        linearProject.textContent =
-            currentProject.projectName ||
-            "Công trình";
-
-    }
-
-
-    const completeTitle =
-        $("completeProjectTitle");
-
-
-    if (completeTitle) {
-
-        completeTitle.textContent =
-            currentProject.projectName ||
-            "Công trình";
-
-    }
-
-
-    const completeName =
-        $("completeProjectName");
-
-
-    if (completeName) {
-
-        completeName.textContent =
-            currentProject.projectName ||
-            "Chưa có công trình";
-
-    }
-
-
-    const completeCode =
-        $("completeProjectCode");
-
-
-    if (completeCode) {
-
-        completeCode.textContent =
-            currentProject.projectCode ||
-            "";
-
-    }
+  #screenProjectHome {
+    display: block !important;
+  }
 
 }
 
 
 /* ==========================================================
-   PROJECT FORM RESET
+   END — TGS WEBAPP GENESIS 2.0
 ========================================================== */
-
-function resetProjectForm() {
-
-    [
-
-        "projectName",
-
-        "projectCode",
-
-        "projectLocation",
-
-        "organization"
-
-    ].forEach(
-        id => {
-
-            const input =
-                $(id);
-
-
-            if (input) {
-
-                input.value = "";
-
-            }
-
-        }
-    );
-
-}
-
-
-/* ==========================================================
-   CREATE PROJECT
-========================================================== */
-
-async function createProject() {
-
-    if (!dbReady) {
-
-        alert(
-            "Offline Database chưa sẵn sàng."
-        );
-
-        return;
-
-    }
-
-
-    const nameInput =
-        $("projectName");
-
-
-    const codeInput =
-        $("projectCode");
-
-
-    const locationInput =
-        $("projectLocation");
-
-
-    const organizationInput =
-        $("organization");
-
-
-    const name =
-        nameInput
-            ? nameInput.value.trim()
-            : "";
-
-
-    const code =
-        codeInput
-            ? codeInput.value.trim()
-            : "";
-
-
-    const location =
-        locationInput
-            ? locationInput.value.trim()
-            : "";
-
-
-    const organization =
-        organizationInput
-            ? organizationInput.value.trim()
-            : "";
-
-
-    if (
-        name === "" ||
-        code === ""
-    ) {
-
-        alert(
-            "Vui lòng nhập Tên và Mã công trình."
-        );
-
-        return;
-
-    }
-
-
-    try {
-
-        const database =
-            requireDatabase();
-
-
-        /*
-         * DB v4 createProject() accepts the
-         * core project fields.
-         */
-
-        const createdProject =
-            await database.createProject({
-
-                projectName:
-                    name,
-
-                projectCode:
-                    code,
-
-                location:
-                    location,
-
-                organization:
-                    organization
-
-            });
-
-
-        /*
-         * Normalize lifecycle state after creation.
-         *
-         * This is intentionally a second write because
-         * the DB project creator owns the canonical
-         * identity fields.
-         */
-
-        currentProject = {
-
-            ...createdProject,
-
-            status:
-                TGS_APP_PROJECT_STATUS.DRAFT,
-
-            completed:
-                false,
-
-            isSaved:
-                false,
-
-            updatedAt:
-                new Date().toISOString()
-
-        };
-
-
-        await database.updateProject(
-            currentProject
-        );
-
-
-        await loadProjectState();
-
-
-        updateProjectUI();
-
-
-        resetGPSState();
-
-
-        show(
-            "screenSurveyHome"
-        );
-
-    } catch (error) {
-
-        console.error(
-            "TGS Create Project Error:",
-            error
-        );
-
-
-        alert(
-            "Không thể tạo công trình."
-        );
-
-    }
-
-}
-
-
-/* ==========================================================
-   COMPLETE PROJECT
-========================================================== */
-
-async function completeProject() {
-
-    if (!currentProject) {
-
-        return;
-
-    }
-
-
-    const confirmed =
-        window.confirm(
-            "Bạn có chắc chắn muốn hoàn thành khảo sát công trình này?"
-        );
-
-
-    if (!confirmed) {
-
-        return;
-
-    }
-
-
-    try {
-
-        const database =
-            requireDatabase();
-
-
-        currentProject = {
-
-            ...currentProject,
-
-            status:
-                TGS_APP_PROJECT_STATUS.COMPLETED,
-
-            completed:
-                true,
-
-            isSaved:
-                false,
-
-            completedAt:
-                new Date().toISOString(),
-
-            updatedAt:
-                new Date().toISOString()
-
-        };
-
-
-        await database.updateProject(
-            currentProject
-        );
-
-
-        await loadProjectState();
-
-
-        updateProjectUI();
-
-
-        show(
-            "screenProjectComplete"
-        );
-
-    } catch (error) {
-
-        console.error(
-            "TGS Complete Project Error:",
-            error
-        );
-
-
-        alert(
-            "Không thể hoàn thành công trình."
-        );
-
-    }
-
-}
-
-
-/* ==========================================================
-   SAVE PROJECT
-========================================================== */
-
-async function saveProject() {
-
-    if (!currentProject) {
-
-        return;
-
-    }
-
-
-    const confirmed =
-        window.confirm(
-            "Lưu công trình này vào danh sách công trình đã lưu?"
-        );
-
-
-    if (!confirmed) {
-
-        return;
-
-    }
-
-
-    try {
-
-        const database =
-            requireDatabase();
-
-
-        currentProject = {
-
-            ...currentProject,
-
-            status:
-                TGS_APP_PROJECT_STATUS.SAVED,
-
-            completed:
-                true,
-
-            isSaved:
-                true,
-
-            savedAt:
-                new Date().toISOString(),
-
-            updatedAt:
-                new Date().toISOString()
-
-        };
-
-
-        await database.updateProject(
-            currentProject
-        );
-
-
-        await loadProjectState();
-
-
-        updateProjectUI();
-
-
-        alert(
-            "Đã lưu công trình thành công."
-        );
-
-
-        show(
-            "screenProjectHome"
-        );
-
-    } catch (error) {
-
-        console.error(
-            "TGS Save Project Error:",
-            error
-        );
-
-
-        alert(
-            "Không thể lưu công trình."
-        );
-
-    }
-
-}
-
-
-/* ==========================================================
-   RETURN TO SURVEY
-========================================================== */
-
-function backToSurveyFromCompletion() {
-
-    if (!currentProject) {
-
-        return;
-
-    }
-
-
-    show(
-        "screenSurveyHome"
-    );
-
-}
-
-
-/* ==========================================================
-   MAP ENGINE
-========================================================== */
-
-const MapEngine = {
-
-    map: null,
-
-    baseLayer: null,
-
-    gpsMarker: null,
-
-    gpsAccuracyCircle: null,
-
-    activeProvider:
-        "arcgis",
-
-    defaultLocation: [
-
-        10.762622,
-
-        106.660172
-
-    ],
-
-
-    /* ------------------------------------------------------
-       INITIALIZE MAP
-    ------------------------------------------------------ */
-
-    initialize() {
-
-        const mapElement =
-            $("map");
-
-
-        if (!mapElement) {
-
-            return;
-
-        }
-
-
-        if (this.map) {
-
-            setTimeout(
-                () => {
-
-                    this.map.invalidateSize();
-
-                },
-                50
-            );
-
-            return;
-
-        }
-
-
-        this.map =
-            L.map(
-                "map",
-                {
-                    zoomControl:
-                        false
-                }
-            ).setView(
-                this.defaultLocation,
-                18
-            );
-
-
-        /*
-         * ArcGIS is the only active base map
-         * in this baseline.
-         */
-
-        this.baseLayer =
-            L.tileLayer(
-                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-                {
-
-                    maxZoom:
-                        22,
-
-                    attribution:
-                        "Tiles © Esri"
-
-                }
-            );
-
-
-        this.baseLayer.addTo(
-            this.map
-        );
-
-
-        /*
-         * IMPORTANT:
-         *
-         * No default marker.
-         * No D001.
-         * No demo geometry.
-         * No synthetic project data.
-         */
-
-        this.map.whenReady(
-            () => {
-
-                this.map.invalidateSize();
-
-            }
-        );
-
-    },
-
-
-    /* ------------------------------------------------------
-       SWITCH BASE MAP
-    ------------------------------------------------------ */
-
-    switchBaseMap(
-        provider
-    ) {
-
-        if (!this.map) {
-
-            return;
-
-        }
-
-
-        /*
-         * Google providers remain intentionally
-         * disabled/prepared in current index.html.
-         */
-
-        if (
-            provider !==
-            "arcgis"
-        ) {
-
-            console.log(
-                "TGS GIS: provider prepared but not activated:",
-                provider
-            );
-
-            return;
-
-        }
-
-
-        if (
-            this.baseLayer &&
-            !this.map.hasLayer(
-                this.baseLayer
-            )
-        ) {
-
-            this.baseLayer.addTo(
-                this.map
-            );
-
-        }
-
-
-        this.activeProvider =
-            "arcgis";
-
-    },
-
-
-    /* ------------------------------------------------------
-       ZOOM IN
-    ------------------------------------------------------ */
-
-    zoomIn() {
-
-        if (this.map) {
-
-            this.map.zoomIn();
-
-        }
-
-    },
-
-
-    /* ------------------------------------------------------
-       ZOOM OUT
-    ------------------------------------------------------ */
-
-    zoomOut() {
-
-        if (this.map) {
-
-            this.map.zoomOut();
-
-        }
-
-    },
-
-
-    /* ------------------------------------------------------
-       LOCATE
-    ------------------------------------------------------ */
-
-    locate() {
-
-        GPSManager.acquire();
-
-    },
-
-
-    /* ------------------------------------------------------
-       SHOW GPS POSITION
-    ------------------------------------------------------ */
-
-    showGPSPosition(
-        latitude,
-        longitude,
-        accuracy
-    ) {
-
-        if (!this.map) {
-
-            return;
-
-        }
-
-
-        const position = [
-
-            latitude,
-
-            longitude
-
-        ];
-
-
-        this.map.flyTo(
-            position,
-            19,
-            {
-                duration:
-                    1
-            }
-        );
-
-
-        /*
-         * Current GPS marker only.
-         *
-         * This is NOT persisted survey data.
-         */
-
-        if (
-            !this.gpsMarker
-        ) {
-
-            this.gpsMarker =
-                L.circleMarker(
-                    position,
-                    {
-
-                        radius:
-                            8,
-
-                        weight:
-                            3,
-
-                        fillOpacity:
-                            0.8
-
-                    }
-                ).addTo(
-                    this.map
-                );
-
-        } else {
-
-            this.gpsMarker.setLatLng(
-                position
-            );
-
-        }
-
-
-        if (
-            Number.isFinite(
-                accuracy
-            )
-        ) {
-
-            if (
-                !this.gpsAccuracyCircle
-            ) {
-
-                this.gpsAccuracyCircle =
-                    L.circle(
-                        position,
-                        {
-
-                            radius:
-                                accuracy,
-
-                            weight:
-                                1,
-
-                            fillOpacity:
-                                0.08
-
-                        }
-                    ).addTo(
-                        this.map
-                    );
-
-            } else {
-
-                this.gpsAccuracyCircle
-                    .setLatLng(
-                        position
-                    );
-
-                this.gpsAccuracyCircle
-                    .setRadius(
-                        accuracy
-                    );
-
-            }
-
-        }
-
-    },
-
-
-    /* ------------------------------------------------------
-       RESET GPS VISUALS
-    ------------------------------------------------------ */
-
-    resetGPSVisuals() {
-
-        if (
-            this.map &&
-            this.gpsMarker
-        ) {
-
-            this.map.removeLayer(
-                this.gpsMarker
-            );
-
-        }
-
-
-        if (
-            this.map &&
-            this.gpsAccuracyCircle
-        ) {
-
-            this.map.removeLayer(
-                this.gpsAccuracyCircle
-            );
-
-        }
-
-
-        this.gpsMarker = null;
-
-        this.gpsAccuracyCircle = null;
-
-    }
-
-};
-
-
-/* ==========================================================
-   GPS MANAGER
-========================================================== */
-
-const GPSManager = {
-
-    /* ------------------------------------------------------
-       SUPPORT CHECK
-    ------------------------------------------------------ */
-
-    isSupported() {
-
-        return (
-            "geolocation" in
-            navigator
-        );
-
-    },
-
-
-    /* ------------------------------------------------------
-       ERROR MESSAGE
-    ------------------------------------------------------ */
-
-    getErrorMessage(error) {
-
-        if (!error) {
-
-            return "Không xác định.";
-
-        }
-
-
-        switch (error.code) {
-
-            case 1:
-
-                return "Người dùng từ chối quyền GPS.";
-
-            case 2:
-
-                return "Thiết bị không xác định được vị trí.";
-
-            case 3:
-
-                return "GPS hết thời gian chờ.";
-
-            default:
-
-                return error.message || "Không xác định.";
-
-        }
-
-    },
-
-
-    /* ------------------------------------------------------
-       UPDATE HUD
-    ------------------------------------------------------ */
-
-    updateHUD() {
-
-        const gpsText =
-            $("gpsText");
-
-
-        const gpsAccuracy =
-            $("gpsAccuracy");
-
-
-        if (!gpsText) {
-
-            return;
-
-        }
-
-
-        if (
-            SmartGNSSState.active
-        ) {
-
-            gpsText.textContent =
-                "GPS: Đang đo " +
-                SmartGNSSState.samples.length +
-                "/" +
-                SmartGNSSState.targetSamples;
-
-            if (gpsAccuracy) {
-
-                gpsAccuracy.textContent =
-                    SmartGNSSState.medianAccuracy !== null
-                        ? "± " +
-                          Math.round(
-                              SmartGNSSState.medianAccuracy
-                          ) +
-                          " m"
-                        : "± --";
-
-            }
-
-            return;
-
-        }
-
-
-        if (
-            GPSState.error
-        ) {
-
-            gpsText.textContent =
-                "GPS: " +
-                GPSState.error;
-
-            if (gpsAccuracy) {
-
-                gpsAccuracy.textContent =
-                    "± --";
-
-            }
-
-            return;
-
-        }
-
-
-        if (
-            SmartGNSSState.ready &&
-            SmartGNSSState.representative
-        ) {
-
-            gpsText.textContent =
-                "GPS: " +
-                SmartGNSSState.qualityLabel;
-
-
-            if (gpsAccuracy) {
-
-                gpsAccuracy.textContent =
-                    "± " +
-                    Math.round(
-                        SmartGNSSState.medianAccuracy
-                    ) +
-                    " m";
-
-            }
-
-            return;
-
-        }
-
-
-        if (
-            GPSState.available
-        ) {
-
-            gpsText.textContent =
-                "Lat " +
-                GPSState.latitude.toFixed(6) +
-                " · Lon " +
-                GPSState.longitude.toFixed(6);
-
-
-            if (gpsAccuracy) {
-
-                gpsAccuracy.textContent =
-                    "± " +
-                    Math.round(
-                        GPSState.accuracy
-                    ) +
-                    " m";
-
-            }
-
-            return;
-
-        }
-
-
-        gpsText.textContent =
-            "GPS: Chưa kết nối";
-
-
-        if (gpsAccuracy) {
-
-            gpsAccuracy.textContent =
-                "± --";
-
-        }
-
-    },
-
-
-    /* ------------------------------------------------------
-       SINGLE POSITION ACQUISITION
-
-       Compatibility method retained for existing buttons.
-       It does NOT persist a point.
-    ------------------------------------------------------ */
-
-    acquire() {
-
-        if (
-            !this.isSupported()
-        ) {
-
-            GPSState.error =
-                "Thiết bị không hỗ trợ GPS.";
-
-            GPSState.acquiring =
-                false;
-
-            GPSState.available =
-                false;
-
-            this.updateHUD();
-
-            SmartGNSSUI.update();
-
-            return;
-
-        }
-
-
-        if (
-            SmartGNSSState.active
-        ) {
-
-            return;
-
-        }
-
-
-        GPSState.acquiring =
-            true;
-
-        GPSState.error =
-            null;
-
-        this.updateHUD();
-
-
-        navigator.geolocation.getCurrentPosition(
-
-            position => {
-
-                this.handleSuccess(
-                    position
-                );
-
-            },
-
-            error => {
-
-                this.handleError(
-                    error
-                );
-
-            },
-
-            {
-
-                enableHighAccuracy:
-                    true,
-
-                timeout:
-                    20000,
-
-                maximumAge:
-                    0
-
-            }
-
-        );
-
-    },
-
-
-    /* ------------------------------------------------------
-       SMART GNSS START
-    ------------------------------------------------------ */
-
-    startSmartMeasurement() {
-
-        if (
-            !this.isSupported()
-        ) {
-
-            this.handleError({
-
-                code: 0,
-
-                message:
-                    "Thiết bị không hỗ trợ GPS."
-
-            });
-
-            return;
-
-        }
-
-
-        if (
-            SmartGNSSState.active
-        ) {
-
-            return;
-
-        }
-
-
-        this.stopSmartMeasurement(false);
-
-
-        SmartGNSSState.active =
-            true;
-
-        SmartGNSSState.samples =
-            [];
-
-        SmartGNSSState.targetSamples =
-            20;
-
-        SmartGNSSState.minimumSamples =
-            10;
-
-        SmartGNSSState.maxSamples =
-            30;
-
-        SmartGNSSState.minSampleIntervalMs =
-            700;
-
-        SmartGNSSState.lastAcceptedTimestamp =
-            0;
-
-        SmartGNSSState.watchId =
-            null;
-
-        SmartGNSSState.startedAt =
-            Date.now();
-
-        SmartGNSSState.finishedAt =
-            null;
-
-        SmartGNSSState.medianAccuracy =
-            null;
-
-        SmartGNSSState.stabilityMeters =
-            null;
-
-        SmartGNSSState.representative =
-            null;
-
-        SmartGNSSState.quality =
-            "ACQUIRING";
-
-        SmartGNSSState.qualityLabel =
-            "Đang thu GNSS";
-
-        SmartGNSSState.ready =
-            false;
-
-        SmartGNSSState.error =
-            null;
-
-
-        GPSState.acquiring =
-            true;
-
-        GPSState.error =
-            null;
-
-
-        SmartGNSSUI.update();
-        this.updateHUD();
-
-
-        try {
-
-            SmartGNSSState.watchId =
-                navigator.geolocation.watchPosition(
-
-                    position => {
-
-                        this.handleSmartSample(
-                            position
-                        );
-
-                    },
-
-                    error => {
-
-                        this.handleSmartError(
-                            error
-                        );
-
-                    },
-
-                    {
-
-                        enableHighAccuracy:
-                            true,
-
-                        timeout:
-                            20000,
-
-                        maximumAge:
-                            0
-
-                    }
-
-                );
-
-        } catch (error) {
-
-            SmartGNSSState.active =
-                false;
-
-            GPSState.acquiring =
-                false;
-
-            SmartGNSSState.error =
-                error.message ||
-                "Không thể khởi động GNSS.";
-
-            SmartGNSSState.quality =
-                "ERROR";
-
-            SmartGNSSState.qualityLabel =
-                "Lỗi GNSS";
-
-            this.updateHUD();
-            SmartGNSSUI.update();
-
-        }
-
-    },
-
-
-    /* ------------------------------------------------------
-       SMART GNSS SAMPLE HANDLER
-    ------------------------------------------------------ */
-
-    handleSmartSample(position) {
-
-        if (
-            !SmartGNSSState.active
-        ) {
-
-            return;
-
-        }
-
-
-        if (
-            !position ||
-            !position.coords
-        ) {
-
-            return;
-
-        }
-
-
-        const coords =
-            position.coords;
-
-
-        const latitude =
-            Number(
-                coords.latitude
-            );
-
-
-        const longitude =
-            Number(
-                coords.longitude
-            );
-
-
-        const accuracy =
-            Number(
-                coords.accuracy
-            );
-
-
-        if (
-            !Number.isFinite(latitude) ||
-            !Number.isFinite(longitude) ||
-            !Number.isFinite(accuracy) ||
-            accuracy <= 0
-        ) {
-
-            return;
-
-        }
-
-
-        const now =
-            Date.now();
-
-
-        if (
-            SmartGNSSState.lastAcceptedTimestamp > 0 &&
-            now -
-                SmartGNSSState.lastAcceptedTimestamp <
-                SmartGNSSState.minSampleIntervalMs
-        ) {
-
-            return;
-
-        }
-
-
-        SmartGNSSState.lastAcceptedTimestamp =
-            now;
-
-
-        const sample = {
-
-            latitude,
-
-            longitude,
-
-            accuracy,
-
-            altitude:
-                Number.isFinite(
-                    Number(
-                        coords.altitude
-                    )
-                )
-                    ? Number(
-                          coords.altitude
-                      )
-                    : null,
-
-            altitudeAccuracy:
-                Number.isFinite(
-                    Number(
-                        coords.altitudeAccuracy
-                    )
-                )
-                    ? Number(
-                          coords.altitudeAccuracy
-                      )
-                    : null,
-
-            heading:
-                Number.isFinite(
-                    Number(
-                        coords.heading
-                    )
-                )
-                    ? Number(
-                          coords.heading
-                      )
-                    : null,
-
-            speed:
-                Number.isFinite(
-                    Number(
-                        coords.speed
-                    )
-                )
-                    ? Number(
-                          coords.speed
-                      )
-                    : null,
-
-            timestamp:
-                Number.isFinite(
-                    Number(
-                        position.timestamp
-                    )
-                )
-                    ? Number(
-                          position.timestamp
-                      )
-                    : Date.now()
-
-        };
-
-
-        SmartGNSSState.samples.push(
-            sample
-        );
-
-
-        if (
-            SmartGNSSState.samples.length >
-            SmartGNSSState.maxSamples
-        ) {
-
-            SmartGNSSState.samples.shift();
-
-        }
-
-
-        GPSState.available =
-            true;
-
-        GPSState.acquiring =
-            true;
-
-        GPSState.latitude =
-            latitude;
-
-        GPSState.longitude =
-            longitude;
-
-        GPSState.accuracy =
-            accuracy;
-
-        GPSState.altitude =
-            sample.altitude;
-
-        GPSState.timestamp =
-            sample.timestamp;
-
-        GPSState.error =
-            null;
-
-
-        MapEngine.showGPSPosition(
-
-            latitude,
-
-            longitude,
-
-            accuracy
-
-        );
-
-
-        this.evaluateSmartMeasurement();
-
-
-        this.updateHUD();
-        SmartGNSSUI.update();
-
-
-        if (
-            SmartGNSSState.samples.length >=
-            SmartGNSSState.targetSamples
-        ) {
-
-            this.finishSmartMeasurement();
-
-        }
-
-    },
-
-
-    /* ------------------------------------------------------
-       SMART GNSS EVALUATION
-    ------------------------------------------------------ */
-
-    evaluateSmartMeasurement() {
-
-        const samples =
-            SmartGNSSState.samples;
-
-
-        if (
-            samples.length === 0
-        ) {
-
-            return;
-
-        }
-
-
-        const accuracies =
-            samples
-                .map(
-                    sample =>
-                        sample.accuracy
-                )
-                .filter(
-                    value =>
-                        Number.isFinite(value)
-                );
-
-
-        const medianAccuracy =
-            this.median(
-                accuracies
-            );
-
-
-        const representative =
-            this.calculateRepresentative(
-                samples
-            );
-
-
-        const stability =
-            representative
-                ? this.calculateStability(
-                      samples,
-                      representative
-                  )
-                : null;
-
-
-        SmartGNSSState.medianAccuracy =
-            medianAccuracy;
-
-        SmartGNSSState.representative =
-            representative;
-
-        SmartGNSSState.stabilityMeters =
-            stability;
-
-
-        const classification =
-            this.classifyQuality(
-                medianAccuracy,
-                stability,
-                samples.length
-            );
-
-
-        SmartGNSSState.quality =
-            classification.code;
-
-        SmartGNSSState.qualityLabel =
-            classification.label;
-
-        SmartGNSSState.ready =
-            classification.ready;
-
-
-        if (
-            representative
-        ) {
-
-            const vnCoord =
-                $("vnCoord");
-
-
-            if (vnCoord) {
-
-                vnCoord.textContent =
-                    "Chưa chuyển VN-2000";
-
-            }
-
-        }
-
-    },
-
-
-    /* ------------------------------------------------------
-       QUALITY CLASSIFICATION
-
-       These are TGS internal QA thresholds, not a national
-       surveying standard and not a claim of absolute accuracy.
-    ------------------------------------------------------ */
-
-    classifyQuality(
-        medianAccuracy,
-        stability,
-        sampleCount
-    ) {
-
-        if (
-            !Number.isFinite(
-                medianAccuracy
-            ) ||
-            !Number.isFinite(
-                stability
-            )
-        ) {
-
-            return {
-
-                code:
-                    "ACQUIRING",
-
-                label:
-                    "Đang thu GNSS",
-
-                ready:
-                    false
-
-            };
-
-        }
-
-
-        if (
-            sampleCount <
-            SmartGNSSState.minimumSamples
-        ) {
-
-            return {
-
-                code:
-                    "ACQUIRING",
-
-                label:
-                    "Đang ổn định vị trí",
-
-                ready:
-                    false
-
-            };
-
-        }
-
-
-        if (
-            medianAccuracy <= 3 &&
-            stability <= 3
-        ) {
-
-            return {
-
-                code:
-                    "SURVEY",
-
-                label:
-                    "Sẵn sàng khảo sát",
-
-                ready:
-                    true
-
-            };
-
-        }
-
-
-        if (
-            medianAccuracy <= 5 &&
-            stability <= 5
-        ) {
-
-            return {
-
-                code:
-                    "GOOD",
-
-                label:
-                    "Tốt — có thể xem xét",
-
-                ready:
-                    true
-
-            };
-
-        }
-
-
-        if (
-            medianAccuracy <= 10 &&
-            stability <= 10
-        ) {
-
-            return {
-
-                code:
-                    "REVIEW",
-
-                label:
-                    "Cần kiểm tra lại",
-
-                ready:
-                    false
-
-            };
-
-        }
-
-
-        return {
-
-            code:
-                "POOR",
-
-            label:
-                "Sai số lớn — đo lại",
-
-            ready:
-                false
-
-        };
-
-    },
-
-
-    /* ------------------------------------------------------
-       MEDIAN
-    ------------------------------------------------------ */
-
-    median(values) {
-
-        if (
-            !Array.isArray(values) ||
-            values.length === 0
-        ) {
-
-            return null;
-
-        }
-
-
-        const sorted =
-            values
-                .slice()
-                .sort(
-                    (a, b) => a - b
-                );
-
-
-        const middle =
-            Math.floor(
-                sorted.length / 2
-            );
-
-
-        if (
-            sorted.length % 2 === 0
-        ) {
-
-            return (
-                sorted[middle - 1] +
-                sorted[middle]
-            ) / 2;
-
-        }
-
-
-        return sorted[middle];
-
-    },
-
-
-    /* ------------------------------------------------------
-       REPRESENTATIVE POSITION
-
-       Weighted by reported accuracy, with a robust median
-       fallback. The result is a field-quality representative
-       coordinate, not a claim of improved sensor precision.
-    ------------------------------------------------------ */
-
-    calculateRepresentative(samples) {
-
-        if (
-            !Array.isArray(samples) ||
-            samples.length === 0
-        ) {
-
-            return null;
-
-        }
-
-
-        const latitudes =
-            samples.map(
-                sample =>
-                    sample.latitude
-            );
-
-
-        const longitudes =
-            samples.map(
-                sample =>
-                    sample.longitude
-            );
-
-
-        const medianLat =
-            this.median(
-                latitudes
-            );
-
-
-        const medianLon =
-            this.median(
-                longitudes
-            );
-
-
-        if (
-            !Number.isFinite(medianLat) ||
-            !Number.isFinite(medianLon)
-        ) {
-
-            return null;
-
-        }
-
-
-        const weights =
-            samples.map(
-                sample => {
-
-                    const accuracy =
-                        Math.max(
-                            1,
-                            sample.accuracy
-                        );
-
-                    return 1 /
-                        (accuracy * accuracy);
-
-                }
-            );
-
-
-        let weightSum =
-            0;
-
-        let weightedLat =
-            0;
-
-        let weightedLon =
-            0;
-
-
-        samples.forEach(
-            (sample, index) => {
-
-                const weight =
-                    weights[index];
-
-                weightSum +=
-                    weight;
-
-                weightedLat +=
-                    sample.latitude *
-                    weight;
-
-                weightedLon +=
-                    sample.longitude *
-                    weight;
-
-            }
-        );
-
-
-        if (
-            weightSum <= 0
-        ) {
-
-            return {
-
-                latitude:
-                    medianLat,
-
-                longitude:
-                    medianLon
-
-            };
-
-        }
-
-
-        return {
-
-            latitude:
-                weightedLat /
-                weightSum,
-
-            longitude:
-                weightedLon /
-                weightSum
-
-        };
-
-    },
-
-
-    /* ------------------------------------------------------
-       DISTANCE
-    ------------------------------------------------------ */
-
-    distanceMeters(
-        lat1,
-        lon1,
-        lat2,
-        lon2
-    ) {
-
-        const earthRadius =
-            6371000;
-
-
-        const toRadians =
-            degrees =>
-                degrees *
-                Math.PI /
-                180;
-
-
-        const dLat =
-            toRadians(
-                lat2 - lat1
-            );
-
-        const dLon =
-            toRadians(
-                lon2 - lon1
-            );
-
-
-        const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos(
-                toRadians(lat1)
-            ) *
-            Math.cos(
-                toRadians(lat2)
-            ) *
-            Math.sin(dLon / 2) ** 2;
-
-
-        const c =
-            2 *
-            Math.atan2(
-                Math.sqrt(a),
-                Math.sqrt(1 - a)
-            );
-
-
-        return earthRadius * c;
-
-    },
-
-
-    /* ------------------------------------------------------
-       STABILITY
-
-       Uses 95th percentile horizontal spread from the
-       representative position. This describes repeatability
-       of the current phone session; it does not replace a
-       survey-grade uncertainty model.
-    ------------------------------------------------------ */
-
-    calculateStability(
-        samples,
-        representative
-    ) {
-
-        if (
-            !Array.isArray(samples) ||
-            samples.length === 0 ||
-            !representative
-        ) {
-
-            return null;
-
-        }
-
-
-        const distances =
-            samples
-                .map(
-                    sample =>
-                        this.distanceMeters(
-                            representative.latitude,
-                            representative.longitude,
-                            sample.latitude,
-                            sample.longitude
-                        )
-                )
-                .filter(
-                    value =>
-                        Number.isFinite(value)
-                )
-                .sort(
-                    (a, b) => a - b
-                );
-
-
-        if (
-            distances.length === 0
-        ) {
-
-            return null;
-
-        }
-
-
-        const index =
-            Math.min(
-                distances.length - 1,
-                Math.max(
-                    0,
-                    Math.ceil(
-                        distances.length *
-                        0.95
-                    ) - 1
-                )
-            );
-
-
-        return distances[index];
-
-    },
-
-
-    /* ------------------------------------------------------
-       FINISH SMART MEASUREMENT
-    ------------------------------------------------------ */
-
-    finishSmartMeasurement() {
-
-        if (
-            !SmartGNSSState.active
-        ) {
-
-            return;
-
-        }
-
-
-        this.stopSmartMeasurement(
-            true
-        );
-
-
-        this.evaluateSmartMeasurement();
-
-
-        if (
-            SmartGNSSState.representative
-        ) {
-
-            GPSState.latitude =
-                SmartGNSSState.representative.latitude;
-
-            GPSState.longitude =
-                SmartGNSSState.representative.longitude;
-
-            GPSState.accuracy =
-                SmartGNSSState.medianAccuracy;
-
-
-            MapEngine.showGPSPosition(
-
-                GPSState.latitude,
-
-                GPSState.longitude,
-
-                GPSState.accuracy
-
-            );
-
-        }
-
-
-        this.updateHUD();
-        SmartGNSSUI.update();
-
-    },
-
-
-    /* ------------------------------------------------------
-       STOP SMART MEASUREMENT
-    ------------------------------------------------------ */
-
-    stopSmartMeasurement(
-        finished
-    ) {
-
-        const wasActive =
-            SmartGNSSState.active;
-
-
-        if (
-            SmartGNSSState.watchId !== null
-        ) {
-
-            try {
-
-                navigator.geolocation.clearWatch(
-                    SmartGNSSState.watchId
-                );
-
-            } catch (error) {
-
-                console.warn(
-                    "TGS GNSS clearWatch error:",
-                    error
-                );
-
-            }
-
-        }
-
-
-        SmartGNSSState.watchId =
-            null;
-
-        SmartGNSSState.active =
-            false;
-
-        SmartGNSSState.finishedAt =
-            Date.now();
-
-        GPSState.acquiring =
-            false;
-
-
-        if (
-            finished &&
-            wasActive
-        ) {
-
-            SmartGNSSState.qualityLabel =
-                SmartGNSSState.ready
-                    ? SmartGNSSState.qualityLabel
-                    : "Đo xong — chưa đạt QA";
-
-        }
-
-
-        this.updateHUD();
-        SmartGNSSUI.update();
-
-    },
-
-
-    /* ------------------------------------------------------
-       SMART GNSS ERROR
-    ------------------------------------------------------ */
-
-    handleSmartError(error) {
-
-        SmartGNSSState.error =
-            this.getErrorMessage(
-                error
-            );
-
-
-        if (
-            SmartGNSSState.samples.length === 0
-        ) {
-
-            SmartGNSSState.quality =
-                "ERROR";
-
-            SmartGNSSState.qualityLabel =
-                "Không lấy được GPS";
-
-        }
-
-
-        GPSState.error =
-            SmartGNSSState.error;
-
-
-        if (
-            SmartGNSSState.active
-        ) {
-
-            this.stopSmartMeasurement(
-                false
-            );
-
-        }
-
-
-        this.updateHUD();
-        SmartGNSSUI.update();
-
-
-        console.warn(
-            "TGS Smart GNSS Error:",
-            error
-        );
-
-    },
-
-
-    /* ------------------------------------------------------
-       SINGLE FIX SUCCESS
-    ------------------------------------------------------ */
-
-    handleSuccess(
-        position
-    ) {
-
-        const coords =
-            position.coords;
-
-
-        GPSState.available =
-            true;
-
-        GPSState.acquiring =
-            false;
-
-        GPSState.latitude =
-            coords.latitude;
-
-        GPSState.longitude =
-            coords.longitude;
-
-        GPSState.accuracy =
-            coords.accuracy;
-
-        GPSState.altitude =
-            coords.altitude;
-
-        GPSState.timestamp =
-            position.timestamp;
-
-        GPSState.error =
-            null;
-
-
-        this.updateHUD();
-
-
-        MapEngine.showGPSPosition(
-
-            GPSState.latitude,
-
-            GPSState.longitude,
-
-            GPSState.accuracy
-
-        );
-
-
-        const vnCoord =
-            $("vnCoord");
-
-
-        if (vnCoord) {
-
-            vnCoord.textContent =
-                "Chưa chuyển VN-2000";
-
-        }
-
-
-        SmartGNSSUI.update();
-
-    },
-
-
-    /* ------------------------------------------------------
-       SINGLE FIX ERROR
-    ------------------------------------------------------ */
-
-    handleError(
-        error
-    ) {
-
-        GPSState.available =
-            false;
-
-        GPSState.acquiring =
-            false;
-
-        GPSState.error =
-            this.getErrorMessage(
-                error
-            );
-
-
-        this.updateHUD();
-        SmartGNSSUI.update();
-
-
-        console.warn(
-            "TGS GPS Error:",
-            error
-        );
-
-    },
-
-
-    /* ------------------------------------------------------
-       RESET
-    ------------------------------------------------------ */
-
-    reset() {
-
-        this.stopSmartMeasurement(
-            false
-        );
-
-
-        GPSState.available =
-            false;
-
-        GPSState.acquiring =
-            false;
-
-        GPSState.latitude =
-            null;
-
-        GPSState.longitude =
-            null;
-
-        GPSState.accuracy =
-            null;
-
-        GPSState.altitude =
-            null;
-
-        GPSState.timestamp =
-            null;
-
-        GPSState.error =
-            null;
-
-
-        SmartGNSSState.samples =
-            [];
-
-        SmartGNSSState.medianAccuracy =
-            null;
-
-        SmartGNSSState.stabilityMeters =
-            null;
-
-        SmartGNSSState.representative =
-            null;
-
-        SmartGNSSState.quality =
-            "IDLE";
-
-        SmartGNSSState.qualityLabel =
-            "Chưa đo";
-
-        SmartGNSSState.ready =
-            false;
-
-        SmartGNSSState.error =
-            null;
-
-        SmartGNSSState.startedAt =
-            null;
-
-        SmartGNSSState.finishedAt =
-            null;
-
-
-        MapEngine.resetGPSVisuals();
-
-
-        this.updateHUD();
-        SmartGNSSUI.update();
-
-
-        const vnCoord =
-            $("vnCoord");
-
-
-        if (vnCoord) {
-
-            vnCoord.textContent =
-                "X / Y";
-
-        }
-
-
-        const pointCode =
-            $("pointCode");
-
-
-        if (pointCode) {
-
-            pointCode.textContent =
-                "Chưa có";
-
-        }
-
-    },
-
-
-    resetState() {
-
-        this.reset();
-
-    }
-
-};
-
-
-/* ==========================================================
-   SMART GNSS UI
-
-   REV14 adds a compact field QA panel dynamically so that
-   index.html does not need a breaking structural change.
-========================================================== */
-
-const SmartGNSSUI = {
-
-    panelId:
-        "tgsSmartGNSSPanel",
-
-
-    styleId:
-        "tgsSmartGNSSStyle",
-
-
-    ensure() {
-
-        if ($(
-            this.panelId
-        )) {
-
-            return $(
-                this.panelId
-            );
-
-        }
-
-
-        const screen =
-            $("screenLinear");
-
-
-        if (!screen) {
-
-            return null;
-
-        }
-
-
-        if (!$(
-            this.styleId
-        )) {
-
-            const style =
-                document.createElement(
-                    "style"
-                );
-
-            style.id =
-                this.styleId;
-
-            style.textContent = `
-                #tgsSmartGNSSPanel {
-                    margin: 12px 0;
-                    padding: 12px;
-                    border: 1px solid rgba(21,101,192,.16);
-                    border-radius: 14px;
-                    background: rgba(255,255,255,.96);
-                    box-shadow: 0 4px 18px rgba(0,0,0,.06);
-                    font-family: inherit;
-                }
-                #tgsSmartGNSSPanel .tgs-gnss-title {
-                    font-weight: 700;
-                    margin-bottom: 8px;
-                }
-                #tgsSmartGNSSPanel .tgs-gnss-grid {
-                    display: grid;
-                    grid-template-columns: repeat(2,minmax(0,1fr));
-                    gap: 8px;
-                }
-                #tgsSmartGNSSPanel .tgs-gnss-item {
-                    padding: 8px;
-                    border-radius: 10px;
-                    background: rgba(0,0,0,.035);
-                }
-                #tgsSmartGNSSPanel .tgs-gnss-label {
-                    display: block;
-                    font-size: 11px;
-                    opacity: .68;
-                    margin-bottom: 3px;
-                }
-                #tgsSmartGNSSPanel .tgs-gnss-value {
-                    display: block;
-                    font-size: 14px;
-                    font-weight: 650;
-                }
-                #tgsSmartGNSSPanel .tgs-gnss-status {
-                    margin-top: 9px;
-                    font-weight: 700;
-                }
-                #tgsSmartGNSSPanel .tgs-gnss-note {
-                    margin-top: 7px;
-                    font-size: 11px;
-                    line-height: 1.4;
-                    opacity: .72;
-                }
-                #tgsSmartGNSSPanel .tgs-gnss-actions {
-                    display: flex;
-                    gap: 8px;
-                    margin-top: 10px;
-                }
-                #tgsSmartGNSSPanel button {
-                    flex: 1;
-                    min-height: 42px;
-                }
-                @media (max-width: 520px) {
-                    #tgsSmartGNSSPanel .tgs-gnss-grid {
-                        grid-template-columns: 1fr 1fr;
-                    }
-                }
-            `;
-
-            document.head.appendChild(
-                style
-            );
-
-        }
-
-
-        const panel =
-            document.createElement(
-                "section"
-            );
-
-        panel.id =
-            this.panelId;
-
-        panel.innerHTML = `
-            <div class="tgs-gnss-title">
-                TGS Smart GNSS
-            </div>
-
-            <div class="tgs-gnss-grid">
-
-                <div class="tgs-gnss-item">
-                    <span class="tgs-gnss-label">Mẫu</span>
-                    <span class="tgs-gnss-value" data-gnss="samples">0 / 20</span>
-                </div>
-
-                <div class="tgs-gnss-item">
-                    <span class="tgs-gnss-label">Accuracy trung vị</span>
-                    <span class="tgs-gnss-value" data-gnss="accuracy">--</span>
-                </div>
-
-                <div class="tgs-gnss-item">
-                    <span class="tgs-gnss-label">Độ ổn định</span>
-                    <span class="tgs-gnss-value" data-gnss="stability">--</span>
-                </div>
-
-                <div class="tgs-gnss-item">
-                    <span class="tgs-gnss-label">Nguồn</span>
-                    <span class="tgs-gnss-value">Smartphone GNSS</span>
-                </div>
-
-            </div>
-
-            <div
-                class="tgs-gnss-status"
-                data-gnss="status"
-            >
-                Chưa đo
-            </div>
-
-            <div
-                class="tgs-gnss-note"
-            >
-                REV14 chỉ đánh giá chất lượng và độ ổn định của GNSS hiện tại.
-                Chưa lưu điểm và không tuyên bố độ chính xác tuyệt đối.
-            </div>
-
-            <div class="tgs-gnss-actions">
-
-                <button
-                    id="btnSmartGNSSStart"
-                    type="button"
-                    class="primary-btn"
-                >
-                    Bắt đầu đo GPS
-                </button>
-
-                <button
-                    id="btnSmartGNSSStop"
-                    type="button"
-                    class="secondary-btn"
-                >
-                    Dừng đo
-                </button>
-
-            </div>
-        `;
-
-
-        const map =
-            $("map");
-
-
-        if (
-            map &&
-            map.parentElement
-        ) {
-
-            map.parentElement.insertBefore(
-                panel,
-                map
-            );
-
-        } else {
-
-            screen.appendChild(
-                panel
-            );
-
-        }
-
-
-        const startButton =
-            $("btnSmartGNSSStart");
-
-        if (startButton) {
-
-            startButton.addEventListener(
-                "click",
-                () => {
-
-                    if (
-                        SmartGNSSState.active
-                    ) {
-
-                        return;
-
-                    }
-
-                    GPSManager.startSmartMeasurement();
-
-                }
-            );
-
-        }
-
-
-        const stopButton =
-            $("btnSmartGNSSStop");
-
-        if (stopButton) {
-
-            stopButton.addEventListener(
-                "click",
-                () => {
-
-                    GPSManager.stopSmartMeasurement(
-                        false
-                    );
-
-                    GPSManager.evaluateSmartMeasurement();
-
-                    GPSManager.updateHUD();
-
-                    this.update();
-
-                }
-            );
-
-        }
-
-
-        return panel;
-
-    },
-
-
-    update() {
-
-        const panel =
-            this.ensure();
-
-
-        if (!panel) {
-
-            return;
-
-        }
-
-
-        const sampleElement =
-            panel.querySelector(
-                '[data-gnss="samples"]'
-            );
-
-
-        const accuracyElement =
-            panel.querySelector(
-                '[data-gnss="accuracy"]'
-            );
-
-
-        const stabilityElement =
-            panel.querySelector(
-                '[data-gnss="stability"]'
-            );
-
-
-        const statusElement =
-            panel.querySelector(
-                '[data-gnss="status"]'
-            );
-
-
-        if (sampleElement) {
-
-            sampleElement.textContent =
-                SmartGNSSState.samples.length +
-                " / " +
-                SmartGNSSState.targetSamples;
-
-        }
-
-
-        if (accuracyElement) {
-
-            accuracyElement.textContent =
-                Number.isFinite(
-                    SmartGNSSState.medianAccuracy
-                )
-                    ? "± " +
-                      SmartGNSSState.medianAccuracy.toFixed(1) +
-                      " m"
-                    : "--";
-
-        }
-
-
-        if (stabilityElement) {
-
-            stabilityElement.textContent =
-                Number.isFinite(
-                    SmartGNSSState.stabilityMeters
-                )
-                    ? "≤ " +
-                      SmartGNSSState.stabilityMeters.toFixed(1) +
-                      " m"
-                    : "--";
-
-        }
-
-
-        if (statusElement) {
-
-            statusElement.textContent =
-                SmartGNSSState.qualityLabel;
-
-        }
-
-
-        const startButton =
-            $("btnSmartGNSSStart");
-
-        const stopButton =
-            $("btnSmartGNSSStop");
-
-
-        if (startButton) {
-
-            startButton.disabled =
-                SmartGNSSState.active;
-
-            startButton.textContent =
-                SmartGNSSState.active
-                    ? "Đang đo GPS…"
-                    : "Bắt đầu đo GPS";
-
-        }
-
-
-        if (stopButton) {
-
-            stopButton.disabled =
-                !SmartGNSSState.active;
-
-        }
-
-    }
-
-};
-
-
-/* ==========================================================
-   GPS COMPATIBILITY ALIAS
-========================================================== */
-
-const GPS = {
-
-    readCurrentLocation() {
-
-        GPSManager.acquire();
-
-    },
-
-    startSmartMeasurement() {
-
-        GPSManager.startSmartMeasurement();
-
-    },
-
-    stopSmartMeasurement() {
-
-        GPSManager.stopSmartMeasurement(false);
-
-        GPSManager.evaluateSmartMeasurement();
-
-        SmartGNSSUI.update();
-
-    },
-
-    reset() {
-
-        GPSManager.reset();
-
-    }
-
-};
-
-
-/* ==========================================================
-   RESET GPS STATE
-========================================================== */
-
-function resetGPSState() {
-
-    GPSManager.reset();
-
-}
-
-
-/* ==========================================================
-   MAP LAYER CONTROL
-========================================================== */
-
-const MapLayerControl = {
-
-    initialized:
-        false,
-
-
-    /* ------------------------------------------------------
-       BASE MAP CONTROLS
-    ------------------------------------------------------ */
-
-    bindBaseMapControls() {
-
-        const controls =
-            document.querySelectorAll(
-                'input[name="baseMap"]'
-            );
-
-
-        controls.forEach(
-            control => {
-
-                if (
-                    control.dataset.tgsBound ===
-                    "true"
-                ) {
-
-                    return;
-
-                }
-
-
-                control.dataset.tgsBound =
-                    "true";
-
-
-                control.addEventListener(
-                    "change",
-                    () => {
-
-                        if (
-                            !control.checked
-                        ) {
-
-                            return;
-
-                        }
-
-
-                        if (
-                            control.value ===
-                            "arcgis"
-                        ) {
-
-                            MapEngine
-                                .switchBaseMap(
-                                    "arcgis"
-                                );
-
-                            return;
-
-                        }
-
-
-                        console.log(
-                            "TGS GIS: provider prepared but not activated.",
-                            control.value
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-    },
-
-
-    /* ------------------------------------------------------
-       GIS LAYER CONTROLS
-    ------------------------------------------------------ */
-
-    bindGISLayerControls() {
-
-        const controls =
-            document.querySelectorAll(
-                "input[type='checkbox'][data-layer]"
-            );
-
-
-        controls.forEach(
-            control => {
-
-                if (
-                    control.dataset.tgsBound ===
-                    "true"
-                ) {
-
-                    return;
-
-                }
-
-
-                control.dataset.tgsBound =
-                    "true";
-
-
-                const container =
-                    control.closest(
-                        "[data-layer]"
-                    );
-
-
-                if (!container) {
-
-                    return;
-
-                }
-
-
-                const layerId =
-                    container.dataset.layer;
-
-
-                if (
-                    Object.prototype
-                        .hasOwnProperty
-                        .call(
-                            GISLayerState,
-                            layerId
-                        )
-                ) {
-
-                    GISLayerState[
-                        layerId
-                    ] =
-                        control.checked;
-
-                }
-
-
-                control.addEventListener(
-                    "change",
-                    () => {
-
-                        if (
-                            Object.prototype
-                                .hasOwnProperty
-                                .call(
-                                    GISLayerState,
-                                    layerId
-                                )
-                        ) {
-
-                            GISLayerState[
-                                layerId
-                            ] =
-                                control.checked;
-
-                        }
-
-
-                        /*
-                         * No synthetic geometry is
-                         * created here.
-                         *
-                         * Actual GIS data will be
-                         * loaded from IndexedDB when
-                         * Survey Point / Route
-                         * persistence is implemented.
-                         */
-
-                        console.log(
-                            "TGS GIS Layer visibility:",
-                            layerId,
-                            control.checked
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-    },
-
-
-    /* ------------------------------------------------------
-       SYNC UI
-    ------------------------------------------------------ */
-
-    syncUI() {
-
-        Object.keys(
-            GISLayerState
-        ).forEach(
-            layerId => {
-
-                const control =
-                    document.querySelector(
-                        `input[type="checkbox"][data-layer="${({surveyPoint:"point",surveyRoute:"route",pipe:"pipe",valve:"valve",tee:"tee",elbow:"elbow",waterStation:"station",customerMeter:"meter"})[layerId] || layerId}"]`
-                    );
-
-
-                if (control) {
-
-                    control.checked =
-                        GISLayerState[
-                            layerId
-                        ];
-
-                }
-
-            }
-        );
-
-    },
-
-
-    /* ------------------------------------------------------
-       INITIALIZE
-    ------------------------------------------------------ */
-
-    initialize() {
-
-        this.bindBaseMapControls();
-
-        this.bindGISLayerControls();
-
-        this.syncUI();
-
-        this.initialized =
-            true;
-
-    }
-
-};
-
-
-/* ==========================================================
-   LINEAR UI
-========================================================== */
-
-function updateLinearUI() {
-
-    if (
-        currentProject
-    ) {
-
-        const linearProject =
-            $("linearProject");
-
-
-        if (linearProject) {
-
-            linearProject.textContent =
-                currentProject.projectName ||
-                "Công trình";
-
-        }
-
-    }
-
-
-    const pointCode =
-        $("pointCode");
-
-
-    if (pointCode) {
-
-        /*
-         * No D001 synthetic value.
-         */
-
-        pointCode.textContent =
-            "Chưa có";
-
-    }
-
-}
-
-
-/* ==========================================================
-   BUTTON BINDINGS
-========================================================== */
-
-function bindButtons() {
-
-
-    /* ------------------------------------------------------
-       SPLASH — START
-       FIXED IN REV11
-    ------------------------------------------------------ */
-
-    const btnStart =
-        $("btnStart");
-
-
-    if (btnStart) {
-
-        btnStart.addEventListener(
-            "click",
-            async () => {
-
-                if (!dbReady) {
-
-                    alert(
-                        "Offline Database chưa sẵn sàng."
-                    );
-
-                    return;
-
-                }
-
-
-                try {
-
-                    await loadProjectState();
-
-
-                    renderProjectHome();
-
-
-                    show(
-                        "screenProjectHome"
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        "TGS Startup Error:",
-                        error
-                    );
-
-
-                    alert(
-                        "Không thể mở hồ sơ công trình."
-                    );
-
-                }
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       NEW PROJECT
-    ------------------------------------------------------ */
-
-    const btnNewProject =
-        $("btnNewProject");
-
-
-    if (btnNewProject) {
-
-        btnNewProject.addEventListener(
-            "click",
-            () => {
-
-                resetProjectForm();
-
-                closeSavedProjects();
-
-                show(
-                    "screenProject"
-                );
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       RESUME PROJECT
-    ------------------------------------------------------ */
-
-    const btnContinueDraft =
-        $("btnContinueDraft");
-
-
-    if (btnContinueDraft) {
-
-        btnContinueDraft.addEventListener(
-            "click",
-            () => {
-
-                resumeProject();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       OPEN SAVED PROJECTS
-    ------------------------------------------------------ */
-
-    const btnOpenSavedProjects =
-        $("btnOpenSavedProjects");
-
-
-    if (btnOpenSavedProjects) {
-
-        btnOpenSavedProjects.addEventListener(
-            "click",
-            () => {
-
-                openSavedProjects();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       CLOSE SAVED PROJECTS
-    ------------------------------------------------------ */
-
-    const btnCloseSaved =
-        $("btnCloseSaved");
-
-
-    if (btnCloseSaved) {
-
-        btnCloseSaved.addEventListener(
-            "click",
-            () => {
-
-                closeSavedProjects();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       CREATE PROJECT
-    ------------------------------------------------------ */
-
-    const projectForm = $("projectForm");
-
-    if (projectForm) {
-
-        projectForm.addEventListener(
-            "submit",
-            event => {
-
-                event.preventDefault();
-                createProject();
-
-            }
-        );
-
-    } else {
-
-        const btnCreateProject = $("btnCreateProject");
-
-        if (btnCreateProject) {
-
-            btnCreateProject.addEventListener(
-                "click",
-                event => {
-
-                    event.preventDefault();
-                    createProject();
-
-                }
-            );
-
-        }
-
-    }
-
-
-    /* ------------------------------------------------------
-       POINT SURVEY
-    ------------------------------------------------------ */
-
-    const btnPoint =
-        $("btnPoint");
-
-
-    if (btnPoint) {
-
-        btnPoint.addEventListener(
-            "click",
-            () => {
-
-                if (!currentProject) {
-
-                    alert(
-                        "Chưa có công trình."
-                    );
-
-                    return;
-
-                }
-
-
-                show(
-                    "screenPoint"
-                );
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       LINEAR SURVEY
-    ------------------------------------------------------ */
-
-    const btnLinear =
-        $("btnLinear");
-
-
-    if (btnLinear) {
-
-        btnLinear.addEventListener(
-            "click",
-            () => {
-
-                if (!currentProject) {
-
-                    alert(
-                        "Chưa có công trình."
-                    );
-
-                    return;
-
-                }
-
-
-                updateLinearUI();
-
-
-                show(
-                    "screenLinear"
-                );
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       COMPLETE PROJECT
-    ------------------------------------------------------ */
-
-    const btnFinishProject =
-        $("btnFinishProject");
-
-
-    if (btnFinishProject) {
-
-        btnFinishProject.addEventListener(
-            "click",
-            () => {
-
-                completeProject();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       SAVE PROJECT
-    ------------------------------------------------------ */
-
-    const btnSaveProject =
-        $("btnSaveProject");
-
-
-    if (btnSaveProject) {
-
-        btnSaveProject.addEventListener(
-            "click",
-            () => {
-
-                saveProject();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       CONTINUE PROJECT
-    ------------------------------------------------------ */
-
-    const btnContinueProject =
-        $("btnContinueProject");
-
-
-    if (btnContinueProject) {
-
-        btnContinueProject.addEventListener(
-            "click",
-            () => {
-
-                backToSurveyFromCompletion();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       BACK TO SURVEY FROM COMPLETE
-    ------------------------------------------------------ */
-
-    const btnReturnSurvey =
-        $("btnReturnSurvey");
-
-
-    if (btnReturnSurvey) {
-
-        btnReturnSurvey.addEventListener(
-            "click",
-            () => {
-
-                backToSurveyFromCompletion();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       GENERIC BACK BUTTONS
-    ------------------------------------------------------ */
-
-    document
-        .querySelectorAll(
-            ".back-btn"
-        )
-        .forEach(
-            button => {
-
-                /*
-                 * Specific buttons already have
-                 * explicit handlers above.
-                 *
-                 * We only bind generic back buttons
-                 * that have not already been handled.
-                 */
-
-                if (
-                    button.dataset.tgsBackBound ===
-                    "true"
-                ) {
-
-                    return;
-
-                }
-
-
-                button.dataset.tgsBackBound =
-                    "true";
-
-
-                button.addEventListener(
-                    "click",
-                    () => {
-
-                        const currentScreen =
-                            screens.find(
-                                id => {
-
-                                    const element =
-                                        $(id);
-
-                                    return (
-                                        element &&
-                                        element.classList.contains(
-                                            "active"
-                                        )
-                                    );
-
-                                }
-                            );
-
-
-                        if (
-                            currentScreen ===
-                            "screenProject"
-                        ) {
-
-                            show(
-                                "screenProjectHome"
-                            );
-
-                            return;
-
-                        }
-
-
-                        show(
-                            "screenSurveyHome"
-                        );
-
-                    }
-                );
-
-            }
-        );
-
-
-    /* ------------------------------------------------------
-       MAP LOCATE
-    ------------------------------------------------------ */
-
-    const btnLocate =
-        $("btnLocate");
-
-
-    if (btnLocate) {
-
-        btnLocate.addEventListener(
-            "click",
-            () => {
-
-                MapEngine.locate();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       MAP ZOOM IN
-    ------------------------------------------------------ */
-
-    const btnZoomIn =
-        $("btnZoomIn");
-
-
-    if (btnZoomIn) {
-
-        btnZoomIn.addEventListener(
-            "click",
-            () => {
-
-                MapEngine.zoomIn();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       MAP ZOOM OUT
-    ------------------------------------------------------ */
-
-    const btnZoomOut =
-        $("btnZoomOut");
-
-
-    if (btnZoomOut) {
-
-        btnZoomOut.addEventListener(
-            "click",
-            () => {
-
-                MapEngine.zoomOut();
-
-            }
-        );
-
-    }
-
-
-    /* ------------------------------------------------------
-       FIRST GPS
-    ------------------------------------------------------ */
-
-    const btnFirstGPS =
-        $("btnFirstGPS");
-
-
-    if (btnFirstGPS) {
-
-        btnFirstGPS.addEventListener(
-            "click",
-            () => {
-
-                if (
-                    SmartGNSSState.active
-                ) {
-
-                    GPSManager.stopSmartMeasurement(
-                        false
-                    );
-
-                    GPSManager.evaluateSmartMeasurement();
-
-                    GPSManager.updateHUD();
-
-                    SmartGNSSUI.update();
-
-                    return;
-
-                }
-
-                GPSManager.startSmartMeasurement();
-
-            }
-        );
-
-    }
-
-}
-
-
-/* ==========================================================
-   STARTUP STATUS
-========================================================== */
-
-function updateStartupStatus() {
-
-    const dbStatus = $("startupDbStatus");
-    const gpsStatus = $("startupGpsStatus");
-    const gisStatus = $("startupGisStatus");
-
-    if (dbStatus) {
-        dbStatus.textContent = dbReady ? "Sẵn sàng" : "Chờ kiểm tra";
-    }
-
-    if (gpsStatus) {
-        gpsStatus.textContent = GPSManager.isSupported() ? "Sẵn sàng" : "Không hỗ trợ";
-    }
-
-    if (gisStatus) {
-        gisStatus.textContent = "ArcGIS";
-    }
-
-}
-
-
-/* ==========================================================
-   APPLICATION BOOT
-========================================================== */
-
-window.addEventListener(
-    "load",
-    async () => {
-
-        /*
-         * Always begin on Splash.
-         */
-
-        show(
-            "screenSplash"
-        );
-
-        updateStartupStatus();
-
-
-        /*
-         * IMPORTANT REV12 STARTUP ORDER
-         *
-         * UI bindings must not depend on IndexedDB
-         * resolution or initialization.
-         *
-         * If the database is unavailable, the START
-         * button must still respond and show a clear
-         * database-not-ready message instead of becoming
-         * a dead button.
-         */
-
-        bindButtons();
-
-
-        /*
-         * Resolve DB API after UI binding.
-         */
-
-        databaseApi =
-            resolveDatabaseApi();
-
-
-        if (!databaseApi) {
-
-            console.error(
-                "TGS: Database API not found."
-            );
-
-            alert(
-                "Không tìm thấy Offline Database."
-            );
-
-            return;
-
-        }
-
-
-        /*
-         * Initialize GIS controls.
-         */
-
-        MapLayerControl.initialize();
-
-
-        /*
-         * Initialize GPS HUD.
-         */
-
-        GPSManager.reset();
-
-
-        /*
-         * Initialize IndexedDB.
-         */
-
-        try {
-
-            await databaseApi.initDatabase();
-
-
-            dbReady =
-                true;
-
-            updateStartupStatus();
-
-
-            /*
-             * Load lifecycle state.
-             *
-             * We intentionally do not navigate away
-             * from Splash automatically.
-             *
-             * The user must press Bắt đầu.
-             */
-
-            await loadProjectState();
-
-
-            console.log(
-                "======================================"
-            );
-
-            console.log(
-                "TGS PLATFORM GENESIS 2.0"
-            );
-
-            console.log(
-                "app.js REV14 — SMART GNSS ACQUISITION"
-            );
-
-            console.log(
-                "Database : READY"
-            );
-
-            console.log(
-                "Startup  : READY"
-            );
-
-            console.log(
-                "ArcGIS   : READY"
-            );
-
-            console.log(
-                "GPS      : READY"
-            );
-
-            console.log(
-                "Synthetic GIS : DISABLED"
-            );
-
-            console.log(
-                "======================================"
-            );
-
-        } catch (error) {
-
-            dbReady =
-                false;
-
-            updateStartupStatus();
-
-
-            console.error(
-                "TGS Database Initialization Error:",
-                error
-            );
-
-
-            alert(
-                "Không thể khởi tạo bộ nhớ Offline."
-            );
-
-        }
-
-    }
-);
-
-
-/* ==========================================================
-   REV14 THREE-FILE RECONCILIATION + SMART GNSS
-
-   UI button binding is intentionally independent from
-   IndexedDB API resolution and initialization.
-
-   This revision adds Smart GNSS acquisition only.
-
-   It does NOT persist Survey Point data.
-========================================================== */
-
-
-/* ==========================================================
-   QA STATUS
-========================================================== */
-
-function qaStatus() {
-
-    return {
-
-        revision:
-            "REV14",
-
-        database:
-            dbReady,
-
-        databaseApi:
-            !!databaseApi,
-
-        startup:
-            !!$("btnStart"),
-
-        startupHome:
-            !!$("screenProjectHome"),
-
-        projectForm:
-            !!$("screenProject"),
-
-        surveyHome:
-            !!$("screenSurveyHome"),
-
-        pointSurvey:
-            !!$("screenPoint"),
-
-        linearSurvey:
-            !!$("screenLinear"),
-
-        projectComplete:
-            !!$("screenProjectComplete"),
-
-        arcgis:
-            true,
-
-        gps:
-            GPSManager.isSupported(),
-
-        smartGNSS:
-            {
-
-                active:
-                    SmartGNSSState.active,
-
-                sampleCount:
-                    SmartGNSSState.samples.length,
-
-                targetSamples:
-                    SmartGNSSState.targetSamples,
-
-                medianAccuracy:
-                    SmartGNSSState.medianAccuracy,
-
-                stabilityMeters:
-                    SmartGNSSState.stabilityMeters,
-
-                quality:
-                    SmartGNSSState.quality,
-
-                ready:
-                    SmartGNSSState.ready
-
-            },
-
-        syntheticGIS:
-            false,
-
-        currentProject:
-            currentProject,
-
-        draftProject:
-            startupState.draftProject,
-
-        savedProjectCount:
-            startupState.savedProjects.length
-
-    };
-
-}
-
-
-/* ==========================================================
-   PUBLIC TGS QA API
-========================================================== */
-
-window.TGS = {
-
-    qaStatus,
-
-    GPS,
-
-    GPSManager,
-
-    SmartGNSSState,
-
-    SmartGNSSUI,
-
-    MapEngine,
-
-    MapLayerControl,
-
-    GISLayerState,
-
-    DB:
-        databaseApi
-
-};
-
-
-/* ==========================================================
-   FINAL LOAD MESSAGE
-========================================================== */
-
-console.log(
-    "TGS Genesis 2.0 app.js REV14 Loaded"
-);
