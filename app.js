@@ -3,7 +3,7 @@
    TGS02-WEB-LINEAR-004
 
    app.js
-   REV13 — THREE-FILE RECONCILED BASELINE
+   REV14 — SMART GNSS ACQUISITION
 
    PURPOSE
    ----------------------------------------------------------
@@ -12,10 +12,11 @@
    3. Fix START button failure.
    4. Ensure UI bindings are independent from DB initialization.
    5. Preserve ArcGIS as default map provider.
-   6. Preserve real-device GPS read/display.
+   6. Implement Smart GNSS acquisition using watchPosition().
    7. Remove all synthetic GIS/demo objects.
    8. Keep GIS layer controls provider-independent.
    9. Do NOT implement Survey Point persistence yet.
+  10. Do NOT claim phone GNSS equals RTK/GNSS survey equipment.
 
    QA BASELINE
    ----------------------------------------------------------
@@ -25,18 +26,22 @@
    ✓ Resume Project
    ✓ Saved Project
    ✓ ArcGIS Default
-   ✓ Real GPS read/display
+   ✓ Smart GNSS watchPosition
+   ✓ Multi-sample acquisition
+   ✓ Accuracy + stability QA
    ✓ No synthetic GIS data
    ✓ Current index.html IDs
    ✓ Current DB v4 API
 
    IMPORTANT
    ----------------------------------------------------------
-   This revision is a reconciliation release.
+   This revision is the Smart GNSS acquisition release.
 
    It intentionally does NOT:
    - create survey points
    - save GPS points
+   - claim centimeter accuracy from smartphone GNSS
+   - perform VN-2000 conversion
    - create demo GIS objects
    - create D001
    - implement VN-2000 conversion
@@ -111,6 +116,52 @@ const GPSState = {
     altitude: null,
 
     timestamp: null,
+
+    error: null
+
+};
+
+
+/* ==========================================================
+   SMART GNSS STATE
+
+   This state is deliberately session-only.
+   No sample is persisted to IndexedDB in REV14.
+========================================================== */
+
+const SmartGNSSState = {
+
+    active: false,
+
+    samples: [],
+
+    targetSamples: 20,
+
+    minimumSamples: 10,
+
+    maxSamples: 30,
+
+    minSampleIntervalMs: 700,
+
+    lastAcceptedTimestamp: 0,
+
+    watchId: null,
+
+    startedAt: null,
+
+    finishedAt: null,
+
+    medianAccuracy: null,
+
+    stabilityMeters: null,
+
+    representative: null,
+
+    quality: "IDLE",
+
+    qualityLabel: "Chưa đo",
+
+    ready: false,
 
     error: null
 
@@ -300,6 +351,10 @@ function show(screenId) {
                 MapEngine.initialize();
 
                 MapLayerControl.initialize();
+
+                SmartGNSSUI.ensure();
+
+                SmartGNSSUI.update();
 
                 updateLinearUI();
 
@@ -1861,6 +1916,42 @@ const GPSManager = {
 
 
     /* ------------------------------------------------------
+       ERROR MESSAGE
+    ------------------------------------------------------ */
+
+    getErrorMessage(error) {
+
+        if (!error) {
+
+            return "Không xác định.";
+
+        }
+
+
+        switch (error.code) {
+
+            case 1:
+
+                return "Người dùng từ chối quyền GPS.";
+
+            case 2:
+
+                return "Thiết bị không xác định được vị trí.";
+
+            case 3:
+
+                return "GPS hết thời gian chờ.";
+
+            default:
+
+                return error.message || "Không xác định.";
+
+        }
+
+    },
+
+
+    /* ------------------------------------------------------
        UPDATE HUD
     ------------------------------------------------------ */
 
@@ -1882,11 +1973,27 @@ const GPSManager = {
 
 
         if (
-            GPSState.acquiring
+            SmartGNSSState.active
         ) {
 
             gpsText.textContent =
-                "GPS: Đang xác định vị trí…";
+                "GPS: Đang đo " +
+                SmartGNSSState.samples.length +
+                "/" +
+                SmartGNSSState.targetSamples;
+
+            if (gpsAccuracy) {
+
+                gpsAccuracy.textContent =
+                    SmartGNSSState.medianAccuracy !== null
+                        ? "± " +
+                          Math.round(
+                              SmartGNSSState.medianAccuracy
+                          ) +
+                          " m"
+                        : "± --";
+
+            }
 
             return;
 
@@ -1901,6 +2008,39 @@ const GPSManager = {
                 "GPS: " +
                 GPSState.error;
 
+            if (gpsAccuracy) {
+
+                gpsAccuracy.textContent =
+                    "± --";
+
+            }
+
+            return;
+
+        }
+
+
+        if (
+            SmartGNSSState.ready &&
+            SmartGNSSState.representative
+        ) {
+
+            gpsText.textContent =
+                "GPS: " +
+                SmartGNSSState.qualityLabel;
+
+
+            if (gpsAccuracy) {
+
+                gpsAccuracy.textContent =
+                    "± " +
+                    Math.round(
+                        SmartGNSSState.medianAccuracy
+                    ) +
+                    " m";
+
+            }
+
             return;
 
         }
@@ -1911,18 +2051,10 @@ const GPSManager = {
         ) {
 
             gpsText.textContent =
-
                 "Lat " +
                 GPSState.latitude.toFixed(6) +
-
                 " · Lon " +
-                GPSState.longitude.toFixed(6) +
-
-                " · ±" +
-                Math.round(
-                    GPSState.accuracy
-                ) +
-                " m";
+                GPSState.longitude.toFixed(6);
 
 
             if (gpsAccuracy) {
@@ -1935,7 +2067,6 @@ const GPSManager = {
                     " m";
 
             }
-
 
             return;
 
@@ -1957,7 +2088,10 @@ const GPSManager = {
 
 
     /* ------------------------------------------------------
-       ACQUIRE CURRENT POSITION
+       SINGLE POSITION ACQUISITION
+
+       Compatibility method retained for existing buttons.
+       It does NOT persist a point.
     ------------------------------------------------------ */
 
     acquire() {
@@ -1977,13 +2111,15 @@ const GPSManager = {
 
             this.updateHUD();
 
+            SmartGNSSUI.update();
+
             return;
 
         }
 
 
         if (
-            GPSState.acquiring
+            SmartGNSSState.active
         ) {
 
             return;
@@ -1996,7 +2132,6 @@ const GPSManager = {
 
         GPSState.error =
             null;
-
 
         this.updateHUD();
 
@@ -2038,7 +2173,1107 @@ const GPSManager = {
 
 
     /* ------------------------------------------------------
-       SUCCESS
+       SMART GNSS START
+    ------------------------------------------------------ */
+
+    startSmartMeasurement() {
+
+        if (
+            !this.isSupported()
+        ) {
+
+            this.handleError({
+
+                code: 0,
+
+                message:
+                    "Thiết bị không hỗ trợ GPS."
+
+            });
+
+            return;
+
+        }
+
+
+        if (
+            SmartGNSSState.active
+        ) {
+
+            return;
+
+        }
+
+
+        this.stopSmartMeasurement(false);
+
+
+        SmartGNSSState.active =
+            true;
+
+        SmartGNSSState.samples =
+            [];
+
+        SmartGNSSState.targetSamples =
+            20;
+
+        SmartGNSSState.minimumSamples =
+            10;
+
+        SmartGNSSState.maxSamples =
+            30;
+
+        SmartGNSSState.minSampleIntervalMs =
+            700;
+
+        SmartGNSSState.lastAcceptedTimestamp =
+            0;
+
+        SmartGNSSState.watchId =
+            null;
+
+        SmartGNSSState.startedAt =
+            Date.now();
+
+        SmartGNSSState.finishedAt =
+            null;
+
+        SmartGNSSState.medianAccuracy =
+            null;
+
+        SmartGNSSState.stabilityMeters =
+            null;
+
+        SmartGNSSState.representative =
+            null;
+
+        SmartGNSSState.quality =
+            "ACQUIRING";
+
+        SmartGNSSState.qualityLabel =
+            "Đang thu GNSS";
+
+        SmartGNSSState.ready =
+            false;
+
+        SmartGNSSState.error =
+            null;
+
+
+        GPSState.acquiring =
+            true;
+
+        GPSState.error =
+            null;
+
+
+        SmartGNSSUI.update();
+        this.updateHUD();
+
+
+        try {
+
+            SmartGNSSState.watchId =
+                navigator.geolocation.watchPosition(
+
+                    position => {
+
+                        this.handleSmartSample(
+                            position
+                        );
+
+                    },
+
+                    error => {
+
+                        this.handleSmartError(
+                            error
+                        );
+
+                    },
+
+                    {
+
+                        enableHighAccuracy:
+                            true,
+
+                        timeout:
+                            20000,
+
+                        maximumAge:
+                            0
+
+                    }
+
+                );
+
+        } catch (error) {
+
+            SmartGNSSState.active =
+                false;
+
+            GPSState.acquiring =
+                false;
+
+            SmartGNSSState.error =
+                error.message ||
+                "Không thể khởi động GNSS.";
+
+            SmartGNSSState.quality =
+                "ERROR";
+
+            SmartGNSSState.qualityLabel =
+                "Lỗi GNSS";
+
+            this.updateHUD();
+            SmartGNSSUI.update();
+
+        }
+
+    },
+
+
+    /* ------------------------------------------------------
+       SMART GNSS SAMPLE HANDLER
+    ------------------------------------------------------ */
+
+    handleSmartSample(position) {
+
+        if (
+            !SmartGNSSState.active
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            !position ||
+            !position.coords
+        ) {
+
+            return;
+
+        }
+
+
+        const coords =
+            position.coords;
+
+
+        const latitude =
+            Number(
+                coords.latitude
+            );
+
+
+        const longitude =
+            Number(
+                coords.longitude
+            );
+
+
+        const accuracy =
+            Number(
+                coords.accuracy
+            );
+
+
+        if (
+            !Number.isFinite(latitude) ||
+            !Number.isFinite(longitude) ||
+            !Number.isFinite(accuracy) ||
+            accuracy <= 0
+        ) {
+
+            return;
+
+        }
+
+
+        const now =
+            Date.now();
+
+
+        if (
+            SmartGNSSState.lastAcceptedTimestamp > 0 &&
+            now -
+                SmartGNSSState.lastAcceptedTimestamp <
+                SmartGNSSState.minSampleIntervalMs
+        ) {
+
+            return;
+
+        }
+
+
+        SmartGNSSState.lastAcceptedTimestamp =
+            now;
+
+
+        const sample = {
+
+            latitude,
+
+            longitude,
+
+            accuracy,
+
+            altitude:
+                Number.isFinite(
+                    Number(
+                        coords.altitude
+                    )
+                )
+                    ? Number(
+                          coords.altitude
+                      )
+                    : null,
+
+            altitudeAccuracy:
+                Number.isFinite(
+                    Number(
+                        coords.altitudeAccuracy
+                    )
+                )
+                    ? Number(
+                          coords.altitudeAccuracy
+                      )
+                    : null,
+
+            heading:
+                Number.isFinite(
+                    Number(
+                        coords.heading
+                    )
+                )
+                    ? Number(
+                          coords.heading
+                      )
+                    : null,
+
+            speed:
+                Number.isFinite(
+                    Number(
+                        coords.speed
+                    )
+                )
+                    ? Number(
+                          coords.speed
+                      )
+                    : null,
+
+            timestamp:
+                Number.isFinite(
+                    Number(
+                        position.timestamp
+                    )
+                )
+                    ? Number(
+                          position.timestamp
+                      )
+                    : Date.now()
+
+        };
+
+
+        SmartGNSSState.samples.push(
+            sample
+        );
+
+
+        if (
+            SmartGNSSState.samples.length >
+            SmartGNSSState.maxSamples
+        ) {
+
+            SmartGNSSState.samples.shift();
+
+        }
+
+
+        GPSState.available =
+            true;
+
+        GPSState.acquiring =
+            true;
+
+        GPSState.latitude =
+            latitude;
+
+        GPSState.longitude =
+            longitude;
+
+        GPSState.accuracy =
+            accuracy;
+
+        GPSState.altitude =
+            sample.altitude;
+
+        GPSState.timestamp =
+            sample.timestamp;
+
+        GPSState.error =
+            null;
+
+
+        MapEngine.showGPSPosition(
+
+            latitude,
+
+            longitude,
+
+            accuracy
+
+        );
+
+
+        this.evaluateSmartMeasurement();
+
+
+        this.updateHUD();
+        SmartGNSSUI.update();
+
+
+        if (
+            SmartGNSSState.samples.length >=
+            SmartGNSSState.targetSamples
+        ) {
+
+            this.finishSmartMeasurement();
+
+        }
+
+    },
+
+
+    /* ------------------------------------------------------
+       SMART GNSS EVALUATION
+    ------------------------------------------------------ */
+
+    evaluateSmartMeasurement() {
+
+        const samples =
+            SmartGNSSState.samples;
+
+
+        if (
+            samples.length === 0
+        ) {
+
+            return;
+
+        }
+
+
+        const accuracies =
+            samples
+                .map(
+                    sample =>
+                        sample.accuracy
+                )
+                .filter(
+                    value =>
+                        Number.isFinite(value)
+                );
+
+
+        const medianAccuracy =
+            this.median(
+                accuracies
+            );
+
+
+        const representative =
+            this.calculateRepresentative(
+                samples
+            );
+
+
+        const stability =
+            representative
+                ? this.calculateStability(
+                      samples,
+                      representative
+                  )
+                : null;
+
+
+        SmartGNSSState.medianAccuracy =
+            medianAccuracy;
+
+        SmartGNSSState.representative =
+            representative;
+
+        SmartGNSSState.stabilityMeters =
+            stability;
+
+
+        const classification =
+            this.classifyQuality(
+                medianAccuracy,
+                stability,
+                samples.length
+            );
+
+
+        SmartGNSSState.quality =
+            classification.code;
+
+        SmartGNSSState.qualityLabel =
+            classification.label;
+
+        SmartGNSSState.ready =
+            classification.ready;
+
+
+        if (
+            representative
+        ) {
+
+            const vnCoord =
+                $("vnCoord");
+
+
+            if (vnCoord) {
+
+                vnCoord.textContent =
+                    "Chưa chuyển VN-2000";
+
+            }
+
+        }
+
+    },
+
+
+    /* ------------------------------------------------------
+       QUALITY CLASSIFICATION
+
+       These are TGS internal QA thresholds, not a national
+       surveying standard and not a claim of absolute accuracy.
+    ------------------------------------------------------ */
+
+    classifyQuality(
+        medianAccuracy,
+        stability,
+        sampleCount
+    ) {
+
+        if (
+            !Number.isFinite(
+                medianAccuracy
+            ) ||
+            !Number.isFinite(
+                stability
+            )
+        ) {
+
+            return {
+
+                code:
+                    "ACQUIRING",
+
+                label:
+                    "Đang thu GNSS",
+
+                ready:
+                    false
+
+            };
+
+        }
+
+
+        if (
+            sampleCount <
+            SmartGNSSState.minimumSamples
+        ) {
+
+            return {
+
+                code:
+                    "ACQUIRING",
+
+                label:
+                    "Đang ổn định vị trí",
+
+                ready:
+                    false
+
+            };
+
+        }
+
+
+        if (
+            medianAccuracy <= 3 &&
+            stability <= 3
+        ) {
+
+            return {
+
+                code:
+                    "SURVEY",
+
+                label:
+                    "Sẵn sàng khảo sát",
+
+                ready:
+                    true
+
+            };
+
+        }
+
+
+        if (
+            medianAccuracy <= 5 &&
+            stability <= 5
+        ) {
+
+            return {
+
+                code:
+                    "GOOD",
+
+                label:
+                    "Tốt — có thể xem xét",
+
+                ready:
+                    true
+
+            };
+
+        }
+
+
+        if (
+            medianAccuracy <= 10 &&
+            stability <= 10
+        ) {
+
+            return {
+
+                code:
+                    "REVIEW",
+
+                label:
+                    "Cần kiểm tra lại",
+
+                ready:
+                    false
+
+            };
+
+        }
+
+
+        return {
+
+            code:
+                "POOR",
+
+            label:
+                "Sai số lớn — đo lại",
+
+            ready:
+                false
+
+        };
+
+    },
+
+
+    /* ------------------------------------------------------
+       MEDIAN
+    ------------------------------------------------------ */
+
+    median(values) {
+
+        if (
+            !Array.isArray(values) ||
+            values.length === 0
+        ) {
+
+            return null;
+
+        }
+
+
+        const sorted =
+            values
+                .slice()
+                .sort(
+                    (a, b) => a - b
+                );
+
+
+        const middle =
+            Math.floor(
+                sorted.length / 2
+            );
+
+
+        if (
+            sorted.length % 2 === 0
+        ) {
+
+            return (
+                sorted[middle - 1] +
+                sorted[middle]
+            ) / 2;
+
+        }
+
+
+        return sorted[middle];
+
+    },
+
+
+    /* ------------------------------------------------------
+       REPRESENTATIVE POSITION
+
+       Weighted by reported accuracy, with a robust median
+       fallback. The result is a field-quality representative
+       coordinate, not a claim of improved sensor precision.
+    ------------------------------------------------------ */
+
+    calculateRepresentative(samples) {
+
+        if (
+            !Array.isArray(samples) ||
+            samples.length === 0
+        ) {
+
+            return null;
+
+        }
+
+
+        const latitudes =
+            samples.map(
+                sample =>
+                    sample.latitude
+            );
+
+
+        const longitudes =
+            samples.map(
+                sample =>
+                    sample.longitude
+            );
+
+
+        const medianLat =
+            this.median(
+                latitudes
+            );
+
+
+        const medianLon =
+            this.median(
+                longitudes
+            );
+
+
+        if (
+            !Number.isFinite(medianLat) ||
+            !Number.isFinite(medianLon)
+        ) {
+
+            return null;
+
+        }
+
+
+        const weights =
+            samples.map(
+                sample => {
+
+                    const accuracy =
+                        Math.max(
+                            1,
+                            sample.accuracy
+                        );
+
+                    return 1 /
+                        (accuracy * accuracy);
+
+                }
+            );
+
+
+        let weightSum =
+            0;
+
+        let weightedLat =
+            0;
+
+        let weightedLon =
+            0;
+
+
+        samples.forEach(
+            (sample, index) => {
+
+                const weight =
+                    weights[index];
+
+                weightSum +=
+                    weight;
+
+                weightedLat +=
+                    sample.latitude *
+                    weight;
+
+                weightedLon +=
+                    sample.longitude *
+                    weight;
+
+            }
+        );
+
+
+        if (
+            weightSum <= 0
+        ) {
+
+            return {
+
+                latitude:
+                    medianLat,
+
+                longitude:
+                    medianLon
+
+            };
+
+        }
+
+
+        return {
+
+            latitude:
+                weightedLat /
+                weightSum,
+
+            longitude:
+                weightedLon /
+                weightSum
+
+        };
+
+    },
+
+
+    /* ------------------------------------------------------
+       DISTANCE
+    ------------------------------------------------------ */
+
+    distanceMeters(
+        lat1,
+        lon1,
+        lat2,
+        lon2
+    ) {
+
+        const earthRadius =
+            6371000;
+
+
+        const toRadians =
+            degrees =>
+                degrees *
+                Math.PI /
+                180;
+
+
+        const dLat =
+            toRadians(
+                lat2 - lat1
+            );
+
+        const dLon =
+            toRadians(
+                lon2 - lon1
+            );
+
+
+        const a =
+            Math.sin(dLat / 2) ** 2 +
+            Math.cos(
+                toRadians(lat1)
+            ) *
+            Math.cos(
+                toRadians(lat2)
+            ) *
+            Math.sin(dLon / 2) ** 2;
+
+
+        const c =
+            2 *
+            Math.atan2(
+                Math.sqrt(a),
+                Math.sqrt(1 - a)
+            );
+
+
+        return earthRadius * c;
+
+    },
+
+
+    /* ------------------------------------------------------
+       STABILITY
+
+       Uses 95th percentile horizontal spread from the
+       representative position. This describes repeatability
+       of the current phone session; it does not replace a
+       survey-grade uncertainty model.
+    ------------------------------------------------------ */
+
+    calculateStability(
+        samples,
+        representative
+    ) {
+
+        if (
+            !Array.isArray(samples) ||
+            samples.length === 0 ||
+            !representative
+        ) {
+
+            return null;
+
+        }
+
+
+        const distances =
+            samples
+                .map(
+                    sample =>
+                        this.distanceMeters(
+                            representative.latitude,
+                            representative.longitude,
+                            sample.latitude,
+                            sample.longitude
+                        )
+                )
+                .filter(
+                    value =>
+                        Number.isFinite(value)
+                )
+                .sort(
+                    (a, b) => a - b
+                );
+
+
+        if (
+            distances.length === 0
+        ) {
+
+            return null;
+
+        }
+
+
+        const index =
+            Math.min(
+                distances.length - 1,
+                Math.max(
+                    0,
+                    Math.ceil(
+                        distances.length *
+                        0.95
+                    ) - 1
+                )
+            );
+
+
+        return distances[index];
+
+    },
+
+
+    /* ------------------------------------------------------
+       FINISH SMART MEASUREMENT
+    ------------------------------------------------------ */
+
+    finishSmartMeasurement() {
+
+        if (
+            !SmartGNSSState.active
+        ) {
+
+            return;
+
+        }
+
+
+        this.stopSmartMeasurement(
+            true
+        );
+
+
+        this.evaluateSmartMeasurement();
+
+
+        if (
+            SmartGNSSState.representative
+        ) {
+
+            GPSState.latitude =
+                SmartGNSSState.representative.latitude;
+
+            GPSState.longitude =
+                SmartGNSSState.representative.longitude;
+
+            GPSState.accuracy =
+                SmartGNSSState.medianAccuracy;
+
+
+            MapEngine.showGPSPosition(
+
+                GPSState.latitude,
+
+                GPSState.longitude,
+
+                GPSState.accuracy
+
+            );
+
+        }
+
+
+        this.updateHUD();
+        SmartGNSSUI.update();
+
+    },
+
+
+    /* ------------------------------------------------------
+       STOP SMART MEASUREMENT
+    ------------------------------------------------------ */
+
+    stopSmartMeasurement(
+        finished
+    ) {
+
+        const wasActive =
+            SmartGNSSState.active;
+
+
+        if (
+            SmartGNSSState.watchId !== null
+        ) {
+
+            try {
+
+                navigator.geolocation.clearWatch(
+                    SmartGNSSState.watchId
+                );
+
+            } catch (error) {
+
+                console.warn(
+                    "TGS GNSS clearWatch error:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        SmartGNSSState.watchId =
+            null;
+
+        SmartGNSSState.active =
+            false;
+
+        SmartGNSSState.finishedAt =
+            Date.now();
+
+        GPSState.acquiring =
+            false;
+
+
+        if (
+            finished &&
+            wasActive
+        ) {
+
+            SmartGNSSState.qualityLabel =
+                SmartGNSSState.ready
+                    ? SmartGNSSState.qualityLabel
+                    : "Đo xong — chưa đạt QA";
+
+        }
+
+
+        this.updateHUD();
+        SmartGNSSUI.update();
+
+    },
+
+
+    /* ------------------------------------------------------
+       SMART GNSS ERROR
+    ------------------------------------------------------ */
+
+    handleSmartError(error) {
+
+        SmartGNSSState.error =
+            this.getErrorMessage(
+                error
+            );
+
+
+        if (
+            SmartGNSSState.samples.length === 0
+        ) {
+
+            SmartGNSSState.quality =
+                "ERROR";
+
+            SmartGNSSState.qualityLabel =
+                "Không lấy được GPS";
+
+        }
+
+
+        GPSState.error =
+            SmartGNSSState.error;
+
+
+        if (
+            SmartGNSSState.active
+        ) {
+
+            this.stopSmartMeasurement(
+                false
+            );
+
+        }
+
+
+        this.updateHUD();
+        SmartGNSSUI.update();
+
+
+        console.warn(
+            "TGS Smart GNSS Error:",
+            error
+        );
+
+    },
+
+
+    /* ------------------------------------------------------
+       SINGLE FIX SUCCESS
     ------------------------------------------------------ */
 
     handleSuccess(
@@ -2077,14 +3312,6 @@ const GPSManager = {
         this.updateHUD();
 
 
-        /*
-         * Current baseline:
-         *
-         * GPS is displayed only.
-         * It is NOT yet persisted as a
-         * survey point.
-         */
-
         MapEngine.showGPSPosition(
 
             GPSState.latitude,
@@ -2095,12 +3322,6 @@ const GPSManager = {
 
         );
 
-
-        /*
-         * VN-2000 conversion is not yet implemented.
-         * Therefore do not label geographic coordinates
-         * as VN-2000.
-         */
 
         const vnCoord =
             $("vnCoord");
@@ -2113,11 +3334,14 @@ const GPSManager = {
 
         }
 
+
+        SmartGNSSUI.update();
+
     },
 
 
     /* ------------------------------------------------------
-       ERROR
+       SINGLE FIX ERROR
     ------------------------------------------------------ */
 
     handleError(
@@ -2130,47 +3354,14 @@ const GPSManager = {
         GPSState.acquiring =
             false;
 
-
-        switch (
-            error.code
-        ) {
-
-            case 1:
-
-                GPSState.error =
-                    "Người dùng từ chối quyền GPS.";
-
-                break;
-
-
-            case 2:
-
-                GPSState.error =
-                    "Thiết bị không xác định được vị trí.";
-
-                break;
-
-
-            case 3:
-
-                GPSState.error =
-                    "GPS hết thời gian chờ.";
-
-                break;
-
-
-            default:
-
-                GPSState.error =
-                    error.message ||
-                    "Không xác định.";
-
-                break;
-
-        }
+        GPSState.error =
+            this.getErrorMessage(
+                error
+            );
 
 
         this.updateHUD();
+        SmartGNSSUI.update();
 
 
         console.warn(
@@ -2186,6 +3377,11 @@ const GPSManager = {
     ------------------------------------------------------ */
 
     reset() {
+
+        this.stopSmartMeasurement(
+            false
+        );
+
 
         GPSState.available =
             false;
@@ -2212,10 +3408,42 @@ const GPSManager = {
             null;
 
 
+        SmartGNSSState.samples =
+            [];
+
+        SmartGNSSState.medianAccuracy =
+            null;
+
+        SmartGNSSState.stabilityMeters =
+            null;
+
+        SmartGNSSState.representative =
+            null;
+
+        SmartGNSSState.quality =
+            "IDLE";
+
+        SmartGNSSState.qualityLabel =
+            "Chưa đo";
+
+        SmartGNSSState.ready =
+            false;
+
+        SmartGNSSState.error =
+            null;
+
+        SmartGNSSState.startedAt =
+            null;
+
+        SmartGNSSState.finishedAt =
+            null;
+
+
         MapEngine.resetGPSVisuals();
 
 
         this.updateHUD();
+        SmartGNSSUI.update();
 
 
         const vnCoord =
@@ -2243,9 +3471,397 @@ const GPSManager = {
 
     },
 
+
     resetState() {
 
         this.reset();
+
+    }
+
+};
+
+
+/* ==========================================================
+   SMART GNSS UI
+
+   REV14 adds a compact field QA panel dynamically so that
+   index.html does not need a breaking structural change.
+========================================================== */
+
+const SmartGNSSUI = {
+
+    panelId:
+        "tgsSmartGNSSPanel",
+
+
+    styleId:
+        "tgsSmartGNSSStyle",
+
+
+    ensure() {
+
+        if ($(
+            this.panelId
+        )) {
+
+            return $(
+                this.panelId
+            );
+
+        }
+
+
+        const screen =
+            $("screenLinear");
+
+
+        if (!screen) {
+
+            return null;
+
+        }
+
+
+        if (!$(
+            this.styleId
+        )) {
+
+            const style =
+                document.createElement(
+                    "style"
+                );
+
+            style.id =
+                this.styleId;
+
+            style.textContent = `
+                #tgsSmartGNSSPanel {
+                    margin: 12px 0;
+                    padding: 12px;
+                    border: 1px solid rgba(21,101,192,.16);
+                    border-radius: 14px;
+                    background: rgba(255,255,255,.96);
+                    box-shadow: 0 4px 18px rgba(0,0,0,.06);
+                    font-family: inherit;
+                }
+                #tgsSmartGNSSPanel .tgs-gnss-title {
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                }
+                #tgsSmartGNSSPanel .tgs-gnss-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2,minmax(0,1fr));
+                    gap: 8px;
+                }
+                #tgsSmartGNSSPanel .tgs-gnss-item {
+                    padding: 8px;
+                    border-radius: 10px;
+                    background: rgba(0,0,0,.035);
+                }
+                #tgsSmartGNSSPanel .tgs-gnss-label {
+                    display: block;
+                    font-size: 11px;
+                    opacity: .68;
+                    margin-bottom: 3px;
+                }
+                #tgsSmartGNSSPanel .tgs-gnss-value {
+                    display: block;
+                    font-size: 14px;
+                    font-weight: 650;
+                }
+                #tgsSmartGNSSPanel .tgs-gnss-status {
+                    margin-top: 9px;
+                    font-weight: 700;
+                }
+                #tgsSmartGNSSPanel .tgs-gnss-note {
+                    margin-top: 7px;
+                    font-size: 11px;
+                    line-height: 1.4;
+                    opacity: .72;
+                }
+                #tgsSmartGNSSPanel .tgs-gnss-actions {
+                    display: flex;
+                    gap: 8px;
+                    margin-top: 10px;
+                }
+                #tgsSmartGNSSPanel button {
+                    flex: 1;
+                    min-height: 42px;
+                }
+                @media (max-width: 520px) {
+                    #tgsSmartGNSSPanel .tgs-gnss-grid {
+                        grid-template-columns: 1fr 1fr;
+                    }
+                }
+            `;
+
+            document.head.appendChild(
+                style
+            );
+
+        }
+
+
+        const panel =
+            document.createElement(
+                "section"
+            );
+
+        panel.id =
+            this.panelId;
+
+        panel.innerHTML = `
+            <div class="tgs-gnss-title">
+                TGS Smart GNSS
+            </div>
+
+            <div class="tgs-gnss-grid">
+
+                <div class="tgs-gnss-item">
+                    <span class="tgs-gnss-label">Mẫu</span>
+                    <span class="tgs-gnss-value" data-gnss="samples">0 / 20</span>
+                </div>
+
+                <div class="tgs-gnss-item">
+                    <span class="tgs-gnss-label">Accuracy trung vị</span>
+                    <span class="tgs-gnss-value" data-gnss="accuracy">--</span>
+                </div>
+
+                <div class="tgs-gnss-item">
+                    <span class="tgs-gnss-label">Độ ổn định</span>
+                    <span class="tgs-gnss-value" data-gnss="stability">--</span>
+                </div>
+
+                <div class="tgs-gnss-item">
+                    <span class="tgs-gnss-label">Nguồn</span>
+                    <span class="tgs-gnss-value">Smartphone GNSS</span>
+                </div>
+
+            </div>
+
+            <div
+                class="tgs-gnss-status"
+                data-gnss="status"
+            >
+                Chưa đo
+            </div>
+
+            <div
+                class="tgs-gnss-note"
+            >
+                REV14 chỉ đánh giá chất lượng và độ ổn định của GNSS hiện tại.
+                Chưa lưu điểm và không tuyên bố độ chính xác tuyệt đối.
+            </div>
+
+            <div class="tgs-gnss-actions">
+
+                <button
+                    id="btnSmartGNSSStart"
+                    type="button"
+                    class="primary-btn"
+                >
+                    Bắt đầu đo GPS
+                </button>
+
+                <button
+                    id="btnSmartGNSSStop"
+                    type="button"
+                    class="secondary-btn"
+                >
+                    Dừng đo
+                </button>
+
+            </div>
+        `;
+
+
+        const map =
+            $("map");
+
+
+        if (
+            map &&
+            map.parentElement
+        ) {
+
+            map.parentElement.insertBefore(
+                panel,
+                map
+            );
+
+        } else {
+
+            screen.appendChild(
+                panel
+            );
+
+        }
+
+
+        const startButton =
+            $("btnSmartGNSSStart");
+
+        if (startButton) {
+
+            startButton.addEventListener(
+                "click",
+                () => {
+
+                    if (
+                        SmartGNSSState.active
+                    ) {
+
+                        return;
+
+                    }
+
+                    GPSManager.startSmartMeasurement();
+
+                }
+            );
+
+        }
+
+
+        const stopButton =
+            $("btnSmartGNSSStop");
+
+        if (stopButton) {
+
+            stopButton.addEventListener(
+                "click",
+                () => {
+
+                    GPSManager.stopSmartMeasurement(
+                        false
+                    );
+
+                    GPSManager.evaluateSmartMeasurement();
+
+                    GPSManager.updateHUD();
+
+                    this.update();
+
+                }
+            );
+
+        }
+
+
+        return panel;
+
+    },
+
+
+    update() {
+
+        const panel =
+            this.ensure();
+
+
+        if (!panel) {
+
+            return;
+
+        }
+
+
+        const sampleElement =
+            panel.querySelector(
+                '[data-gnss="samples"]'
+            );
+
+
+        const accuracyElement =
+            panel.querySelector(
+                '[data-gnss="accuracy"]'
+            );
+
+
+        const stabilityElement =
+            panel.querySelector(
+                '[data-gnss="stability"]'
+            );
+
+
+        const statusElement =
+            panel.querySelector(
+                '[data-gnss="status"]'
+            );
+
+
+        if (sampleElement) {
+
+            sampleElement.textContent =
+                SmartGNSSState.samples.length +
+                " / " +
+                SmartGNSSState.targetSamples;
+
+        }
+
+
+        if (accuracyElement) {
+
+            accuracyElement.textContent =
+                Number.isFinite(
+                    SmartGNSSState.medianAccuracy
+                )
+                    ? "± " +
+                      SmartGNSSState.medianAccuracy.toFixed(1) +
+                      " m"
+                    : "--";
+
+        }
+
+
+        if (stabilityElement) {
+
+            stabilityElement.textContent =
+                Number.isFinite(
+                    SmartGNSSState.stabilityMeters
+                )
+                    ? "≤ " +
+                      SmartGNSSState.stabilityMeters.toFixed(1) +
+                      " m"
+                    : "--";
+
+        }
+
+
+        if (statusElement) {
+
+            statusElement.textContent =
+                SmartGNSSState.qualityLabel;
+
+        }
+
+
+        const startButton =
+            $("btnSmartGNSSStart");
+
+        const stopButton =
+            $("btnSmartGNSSStop");
+
+
+        if (startButton) {
+
+            startButton.disabled =
+                SmartGNSSState.active;
+
+            startButton.textContent =
+                SmartGNSSState.active
+                    ? "Đang đo GPS…"
+                    : "Bắt đầu đo GPS";
+
+        }
+
+
+        if (stopButton) {
+
+            stopButton.disabled =
+                !SmartGNSSState.active;
+
+        }
 
     }
 
@@ -2261,6 +3877,22 @@ const GPS = {
     readCurrentLocation() {
 
         GPSManager.acquire();
+
+    },
+
+    startSmartMeasurement() {
+
+        GPSManager.startSmartMeasurement();
+
+    },
+
+    stopSmartMeasurement() {
+
+        GPSManager.stopSmartMeasurement(false);
+
+        GPSManager.evaluateSmartMeasurement();
+
+        SmartGNSSUI.update();
 
     },
 
@@ -3088,7 +4720,25 @@ function bindButtons() {
             "click",
             () => {
 
-                GPSManager.acquire();
+                if (
+                    SmartGNSSState.active
+                ) {
+
+                    GPSManager.stopSmartMeasurement(
+                        false
+                    );
+
+                    GPSManager.evaluateSmartMeasurement();
+
+                    GPSManager.updateHUD();
+
+                    SmartGNSSUI.update();
+
+                    return;
+
+                }
+
+                GPSManager.startSmartMeasurement();
 
             }
         );
@@ -3189,7 +4839,6 @@ window.addEventListener(
 
         /*
          * Initialize GPS HUD.
-
          */
 
         GPSManager.reset();
@@ -3231,7 +4880,7 @@ window.addEventListener(
             );
 
             console.log(
-                "app.js REV13 — THREE-FILE RECONCILED BASELINE"
+                "app.js REV14 — SMART GNSS ACQUISITION"
             );
 
             console.log(
@@ -3283,14 +4932,14 @@ window.addEventListener(
 
 
 /* ==========================================================
-   REV13 THREE-FILE RECONCILIATION
+   REV14 THREE-FILE RECONCILIATION + SMART GNSS
 
    UI button binding is intentionally independent from
    IndexedDB API resolution and initialization.
 
-   This revision does NOT change project data, GIS data,
-   GPS persistence, Survey Point persistence, or any
-   subsequent survey implementation gate.
+   This revision adds Smart GNSS acquisition only.
+
+   It does NOT persist Survey Point data.
 ========================================================== */
 
 
@@ -3303,7 +4952,7 @@ function qaStatus() {
     return {
 
         revision:
-            "REV13",
+            "REV14",
 
         database:
             dbReady,
@@ -3338,6 +4987,32 @@ function qaStatus() {
         gps:
             GPSManager.isSupported(),
 
+        smartGNSS:
+            {
+
+                active:
+                    SmartGNSSState.active,
+
+                sampleCount:
+                    SmartGNSSState.samples.length,
+
+                targetSamples:
+                    SmartGNSSState.targetSamples,
+
+                medianAccuracy:
+                    SmartGNSSState.medianAccuracy,
+
+                stabilityMeters:
+                    SmartGNSSState.stabilityMeters,
+
+                quality:
+                    SmartGNSSState.quality,
+
+                ready:
+                    SmartGNSSState.ready
+
+            },
+
         syntheticGIS:
             false,
 
@@ -3367,6 +5042,10 @@ window.TGS = {
 
     GPSManager,
 
+    SmartGNSSState,
+
+    SmartGNSSUI,
+
     MapEngine,
 
     MapLayerControl,
@@ -3384,5 +5063,5 @@ window.TGS = {
 ========================================================== */
 
 console.log(
-    "TGS Genesis 2.0 app.js REV13 Loaded"
+    "TGS Genesis 2.0 app.js REV14 Loaded"
 );
