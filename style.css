@@ -5,28 +5,9 @@
    REV01
 
    FOUNDATION UI BASELINE
-   ----------------------------------------------------------
-   Contract:
-   - index.html REV01
-   - Mobile First
-   - Responsive
-   - Material 3 inspired
-   - Field Engineering UX
-   - Safe Area
-   - Touch First
-   - No JavaScript dependency
-========================================================== */
-
-
-/* ==========================================================
-   01. DESIGN TOKENS
 ========================================================== */
 
 :root {
-
-  /* --------------------------------------------------------
-     COLOR
-  -------------------------------------------------------- */
 
   --tgs-primary: #1565C0;
   --tgs-primary-dark: #0D47A1;
@@ -60,11 +41,6 @@
 
   --tgs-overlay: rgba(15, 23, 42, 0.48);
 
-
-  /* --------------------------------------------------------
-     TYPOGRAPHY
-  -------------------------------------------------------- */
-
   --font-family:
     Inter,
     "Noto Sans",
@@ -86,11 +62,6 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-
-  /* --------------------------------------------------------
-     SPACING
-  -------------------------------------------------------- */
-
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -103,22 +74,12 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-
-  /* --------------------------------------------------------
-     RADIUS
-  -------------------------------------------------------- */
-
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
   --radius-2xl: 1.5rem;
   --radius-pill: 999px;
-
-
-  /* --------------------------------------------------------
-     SHADOW
-  -------------------------------------------------------- */
 
   --shadow-sm:
     0 1px 3px rgba(15, 23, 42, 0.08);
@@ -132,11 +93,6 @@
   --shadow-primary:
     0 10px 24px rgba(21, 101, 192, 0.22);
 
-
-  /* --------------------------------------------------------
-     LAYOUT
-  -------------------------------------------------------- */
-
   --header-height: 64px;
   --bottom-panel-height: 152px;
 
@@ -145,16 +101,10 @@
 
   --touch-target: 48px;
 
-
-  /* --------------------------------------------------------
-     SAFE AREA
-  -------------------------------------------------------- */
-
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
-
 }
 
 
@@ -998,6 +948,7 @@ a {
 .modal-panel {
 
   position: fixed;
+
   inset: 0;
 
   z-index: 100;
@@ -1498,95 +1449,12 @@ a {
 .completion-card .secondary-btn {
 
   flex-shrink: 0;
-
-  min-height: 42px;
-
-  padding: 0 var(--space-3);
-
-  font-size: var(--font-size-sm);
 }
 
 
 /* ==========================================================
-   18. POINT SURVEY PLACEHOLDER
+   18. SURVEY PLACEHOLDER
 ========================================================== */
-
-.survey-screen {
-
-  background: #101820;
-}
-
-
-.survey-header {
-
-  position: relative;
-  z-index: 20;
-
-  display: flex;
-  align-items: center;
-
-  min-height: var(--header-height);
-
-  padding:
-    var(--space-2)
-    calc(var(--space-4) + var(--safe-right))
-    var(--space-2)
-    calc(var(--space-4) + var(--safe-left));
-
-  color: #FFFFFF;
-
-  background:
-    rgba(16, 24, 32, 0.94);
-
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-
-.survey-header-title {
-
-  display: flex;
-  flex-direction: column;
-
-  flex: 1;
-
-  min-width: 0;
-
-  text-align: center;
-}
-
-
-.survey-header-title strong {
-
-  color: #FFFFFF;
-
-  font-size: var(--font-size-md);
-}
-
-
-.survey-header-title span {
-
-  color: rgba(255, 255, 255, 0.58);
-
-  font-size: var(--font-size-xs);
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-
-.dark-icon {
-  color: #FFFFFF;
-}
-
-
-.dark-icon:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
 
 .survey-placeholder {
 
@@ -1595,14 +1463,13 @@ a {
   align-items: center;
   justify-content: center;
 
-  flex: 1;
+  min-height: 70vh;
 
-  padding:
-    var(--space-8)
-    var(--space-5)
-    calc(var(--space-8) + var(--safe-bottom));
+  padding: var(--space-8);
 
   color: #FFFFFF;
+
+  background: #101820;
 
   text-align: center;
 }
@@ -2513,7 +2380,7 @@ select:focus-visible {
 
 
 /* ==========================================================
-   28. LEAFLET TOUCH OPTIMIZATION
+   28. LEAFLET
 ========================================================== */
 
 .leaflet-container {
@@ -2521,22 +2388,6 @@ select:focus-visible {
   font-family: var(--font-family);
 
   -webkit-tap-highlight-color: transparent;
-}
-
-
-.leaflet-control {
-
-  box-shadow: none;
-}
-
-
-.leaflet-control-attribution {
-
-  background:
-    rgba(255, 255, 255, 0.80) !important;
-
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 
 
@@ -2595,6 +2446,7 @@ select:focus-visible {
 
   .completion-actions .primary-btn,
   .completion-actions .secondary-btn {
+
     width: auto;
     flex: 1;
   }
@@ -2835,6 +2687,50 @@ select:focus-visible {
     display: block !important;
   }
 
+}
+
+
+/* ==========================================================
+   35. LEAFLET TILE ISOLATION
+========================================================== */
+
+/*
+   Global img rules must not resize Leaflet tiles.
+
+   Leaflet positions map tiles on a fixed 256px tile grid.
+   These rules only affect Leaflet tile images and therefore
+   do not change TGS buttons, startup screens, forms, or
+   other application UI.
+*/
+
+.leaflet-container .leaflet-tile,
+.leaflet-container img.leaflet-tile,
+.leaflet-container .leaflet-tile-container img {
+
+  width: 256px !important;
+  height: 256px !important;
+
+  max-width: none !important;
+  max-height: none !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+
+  display: block;
+}
+
+
+.leaflet-container .leaflet-tile-container {
+
+  width: 256px;
+  height: 256px;
+}
+
+
+.leaflet-container svg {
+  max-width: none;
 }
 
 
