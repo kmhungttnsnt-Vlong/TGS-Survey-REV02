@@ -3,7 +3,7 @@
    TGS02-WEB-LINEAR-004
 
    app.js
-   REV12 — STARTUP / DB BINDING FIX
+   REV13 — THREE-FILE RECONCILED BASELINE
 
    PURPOSE
    ----------------------------------------------------------
@@ -66,7 +66,7 @@ const $ = (id) => {
    PROJECT STATUS
 ========================================================== */
 
-const PROJECT_STATUS = {
+const TGS_APP_PROJECT_STATUS = {
 
     DRAFT: "DRAFT",
 
@@ -327,7 +327,7 @@ function isDraftProject(project) {
 
     if (
         project.status ===
-        PROJECT_STATUS.DRAFT
+        TGS_APP_PROJECT_STATUS.DRAFT
     ) {
 
         return true;
@@ -337,7 +337,7 @@ function isDraftProject(project) {
 
     if (
         project.status ===
-        PROJECT_STATUS.IN_PROGRESS
+        TGS_APP_PROJECT_STATUS.IN_PROGRESS
     ) {
 
         return true;
@@ -367,7 +367,7 @@ function isDraftProject(project) {
 
     if (
         project.status ===
-        PROJECT_STATUS.COMPLETED &&
+        TGS_APP_PROJECT_STATUS.COMPLETED &&
         project.isSaved !== true
     ) {
 
@@ -411,7 +411,7 @@ function isSavedProject(project) {
 
     if (
         project.status ===
-        PROJECT_STATUS.SAVED
+        TGS_APP_PROJECT_STATUS.SAVED
     ) {
 
         return true;
@@ -607,7 +607,7 @@ function renderProjectHome() {
 
 
     const resumeButton =
-        $("btnResumeProject");
+        $("btnContinueDraft");
 
 
     const savedList =
@@ -1220,7 +1220,7 @@ async function createProject() {
             ...createdProject,
 
             status:
-                PROJECT_STATUS.DRAFT,
+                TGS_APP_PROJECT_STATUS.DRAFT,
 
             completed:
                 false,
@@ -1306,7 +1306,7 @@ async function completeProject() {
             ...currentProject,
 
             status:
-                PROJECT_STATUS.COMPLETED,
+                TGS_APP_PROJECT_STATUS.COMPLETED,
 
             completed:
                 true,
@@ -1392,7 +1392,7 @@ async function saveProject() {
             ...currentProject,
 
             status:
-                PROJECT_STATUS.SAVED,
+                TGS_APP_PROJECT_STATUS.SAVED,
 
             completed:
                 true,
@@ -2373,7 +2373,7 @@ const MapLayerControl = {
 
         const controls =
             document.querySelectorAll(
-                "[data-layer] input[type='checkbox']"
+                "input[type='checkbox'][data-layer]"
             );
 
 
@@ -2487,7 +2487,7 @@ const MapLayerControl = {
 
                 const control =
                     document.querySelector(
-                        `[data-layer="${layerId}"] input[type="checkbox"]`
+                        `input[type="checkbox"][data-layer="${({surveyPoint:"point",surveyRoute:"route",pipe:"pipe",valve:"valve",tee:"tee",elbow:"elbow",waterStation:"station",customerMeter:"meter"})[layerId] || layerId}"]`
                     );
 
 
@@ -2666,13 +2666,13 @@ function bindButtons() {
        RESUME PROJECT
     ------------------------------------------------------ */
 
-    const btnResumeProject =
-        $("btnResumeProject");
+    const btnContinueDraft =
+        $("btnContinueDraft");
 
 
-    if (btnResumeProject) {
+    if (btnContinueDraft) {
 
-        btnResumeProject.addEventListener(
+        btnContinueDraft.addEventListener(
             "click",
             () => {
 
@@ -2710,13 +2710,13 @@ function bindButtons() {
        CLOSE SAVED PROJECTS
     ------------------------------------------------------ */
 
-    const btnCloseSavedProjects =
-        $("btnCloseSavedProjects");
+    const btnCloseSaved =
+        $("btnCloseSaved");
 
 
-    if (btnCloseSavedProjects) {
+    if (btnCloseSaved) {
 
-        btnCloseSavedProjects.addEventListener(
+        btnCloseSaved.addEventListener(
             "click",
             () => {
 
@@ -2732,20 +2732,37 @@ function bindButtons() {
        CREATE PROJECT
     ------------------------------------------------------ */
 
-    const btnCreateProject =
-        $("btnCreateProject");
+    const projectForm = $("projectForm");
 
+    if (projectForm) {
 
-    if (btnCreateProject) {
+        projectForm.addEventListener(
+            "submit",
+            event => {
 
-        btnCreateProject.addEventListener(
-            "click",
-            () => {
-
+                event.preventDefault();
                 createProject();
 
             }
         );
+
+    } else {
+
+        const btnCreateProject = $("btnCreateProject");
+
+        if (btnCreateProject) {
+
+            btnCreateProject.addEventListener(
+                "click",
+                event => {
+
+                    event.preventDefault();
+                    createProject();
+
+                }
+            );
+
+        }
 
     }
 
@@ -2827,13 +2844,13 @@ function bindButtons() {
        COMPLETE PROJECT
     ------------------------------------------------------ */
 
-    const btnCompleteProject =
-        $("btnCompleteProject");
+    const btnFinishProject =
+        $("btnFinishProject");
 
 
-    if (btnCompleteProject) {
+    if (btnFinishProject) {
 
-        btnCompleteProject.addEventListener(
+        btnFinishProject.addEventListener(
             "click",
             () => {
 
@@ -2893,13 +2910,13 @@ function bindButtons() {
        BACK TO SURVEY FROM COMPLETE
     ------------------------------------------------------ */
 
-    const btnBackToSurvey =
-        $("btnBackToSurvey");
+    const btnReturnSurvey =
+        $("btnReturnSurvey");
 
 
-    if (btnBackToSurvey) {
+    if (btnReturnSurvey) {
 
-        btnBackToSurvey.addEventListener(
+        btnReturnSurvey.addEventListener(
             "click",
             () => {
 
@@ -3082,6 +3099,31 @@ function bindButtons() {
 
 
 /* ==========================================================
+   STARTUP STATUS
+========================================================== */
+
+function updateStartupStatus() {
+
+    const dbStatus = $("startupDbStatus");
+    const gpsStatus = $("startupGpsStatus");
+    const gisStatus = $("startupGisStatus");
+
+    if (dbStatus) {
+        dbStatus.textContent = dbReady ? "Sẵn sàng" : "Chờ kiểm tra";
+    }
+
+    if (gpsStatus) {
+        gpsStatus.textContent = GPSManager.isSupported() ? "Sẵn sàng" : "Không hỗ trợ";
+    }
+
+    if (gisStatus) {
+        gisStatus.textContent = "ArcGIS";
+    }
+
+}
+
+
+/* ==========================================================
    APPLICATION BOOT
 ========================================================== */
 
@@ -3096,6 +3138,8 @@ window.addEventListener(
         show(
             "screenSplash"
         );
+
+        updateStartupStatus();
 
 
         /*
@@ -3145,6 +3189,7 @@ window.addEventListener(
 
         /*
          * Initialize GPS HUD.
+
          */
 
         GPSManager.reset();
@@ -3161,6 +3206,8 @@ window.addEventListener(
 
             dbReady =
                 true;
+
+            updateStartupStatus();
 
 
             /*
@@ -3184,7 +3231,7 @@ window.addEventListener(
             );
 
             console.log(
-                "app.js REV12 — STARTUP / DB BINDING FIX"
+                "app.js REV13 — THREE-FILE RECONCILED BASELINE"
             );
 
             console.log(
@@ -3216,6 +3263,8 @@ window.addEventListener(
             dbReady =
                 false;
 
+            updateStartupStatus();
+
 
             console.error(
                 "TGS Database Initialization Error:",
@@ -3234,7 +3283,7 @@ window.addEventListener(
 
 
 /* ==========================================================
-   REV12 STARTUP FIX
+   REV13 THREE-FILE RECONCILIATION
 
    UI button binding is intentionally independent from
    IndexedDB API resolution and initialization.
@@ -3254,7 +3303,7 @@ function qaStatus() {
     return {
 
         revision:
-            "REV12",
+            "REV13",
 
         database:
             dbReady,
@@ -3335,5 +3384,5 @@ window.TGS = {
 ========================================================== */
 
 console.log(
-    "TGS Genesis 2.0 app.js REV12 Loaded"
+    "TGS Genesis 2.0 app.js REV13 Loaded"
 );
