@@ -231,16 +231,18 @@ async function loadDraftBanner(){
 
 async function createNewProject(){
 
-    const name = $("projectName").value.trim();
-    const code = $("projectCode").value.trim();
-    const location = $("projectLocation").value.trim();
+    ...
 
-    if(name===""){
+    App.project = project;
 
-        alert("Vui lòng nhập tên công trình");
-        return;
+    $("surveyProjectTitle").textContent = project.name;
+    $("linearProjectName").textContent = project.name;
 
-    }
+    clearProjectForm();          // ← thêm đúng dòng này
+
+    showScreen("screenSurveyHome");
+
+}
 
     const project = await DB.createProject({
 
