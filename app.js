@@ -150,8 +150,14 @@ function showScreen(id) {
 
 /* -------- Navigation -------- */
 
-function goHome() {
-  showScreen("screenProjectHome");
+async function goHome() {
+
+    if (typeof loadDraftBanner === "function") {
+        await loadDraftBanner();
+    }
+
+    showScreen("screenProjectHome");
+
 }
 
 function goProject() {
