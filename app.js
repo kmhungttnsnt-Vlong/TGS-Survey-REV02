@@ -1,315 +1,124 @@
 /* ==========================================================
    TGS PLATFORM GENESIS 2.0
-   APP.JS BASELINE REV01
+   APP.JS — BASELINE REV01
+   BLOCK A1 : CORE BOOTSTRAP
    ========================================================== */
 
-/* ==========================================================
-   A. CORE STATE
-   ========================================================== */
-
-const AppState = {
-    currentProject: null,
-    draftProject: null,
-    projects: [],
-    map: null,
-    gpsMarker: null,
-    gpsCircle: null
+const App = {
+    currentScreen: "screenSplash",
+    project: null
 };
 
 /* ==========================================================
-   B. SCREEN ROUTER
+   SCREEN REGISTRY
    ========================================================== */
 
-const Screens = {};
+const Screens = [
+    "screenSplash",
+    "screenProjectHome",
+    "screenProject",
+    "screenSurveyHome",
+    "screenPoint",
+    "screenLinear"
+];
 
-document.querySelectorAll(".screen").forEach(s => {
-    Screens[s.id] = s;
-});
+function $(id){
+    return document.getElementById(id);
+}
+
+/* ==========================================================
+   NAVIGATION
+   ========================================================== */
 
 function showScreen(id){
 
-    Object.values(Screens).forEach(s=>{
-        s.classList.remove("active");
+    Screens.forEach(screen=>{
+        const el = $(screen);
+        if(el) el.classList.remove("active");
     });
 
-    Screens[id].classList.add("active");
+    const target = $(id);
 
-    if(id==="screenLinear"){
-        setTimeout(initMap,250);
+    if(target){
+        target.classList.add("active");
+        App.currentScreen = id;
     }
+
 }
 
 /* ==========================================================
-   C. NAVIGATION
+   BOOTSTRAP
    ========================================================== */
 
-function bindNavigation(){
+document.addEventListener("DOMContentLoaded", ()=>{
 
     // Splash
-    btnStart.onclick=()=>showScreen("screenProjectHome");
+    $("btnStart")?.addEventListener("click", ()=>{
+        showScreen("screenProjectHome");
+    });
 
-    // Home
-    btnNewProject.onclick=()=>showScreen("screenProject");
+    // Project Home
+    $("btnNewProject")?.addEventListener("click", ()=>{
+        showScreen("screenProject");
+    });
 
-    btnContinueDraft.onclick=resumeDraft;
+    $("btnContinueDraft")?.addEventListener("click", ()=>{
+        showScreen("screenSurveyHome");
+    });
 
-    btnOpenProject.onclick=openSavedProjects;
+    $("btnOpenProject")?.addEventListener("click", ()=>{
+        alert("A1 QA: Chưa kích hoạt DB");
+    });
 
     // Project
-    btnBackHome.onclick=()=>showScreen("screenProjectHome");
-
-    btnSaveProject.onclick=createProject;
-
-    // Survey
-    btnBackProject.onclick=()=>showScreen("screenProjectHome");
-
-    btnPointSurvey.onclick=()=>showScreen("screenPoint");
-
-    btnLinearSurvey.onclick=()=>{
-        linearProjectName.textContent=
-            AppState.currentProject.name;
-        showScreen("screenLinear");
-    };
-
-    btnExitLinear.onclick=()=>showScreen("screenSurveyHome");
-
-    btnExitPoint.onclick=()=>showScreen("screenSurveyHome");
-}
-
-/* ==========================================================
-   D. PROJECT CONTROLLER
-   ========================================================== */
-
-function createProject(){
-
-    const name=projectName.value.trim();
-    const code=projectCode.value.trim();
-    const location=projectLocation.value.trim();
-
-    if(!name){
-        alert("Nhập tên công trình");
-        return;
-    }
-
-    const project={
-        id:Date.now(),
-        name,
-        code,
-        location,
-        status:"draft",
-        created:new Date().toISOString()
-    };
-
-    AppState.currentProject=project;
-    AppState.draftProject=project;
-
-    localStorage.setItem(
-        "TGS_DRAFT",
-        JSON.stringify(project)
-    );
-
-    surveyProjectTitle.textContent=name;
-
-    showScreen("screenSurveyHome");
-}
-
-/* ==========================================================
-   E. DRAFT RESUME
-   ========================================================== */
-
-function loadDraft(){
-
-    const raw=localStorage.getItem("TGS_DRAFT");
-
-    if(!raw){
-        draftBanner.classList.add("hidden");
-        return;
-    }
-
-    AppState.draftProject=JSON.parse(raw);
-
-    draftBanner.classList.remove("hidden");
-}
-
-function resumeDraft(){
-
-    AppState.currentProject=AppState.draftProject;
-
-    surveyProjectTitle.textContent=
-        AppState.currentProject.name;
-
-    showScreen("screenSurveyHome");
-}
-
-/* ==========================================================
-   F. SAVED PROJECT
-   ========================================================== */
-
-function openSavedProjects(){
-
-    const list=
-        JSON.parse(localStorage.getItem("TGS_PROJECTS")||"[]");
-
-    if(list.length===0){
-        alert("Chưa có công trình đã lưu");
-        return;
-    }
-
-    const p=list[0];
-
-    AppState.currentProject=p;
-
-    surveyProjectTitle.textContent=p.name;
-
-    showScreen("screenSurveyHome");
-}
-
-/* ==========================================================
-   G. SURVEY CONTROLLER
-   ========================================================== */
-
-function initSurveyButtons(){
-
-    btnLocate.onclick=getCurrentLocation;
-
-    btnZoomIn.onclick=()=>{
-        if(AppState.map) AppState.map.zoomIn();
-    };
-
-    btnZoomOut.onclick=()=>{
-        if(AppState.map) AppState.map.zoomOut();
-    };
-
-    btnAcquireGPS.onclick=startGPSAcquisition;
-}
-
-/* ==========================================================
-   H. LINEAR GIS
-   ========================================================== */
-
-function initMap(){
-
-    if(AppState.map){
-        AppState.map.invalidateSize();
-        return;
-    }
-
-    AppState.map=L.map("map",{
-        zoomControl:false
-    }).setView([9.923,106.31],16);
-
-    L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            maxZoom:20
-        }
-    ).addTo(AppState.map);
-}
-
-function getCurrentLocation(){
-
-    if(!navigator.geolocation){
-        alert("Thiết bị không hỗ trợ GPS");
-        return;
-    }
-
-    navigator.geolocation.getCurrentPosition(pos=>{
-
-        const lat=pos.coords.latitude;
-        const lng=pos.coords.longitude;
-        const acc=pos.coords.accuracy;
-
-        updateGPS(lat,lng,acc);
-
-        AppState.map.setView([lat,lng],18);
-
-    },()=>{
-
-        alert("Không lấy được vị trí");
-
-    },{
-        enableHighAccuracy:true,
-        timeout:8000
+    $("btnBackHome")?.addEventListener("click", ()=>{
+        showScreen("screenProjectHome");
     });
-}
 
-function updateGPS(lat,lng,accuracy){
+    $("btnSaveProject")?.addEventListener("click", ()=>{
 
-    gpsText.textContent=
-        `Lat ${lat.toFixed(6)} · Lon ${lng.toFixed(6)}`;
+        const name = $("projectName").value.trim();
 
-    gpsAccuracy.textContent=
-        `± ${Math.round(accuracy)} m`;
-
-    if(AppState.gpsMarker){
-        AppState.map.removeLayer(AppState.gpsMarker);
-        AppState.map.removeLayer(AppState.gpsCircle);
-    }
-
-    AppState.gpsMarker=L.circleMarker([lat,lng],{
-        radius:6,
-        color:"#2563eb",
-        fillColor:"#2563eb",
-        fillOpacity:1
-    }).addTo(AppState.map);
-
-    AppState.gpsCircle=L.circle([lat,lng],{
-        radius:Math.max(accuracy,5),
-        color:"#3b82f6",
-        weight:1,
-        fillOpacity:0.08
-    }).addTo(AppState.map);
-}
-
-function startGPSAcquisition(){
-
-    let count=0;
-
-    btnAcquireGPS.disabled=true;
-
-    const timer=setInterval(()=>{
-
-        count++;
-
-        gpsText.textContent=
-            `Đang đo ${count}/20`;
-
-        if(navigator.geolocation){
-
-            navigator.geolocation.getCurrentPosition(pos=>{
-
-                updateGPS(
-                    pos.coords.latitude,
-                    pos.coords.longitude,
-                    pos.coords.accuracy
-                );
-
-            });
+        if(name===""){
+            alert("Nhập tên công trình");
+            return;
         }
 
-        if(count>=20){
+        App.project = {
+            name,
+            code: $("projectCode").value.trim(),
+            location: $("projectLocation").value.trim()
+        };
 
-            clearInterval(timer);
+        $("surveyProjectTitle").textContent = App.project.name;
 
-            btnAcquireGPS.disabled=false;
+        showScreen("screenSurveyHome");
 
-            gpsText.textContent="GPS hoàn tất";
-        }
+    });
 
-    },300);
-}
+    // Survey Home
+    $("btnBackProject")?.addEventListener("click", ()=>{
+        showScreen("screenProject");
+    });
 
-/* ==========================================================
-   I. BOOTSTRAP
-   ========================================================== */
+    $("btnPointSurvey")?.addEventListener("click", ()=>{
+        showScreen("screenPoint");
+    });
 
-window.onload=()=>{
+    $("btnLinearSurvey")?.addEventListener("click", ()=>{
+        showScreen("screenLinear");
+    });
 
-    bindNavigation();
+    // Exit Survey
+    $("btnExitPoint")?.addEventListener("click", ()=>{
+        showScreen("screenSurveyHome");
+    });
 
-    initSurveyButtons();
+    $("btnExitLinear")?.addEventListener("click", ()=>{
+        showScreen("screenSurveyHome");
+    });
 
-    loadDraft();
+    // Start screen
+    showScreen("screenSplash");
 
-    console.log("TGS Genesis REV01 READY");
-};
+});
