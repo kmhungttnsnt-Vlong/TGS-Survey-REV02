@@ -1,57 +1,35 @@
 /* ==========================================================
    TGS PLATFORM GENESIS 2.0
-   style.css REV02
-   BASELINE: TGS-HO-301
-   ========================================================== */
+   STYLE BASELINE B2
+   File : style.css
+========================================================== */
 
-/* ==========================================================
-   01. DESIGN TOKENS
-   ========================================================== */
+/* ===== 01. ROOT ===== */
 
 :root{
 
-    /* Brand */
-    --tgs-primary:#1565C0;
-    --tgs-primary-dark:#0D47A1;
-    --tgs-accent:#42A5F5;
+    --primary:#1565C0;
+    --primary-dark:#0D47A1;
 
-    /* Background */
-    --bg-app:#EEF3F8;
-    --bg-surface:#FFFFFF;
-    --bg-header:#1F2A44;
-    --bg-footer:#0E172A;
+    --bg:#EEF3F8;
+    --surface:#FFFFFF;
 
-    /* Text */
-    --text-primary:#1E293B;
-    --text-secondary:#64748B;
-    --text-white:#FFFFFF;
+    --text:#0F172A;
+    --muted:#64748B;
 
-    /* Border */
-    --border:#D9E2EC;
-
-    /* Status */
     --success:#2E7D32;
-    --warning:#F59E0B;
-    --danger:#D32F2F;
 
-    /* Radius */
-    --radius-sm:12px;
-    --radius-md:18px;
-    --radius-lg:24px;
+    --radius:24px;
 
-    /* Shadow */
-    --shadow-card:
-        0 8px 24px rgba(15,23,42,.08);
+    --shadow:
+        0 10px 30px rgba(0,0,0,.08);
 
-    /* Layout */
-    --header-height:74px;
-    --bottom-height:136px;
-    --sidebar-width:280px;
+    --header-h:72px;
+    --bottom-h:120px;
 
 }
-/* ==========================================================
-   02. RESET
-   ========================================================== */
+
+/* ===== 02. RESET ===== */
 
 *{
     margin:0;
@@ -59,416 +37,411 @@
     box-sizing:border-box;
 }
 
-html,body{
+html,
+body{
+
     width:100%;
     height:100%;
+    overflow:hidden;
+
     font-family:
+        Inter,
         "Segoe UI",
         Roboto,
         Arial,
         sans-serif;
-    background:var(--bg-app);
-    color:var(--text-primary);
-    overflow:hidden;
+
+    background:var(--bg);
+    color:var(--text);
+
 }
 
-button,
-input,
-select,
-textarea{
-    font:inherit;
-}
-
-img{
-    max-width:100%;
-    display:block;
-}
-/* ==========================================================
-   03. TYPOGRAPHY
-   ========================================================== */
-
-h1{
-    font-size:42px;
-    font-weight:700;
-    line-height:1.1;
-}
-
-h2{
-    font-size:28px;
-    font-weight:700;
-}
-
-h3{
-    font-size:20px;
-    font-weight:600;
-}
-
-p{
-    color:var(--text-secondary);
-    line-height:1.6;
-}
-
-.label{
-    font-size:12px;
-    letter-spacing:1.2px;
-    text-transform:uppercase;
-    color:var(--tgs-primary);
-    font-weight:700;
-}
-/* ==========================================================
-   04. LAYOUT
-   ========================================================== */
+/* ===== 03. SCREEN SYSTEM ===== */
 
 .screen{
+
     display:none;
     width:100%;
     height:100%;
+
 }
 
 .screen.active{
+
     display:block;
-}
-
-.page{
-    width:100%;
-    height:100%;
-    display:flex;
-    flex-direction:column;
-}
-
-.content{
-    flex:1;
-    overflow:auto;
-    padding:32px;
-}
-
-.container{
-    width:100%;
-    max-width:1400px;
-    margin:auto;
-}
-
-.grid-2{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:20px;
-}
-/* ==========================================================
-   05. HEADER
-   ========================================================== */
-
-.app-header{
-    height:var(--header-height);
-    background:linear-gradient(
-        180deg,
-        #24324F,
-        #1F2A44
-    );
-
-    color:white;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    padding:0 24px;
-}
-
-.header-title{
-    font-size:22px;
-    font-weight:700;
-}
-
-.header-subtitle{
-    font-size:13px;
-    opacity:.8;
-}
-/* ==========================================================
-   06. CARD
-   ========================================================== */
-
-.card{
-
-    background:var(--bg-surface);
-
-    border-radius:var(--radius-lg);
-
-    border:1px solid var(--border);
-
-    box-shadow:var(--shadow-card);
-
-    padding:22px;
 
 }
 
-.card + .card{
-    margin-top:18px;
-}
-/* ==========================================================
-   07. BUTTON
-   ========================================================== */
+/* ===== 04. BUTTON ===== */
 
-.btn-primary{
+.btn{
 
     width:100%;
-
-    height:58px;
-
     border:none;
+    cursor:pointer;
 
     border-radius:18px;
 
-    background:var(--tgs-primary);
-
-    color:white;
-
-    font-size:18px;
+    background:var(--primary);
+    color:#fff;
 
     font-weight:700;
+    font-size:18px;
 
-    cursor:pointer;
-
-    transition:.25s;
-
-}
-
-.btn-primary:hover{
-
-    background:var(--tgs-primary-dark);
+    padding:18px;
 
 }
 
-.btn-secondary{
+.btn:active{
 
-    background:#E3F2FD;
-
-    color:var(--tgs-primary);
+    transform:scale(.98);
 
 }
-/* ==========================================================
-   08. FORM
-   ========================================================== */
 
-.form-group{
+/* ===== 05. SPLASH ===== */
+
+.splash{
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    height:100%;
+
+    background:
+        radial-gradient(circle,#E8F3FF,#F7FAFC);
+
+}
+
+.splash-card{
+
+    width:min(92%,480px);
+
+    text-align:center;
+
+}
+
+.logo{
+
+    width:120px;
+    height:120px;
+
+    border-radius:30px;
+
+    margin:auto auto 24px;
+
+    background:linear-gradient(
+        135deg,
+        #1976D2,
+        #0D47A1
+    );
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    color:#fff;
+    font-size:42px;
+    font-weight:800;
+
+    box-shadow:var(--shadow);
+
+}
+
+.splash-card h1{
+
+    font-size:48px;
+    font-weight:800;
+
+}
+
+.splash-card h2{
+
+    color:var(--primary);
+    margin-top:8px;
+
+}
+
+.splash-card p{
+
+    color:var(--muted);
+
+    margin:18px 0 28px;
+
+}
+
+/* ===== 06. TOP BAR ===== */
+
+.topbar{
+
+    height:72px;
+
+    background:#fff;
+
+    display:flex;
+    align-items:center;
+
+    padding:0 22px;
+
+    box-shadow:
+        0 1px 0 rgba(0,0,0,.06);
+
+}
+
+.brand{
+
+    font-size:26px;
+    font-weight:800;
+
+    color:var(--primary);
+
+}
+
+.brand span{
+
+    color:#374151;
+    font-weight:500;
+
+}
+
+.version{
+
+    margin-left:auto;
+    color:var(--muted);
+
+    font-weight:600;
+
+}
+
+/* ===== 07. PAGE ===== */
+
+.page{
+
+    height:calc(100% - 72px);
+
+    overflow:auto;
+
+    padding:34px;
+
+}
+
+.section-label{
+
+    color:var(--primary);
+
+    font-size:13px;
+    letter-spacing:2px;
+    font-weight:700;
+
+}
+
+.page h1{
+
+    font-size:54px;
+    margin-top:8px;
+
+}
+
+.subtitle{
+
+    color:var(--muted);
+
+    margin:10px 0 28px;
+
+    font-size:20px;
+
+}
+
+/* ===== 08. CARD ===== */
+
+.card{
+
+    background:#fff;
+
+    border-radius:26px;
+
+    padding:22px;
+
+    box-shadow:var(--shadow);
 
     margin-bottom:18px;
 
 }
 
-.form-label{
-
-    display:block;
-
-    margin-bottom:8px;
-
-    font-weight:600;
-
-}
-
-.form-input{
-
-    width:100%;
-
-    height:54px;
-
-    border:1px solid var(--border);
-
-    border-radius:14px;
-
-    padding:0 16px;
-
-    background:white;
-
-}
-/* ==========================================================
-   09. STATUS PANEL
-   ========================================================== */
-
-.status-row{
+.menu-card{
 
     display:flex;
+    align-items:center;
 
-    justify-content:space-between;
+    gap:18px;
 
-    padding:14px 0;
+    cursor:pointer;
 
-    border-bottom:1px solid #EEF2F6;
-
-}
-
-.status-value{
-
-    color:var(--success);
-
-    font-weight:700;
-
-}
-/* ==========================================================
-   10. MAP WORKSPACE
-   ========================================================== */
-
-.map-workspace{
-
-    position:relative;
-
-    width:100%;
-
-    height:calc(
-        100vh - var(--header-height)
-    );
-
-    overflow:hidden;
+    transition:.2s;
 
 }
 
-#map{
+.menu-card:hover{
 
-    position:absolute;
-
-    inset:0;
-
-    width:100%;
-
-    height:100%;
-
-    z-index:1;
+    transform:translateY(-2px);
 
 }
 
-.gis-panel{
+.icon-box{
 
-    position:absolute;
+    width:64px;
+    height:64px;
 
-    left:16px;
+    border-radius:18px;
 
-    top:16px;
-
-    width:260px;
-
-    z-index:1000;
-
-}
-
-.map-toolbar{
-
-    position:absolute;
-
-    right:18px;
-
-    top:20px;
+    background:#E3F2FD;
 
     display:flex;
+    justify-content:center;
+    align-items:center;
 
-    flex-direction:column;
+    font-size:30px;
 
-    gap:12px;
-
-    z-index:1000;
-
-}
-/* ==========================================================
-   11. GNSS BAR
-   ========================================================== */
-
-.gnss-bar{
-
-    position:absolute;
-
-    left:0;
-
-    right:0;
-
-    bottom:0;
-
-    height:var(--bottom-height);
-
-    background:linear-gradient(
-        180deg,
-        rgba(15,23,42,.15),
-        var(--bg-footer)
-    );
-
-    backdrop-filter:blur(12px);
-
-    padding:18px;
-
-    z-index:1000;
+    color:var(--primary);
 
 }
 
-.gnss-grid{
+.menu-card h3{
+
+    font-size:28px;
+
+}
+
+.menu-card p{
+
+    color:var(--muted);
+
+    margin-top:4px;
+
+}
+
+/* ===== 09. STATUS ===== */
+
+.status{
 
     display:grid;
 
-    grid-template-columns:repeat(4,1fr);
+    grid-template-columns:
+        1fr auto;
 
-    gap:14px;
+    row-gap:14px;
 
-    margin-bottom:16px;
+    color:var(--muted);
 
-}
-/* ==========================================================
-   12. RESPONSIVE
-   ========================================================== */
-
-@media (max-width:1024px){
-
-    .grid-2{
-
-        grid-template-columns:1fr;
-
-    }
-
-    .gis-panel{
-
-        width:220px;
-
-    }
+    font-size:18px;
 
 }
 
-@media (max-width:768px){
+.status b{
 
-    .content{
+    color:var(--success);
+
+}
+
+/* ===== 10. FORM ===== */
+
+.form{
+
+    display:grid;
+    gap:18px;
+
+}
+
+.row{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(3,1fr);
+
+    gap:16px;
+
+}
+
+.field{
+
+    display:flex;
+    flex-direction:column;
+
+}
+
+.field label{
+
+    font-weight:700;
+    margin-bottom:8px;
+
+}
+
+.field input{
+
+    height:54px;
+
+    border:1px solid #CBD5E1;
+
+    border-radius:14px;
+
+    padding:0 14px;
+
+    font-size:16px;
+
+    background:#fff;
+
+}
+
+/* ===== 11. BACK BUTTON ===== */
+
+.back{
+
+    width:42px;
+    height:42px;
+
+    border:none;
+
+    border-radius:12px;
+
+    cursor:pointer;
+
+    background:#fff;
+
+    box-shadow:var(--shadow);
+
+    margin-bottom:18px;
+
+    font-size:22px;
+
+}
+
+/* ===== 12. MOBILE ===== */
+
+@media(max-width:768px){
+
+    .page{
 
         padding:18px;
 
     }
 
-    h1{
+    .page h1{
 
-        font-size:34px;
-
-    }
-
-    .gnss-grid{
-
-        grid-template-columns:repeat(2,1fr);
+        font-size:42px;
 
     }
 
-    .gis-panel{
+    .row{
 
-        width:190px;
+        grid-template-columns:1fr;
+
+    }
+
+    .menu-card h3{
+
+        font-size:22px;
 
     }
 
 }
-/* ==========================================================
-   13. UTILITIES
-   ========================================================== */
-
-.hidden{
-    display:none !important;
-}
-
-.center{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-}
-
-.mt-16{margin-top:16px;}
-.mt-24{margin-top:24px;}
-.mb-16{margin-bottom:16px;}
-.mb-24{margin-bottom:24px;}
