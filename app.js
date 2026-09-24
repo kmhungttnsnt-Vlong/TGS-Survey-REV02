@@ -1,124 +1,112 @@
 /* ==========================================================
    TGS PLATFORM GENESIS 2.0
-   APP.JS — BASELINE REV01
-   BLOCK A1 : CORE BOOTSTRAP
-   ========================================================== */
+   APP.JS — A1 REV02
+   CORE BOOTSTRAP + SCREEN ROUTER
+   BASELINE LOCKED
+========================================================== */
 
-const App = {
-    currentScreen: "screenSplash",
-    project: null
+/* ==========================================================
+   A1.1 APP STATE
+========================================================== */
+
+const APP = {
+
+    currentScreen : "screenSplash",
+
+    project : null
+
 };
 
 /* ==========================================================
-   SCREEN REGISTRY
-   ========================================================== */
-
-const Screens = [
-    "screenSplash",
-    "screenProjectHome",
-    "screenProject",
-    "screenSurveyHome",
-    "screenPoint",
-    "screenLinear"
-];
+   A1.2 DOM HELPER
+========================================================== */
 
 function $(id){
+
     return document.getElementById(id);
+
 }
 
 /* ==========================================================
-   NAVIGATION
-   ========================================================== */
+   A1.3 SCREEN REGISTRY
+========================================================== */
+
+const SCREENS = [
+
+    "screenSplash",
+
+    "screenProjectHome",
+
+    "screenProject",
+
+    "screenSurveyHome",
+
+    "screenPoint",
+
+    "screenLinear"
+
+];
+
+/* ==========================================================
+   A1.4 ROUTER
+========================================================== */
 
 function showScreen(id){
 
-    Screens.forEach(screen=>{
+    SCREENS.forEach(screen=>{
+
         const el = $(screen);
+
         if(el) el.classList.remove("active");
+
     });
 
     const target = $(id);
 
     if(target){
+
         target.classList.add("active");
-        App.currentScreen = id;
+
+        APP.currentScreen = id;
+
     }
 
 }
 
 /* ==========================================================
-   BOOTSTRAP
-   ========================================================== */
+   A1.5 BOOTSTRAP
+========================================================== */
 
-document.addEventListener("DOMContentLoaded", ()=>{
+document.addEventListener("DOMContentLoaded",()=>{
 
     // Splash
-    $("btnStart")?.addEventListener("click", ()=>{
-        showScreen("screenProjectHome");
-    });
+    $("btnStart")?.addEventListener("click",goHome);
 
-    // Project Home
-    $("btnNewProject")?.addEventListener("click", ()=>{
-        showScreen("screenProject");
-    });
+    // Home
+    $("btnNewProject")?.addEventListener("click",goProject);
 
-    $("btnContinueDraft")?.addEventListener("click", ()=>{
-        showScreen("screenSurveyHome");
-    });
+    $("btnContinueDraft")?.addEventListener("click",continueDraft);
 
-    $("btnOpenProject")?.addEventListener("click", ()=>{
-        alert("A1 QA: Chưa kích hoạt DB");
-    });
+    $("btnOpenProject")?.addEventListener("click",openSavedProjects);
 
     // Project
-    $("btnBackHome")?.addEventListener("click", ()=>{
-        showScreen("screenProjectHome");
-    });
+    $("btnBackHome")?.addEventListener("click",goHome);
 
-    $("btnSaveProject")?.addEventListener("click", ()=>{
-
-        const name = $("projectName").value.trim();
-
-        if(name===""){
-            alert("Nhập tên công trình");
-            return;
-        }
-
-        App.project = {
-            name,
-            code: $("projectCode").value.trim(),
-            location: $("projectLocation").value.trim()
-        };
-
-        $("surveyProjectTitle").textContent = App.project.name;
-
-        showScreen("screenSurveyHome");
-
-    });
+    $("btnSaveProject")?.addEventListener("click",createNewProject);
 
     // Survey Home
-    $("btnBackProject")?.addEventListener("click", ()=>{
-        showScreen("screenProject");
-    });
+    $("btnBackProject")?.addEventListener("click",goHome);
 
-    $("btnPointSurvey")?.addEventListener("click", ()=>{
-        showScreen("screenPoint");
-    });
+    $("btnPointSurvey")?.addEventListener("click",goPoint);
 
-    $("btnLinearSurvey")?.addEventListener("click", ()=>{
-        showScreen("screenLinear");
-    });
+    $("btnLinearSurvey")?.addEventListener("click",goLinear);
 
-    // Exit Survey
-    $("btnExitPoint")?.addEventListener("click", ()=>{
-        showScreen("screenSurveyHome");
-    });
+    // Exit
+    $("btnExitPoint")?.addEventListener("click",goSurvey);
 
-    $("btnExitLinear")?.addEventListener("click", ()=>{
-        showScreen("screenSurveyHome");
-    });
+    $("btnExitLinear")?.addEventListener("click",goSurvey);
 
-    // Start screen
+    // Initial Screen
     showScreen("screenSplash");
 
 });
