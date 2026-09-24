@@ -1,447 +1,233 @@
 /* ==========================================================
    TGS PLATFORM GENESIS 2.0
-   STYLE BASELINE B2
-   File : style.css
+   BASELINE B2 - STYLE.CSS
+   Compatible with INDEX BASELINE B1
 ========================================================== */
 
-/* ===== 01. ROOT ===== */
-
 :root{
-
-    --primary:#1565C0;
-    --primary-dark:#0D47A1;
-
-    --bg:#EEF3F8;
-    --surface:#FFFFFF;
-
-    --text:#0F172A;
-    --muted:#64748B;
-
-    --success:#2E7D32;
-
-    --radius:24px;
-
-    --shadow:
-        0 10px 30px rgba(0,0,0,.08);
-
-    --header-h:72px;
-    --bottom-h:120px;
-
+  --primary:#1565C0;
+  --primary-dark:#0D47A1;
+  --bg:#EEF3F8;
+  --surface:#FFFFFF;
+  --text:#0F172A;
+  --muted:#64748B;
+  --success:#2E7D32;
+  --radius:22px;
+  --shadow:0 10px 24px rgba(15,23,42,.08);
 }
 
-/* ===== 02. RESET ===== */
+/* ================= RESET ================= */
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif;
+  background:var(--bg);color:var(--text);
+}
+button,input{font:inherit;}
+.hidden{display:none!important;}
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+/* ================= APP ================= */
+#app{width:100%;height:100%;position:relative;overflow:hidden;}
+.screen{display:none;width:100%;height:100%;}
+.screen.active{display:block;}
+
+/* ================= BUTTON ================= */
+.btn-primary{
+  width:100%;height:56px;border:none;border-radius:16px;
+  background:var(--primary);color:#fff;font-weight:700;
+  cursor:pointer;transition:.18s;
+}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn-primary:active{transform:scale(.98);}
+
+.btn-secondary{
+  border:none;padding:12px 18px;border-radius:12px;
+  background:#E3F2FD;color:var(--primary);font-weight:700;
+  cursor:pointer;
 }
 
-html,
-body{
-
-    width:100%;
-    height:100%;
-    overflow:hidden;
-
-    font-family:
-        Inter,
-        "Segoe UI",
-        Roboto,
-        Arial,
-        sans-serif;
-
-    background:var(--bg);
-    color:var(--text);
-
+.back-btn{
+  width:42px;height:42px;border:none;border-radius:12px;
+  background:#fff;box-shadow:var(--shadow);cursor:pointer;
+  font-size:20px;font-weight:700;
 }
 
-/* ===== 03. SCREEN SYSTEM ===== */
-
-.screen{
-
-    display:none;
-    width:100%;
-    height:100%;
-
+/* ================= SPLASH ================= */
+.splash-wrap{
+  height:100%;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;
+  padding:24px;text-align:center;
+  background:radial-gradient(circle at top,#E3F2FD,#F8FBFF);
 }
-
-.screen.active{
-
-    display:block;
-
+.logo-box{
+  width:120px;height:120px;border-radius:28px;
+  background:linear-gradient(135deg,#1E88E5,#0D47A1);
+  color:#fff;font-size:40px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow);margin-bottom:28px;
 }
+.splash-wrap h1{font-size:46px;font-weight:800;}
+.splash-wrap h2{font-size:28px;color:var(--primary);margin-top:8px;}
+.splash-wrap p{margin:18px 0 36px;color:var(--muted);}
+.splash-wrap .btn-primary{max-width:420px;}
 
-/* ===== 04. BUTTON ===== */
-
-.btn{
-
-    width:100%;
-    border:none;
-    cursor:pointer;
-
-    border-radius:18px;
-
-    background:var(--primary);
-    color:#fff;
-
-    font-weight:700;
-    font-size:18px;
-
-    padding:18px;
-
-}
-
-.btn:active{
-
-    transform:scale(.98);
-
-}
-
-/* ===== 05. SPLASH ===== */
-
-.splash{
-
-    display:flex;
-    justify-content:center;
-    align-items:center;
-
-    height:100%;
-
-    background:
-        radial-gradient(circle,#E8F3FF,#F7FAFC);
-
-}
-
-.splash-card{
-
-    width:min(92%,480px);
-
-    text-align:center;
-
-}
-
-.logo{
-
-    width:120px;
-    height:120px;
-
-    border-radius:30px;
-
-    margin:auto auto 24px;
-
-    background:linear-gradient(
-        135deg,
-        #1976D2,
-        #0D47A1
-    );
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    color:#fff;
-    font-size:42px;
-    font-weight:800;
-
-    box-shadow:var(--shadow);
-
-}
-
-.splash-card h1{
-
-    font-size:48px;
-    font-weight:800;
-
-}
-
-.splash-card h2{
-
-    color:var(--primary);
-    margin-top:8px;
-
-}
-
-.splash-card p{
-
-    color:var(--muted);
-
-    margin:18px 0 28px;
-
-}
-
-/* ===== 06. TOP BAR ===== */
-
+/* ================= HEADER ================= */
 .topbar{
-
-    height:72px;
-
-    background:#fff;
-
-    display:flex;
-    align-items:center;
-
-    padding:0 22px;
-
-    box-shadow:
-        0 1px 0 rgba(0,0,0,.06);
-
+  height:64px;background:#fff;display:flex;align-items:center;
+  justify-content:space-between;padding:0 22px;
+  box-shadow:0 1px 0 rgba(0,0,0,.06);
 }
+.brand{font-size:18px;}
+.brand strong{color:var(--primary);font-size:22px;}
+.brand span{margin-left:4px;color:#334155;}
+.version{font-size:15px;color:var(--muted);}
 
-.brand{
-
-    font-size:26px;
-    font-weight:800;
-
-    color:var(--primary);
-
+.nav-header{
+  height:72px;background:#fff;display:flex;align-items:center;
+  gap:16px;padding:0 18px;box-shadow:0 1px 0 rgba(0,0,0,.06);
 }
+.nav-header h2{font-size:22px;}
+.nav-header p{font-size:14px;color:var(--muted);margin-top:2px;}
 
-.brand span{
-
-    color:#374151;
-    font-weight:500;
-
+/* ================= PAGE ================= */
+.page,.form-page,.survey-home{
+  height:calc(100% - 64px);overflow:auto;padding:28px;
 }
-
-.version{
-
-    margin-left:auto;
-    color:var(--muted);
-
-    font-weight:600;
-
+.form-page{height:calc(100% - 72px);}
+.page-label{
+  font-size:12px;font-weight:700;letter-spacing:2px;
+  color:var(--primary);margin-bottom:10px;
 }
+.page h1{font-size:52px;line-height:1.1;margin-bottom:10px;}
+.page-desc{font-size:18px;color:var(--muted);margin-bottom:28px;}
 
-/* ===== 07. PAGE ===== */
-
-.page{
-
-    height:calc(100% - 72px);
-
-    overflow:auto;
-
-    padding:34px;
-
+/* ================= DRAFT ================= */
+.draft-banner{
+  background:#FFF8E1;border-left:5px solid #F59E0B;
+  border-radius:16px;padding:18px;display:flex;
+  justify-content:space-between;align-items:center;
+  margin-bottom:18px;gap:16px;
 }
+.draft-banner p{margin-top:6px;color:#92400E;}
 
-.section-label{
-
-    color:var(--primary);
-
-    font-size:13px;
-    letter-spacing:2px;
-    font-weight:700;
-
+/* ================= CARDS ================= */
+.card-action{
+  background:#fff;border-radius:22px;padding:22px;
+  display:flex;align-items:center;gap:18px;
+  box-shadow:var(--shadow);cursor:pointer;
+  margin-bottom:18px;transition:.18s;
 }
-
-.page h1{
-
-    font-size:54px;
-    margin-top:8px;
-
+.card-action:hover{transform:translateY(-2px);}
+.icon{
+  width:68px;height:68px;border-radius:18px;
+  background:#E3F2FD;color:var(--primary);
+  display:flex;align-items:center;justify-content:center;
+  font-size:34px;font-weight:700;
 }
+.card-action h3{font-size:28px;margin-bottom:6px;}
+.card-action p{color:var(--muted);}
 
-.subtitle{
-
-    color:var(--muted);
-
-    margin:10px 0 28px;
-
-    font-size:20px;
-
+/* ================= STATUS ================= */
+.status-card{
+  background:#fff;border-radius:20px;padding:22px;
+  box-shadow:var(--shadow);margin-top:10px;
 }
-
-/* ===== 08. CARD ===== */
-
-.card{
-
-    background:#fff;
-
-    border-radius:26px;
-
-    padding:22px;
-
-    box-shadow:var(--shadow);
-
-    margin-bottom:18px;
-
+.status-row{
+  display:flex;justify-content:space-between;
+  padding:14px 0;border-bottom:1px solid #E5E7EB;
 }
+.status-row:last-child{border-bottom:none;}
+.status-row span{color:var(--muted);}
+.status-row strong{color:var(--success);}
 
-.menu-card{
-
-    display:flex;
-    align-items:center;
-
-    gap:18px;
-
-    cursor:pointer;
-
-    transition:.2s;
-
+/* ================= FORM ================= */
+.form-page label{
+  display:block;font-weight:700;margin:18px 0 8px;
 }
-
-.menu-card:hover{
-
-    transform:translateY(-2px);
-
+.form-page input{
+  width:100%;height:52px;border-radius:14px;
+  border:1px solid #CBD5E1;padding:0 16px;
+  background:#fff;font-size:16px;
 }
+.form-page .btn-primary{margin-top:28px;}
 
-.icon-box{
-
-    width:64px;
-    height:64px;
-
-    border-radius:18px;
-
-    background:#E3F2FD;
-
-    display:flex;
-    justify-content:center;
-    align-items:center;
-
-    font-size:30px;
-
-    color:var(--primary);
-
+/* ================= SURVEY HOME ================= */
+.survey-home{display:grid;gap:20px;align-content:start;}
+.survey-card{
+  background:#fff;border-radius:22px;padding:26px;
+  box-shadow:var(--shadow);cursor:pointer;
+  transition:.18s;
 }
+.survey-card:hover{transform:translateY(-2px);}
+.survey-card h3{font-size:30px;margin-bottom:10px;}
+.survey-card p{font-size:18px;color:var(--muted);}
 
-.menu-card h3{
-
-    font-size:28px;
-
+/* ================= LINEAR SURVEY ================= */
+.survey-header{
+  height:72px;background:linear-gradient(180deg,#1E293B,#334155);
+  color:#fff;display:flex;align-items:center;
+  gap:16px;padding:0 18px;
 }
-
-.menu-card p{
-
-    color:var(--muted);
-
-    margin-top:4px;
-
+.survey-header .back-btn{background:rgba(255,255,255,.14);color:#fff;}
+.survey-header p{opacity:.8;font-size:13px;}
+.linear-layout{display:flex;height:calc(100% - 188px);}
+.gis-panel{
+  width:240px;background:#F8FAFC;padding:16px;
+  border-right:1px solid #E2E8F0;overflow:auto;
 }
-
-/* ===== 09. STATUS ===== */
-
-.status{
-
-    display:grid;
-
-    grid-template-columns:
-        1fr auto;
-
-    row-gap:14px;
-
-    color:var(--muted);
-
-    font-size:18px;
-
+.gps-pill{
+  background:#1E293B;color:#fff;border-radius:999px;
+  padding:10px 14px;display:flex;align-items:center;
+  gap:8px;font-size:13px;margin-bottom:16px;
 }
-
-.status b{
-
-    color:var(--success);
-
+.gps-dot{width:10px;height:10px;border-radius:50%;background:#4ADE80;}
+.layer-card{
+  background:#fff;border-radius:18px;padding:14px;
+  box-shadow:var(--shadow);
 }
-
-/* ===== 10. FORM ===== */
-
-.form{
-
-    display:grid;
-    gap:18px;
-
+.layer-card h3{margin-bottom:12px;}
+.layer-card label{display:block;margin:10px 0;font-size:14px;}
+.map-wrapper{flex:1;position:relative;background:#DCECF8;}
+#map{position:absolute;inset:0;width:100%;height:100%;z-index:1;}
+.map-title{
+  position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  background:rgba(255,255,255,.95);padding:10px 18px;
+  border-radius:999px;font-weight:700;z-index:500;
 }
-
-.row{
-
-    display:grid;
-
-    grid-template-columns:
-        repeat(3,1fr);
-
-    gap:16px;
-
+.map-tools{
+  position:absolute;right:18px;top:20px;display:flex;
+  flex-direction:column;gap:12px;z-index:500;
 }
-
-.field{
-
-    display:flex;
-    flex-direction:column;
-
+.map-tools button{
+  width:54px;height:54px;border:none;border-radius:18px;
+  background:#fff;box-shadow:var(--shadow);cursor:pointer;
+  font-size:24px;
 }
-
-.field label{
-
-    font-weight:700;
-    margin-bottom:8px;
-
+.survey-footer{
+  height:116px;background:rgba(15,23,42,.94);
+  backdrop-filter:blur(10px);display:grid;
+  grid-template-columns:repeat(4,1fr);gap:12px;
+  padding:14px 18px;align-items:center;
 }
-
-.field input{
-
-    height:54px;
-
-    border:1px solid #CBD5E1;
-
-    border-radius:14px;
-
-    padding:0 14px;
-
-    font-size:16px;
-
-    background:#fff;
-
+.metric{
+  background:rgba(30,41,59,.65);border-radius:14px;
+  padding:12px;text-align:center;color:#fff;
 }
+.metric label{display:block;font-size:11px;opacity:.7;}
+.metric strong{font-size:16px;}
+#btnAcquireGPS{grid-column:2/4;height:52px;}
 
-/* ===== 11. BACK BUTTON ===== */
+/* Leaflet fix */
+.leaflet-container{background:#DCECF8;font:inherit;}
 
-.back{
-
-    width:42px;
-    height:42px;
-
-    border:none;
-
-    border-radius:12px;
-
-    cursor:pointer;
-
-    background:#fff;
-
-    box-shadow:var(--shadow);
-
-    margin-bottom:18px;
-
-    font-size:22px;
-
-}
-
-/* ===== 12. MOBILE ===== */
-
+/* ================= MOBILE ================= */
 @media(max-width:768px){
-
-    .page{
-
-        padding:18px;
-
-    }
-
-    .page h1{
-
-        font-size:42px;
-
-    }
-
-    .row{
-
-        grid-template-columns:1fr;
-
-    }
-
-    .menu-card h3{
-
-        font-size:22px;
-
-    }
-
+  .page,.form-page,.survey-home{padding:18px;}
+  .page h1{font-size:38px;}
+  .card-action h3{font-size:22px;}
+  .linear-layout{flex-direction:column;}
+  .gis-panel{width:100%;height:160px;border-right:none;border-bottom:1px solid #E2E8F0;}
+  .survey-footer{grid-template-columns:repeat(2,1fr);height:180px;}
+  #btnAcquireGPS{grid-column:1/3;}
 }
+/* ===== END BASELINE B2 ===== */
