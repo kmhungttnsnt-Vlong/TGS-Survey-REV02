@@ -122,3 +122,71 @@ document.addEventListener("DOMContentLoaded", ()=>{
     showScreen("screenSplash");
 
 });
+/* =========================================================
+   APP.JS — A2
+   Navigation & Event Binding
+   Baseline: GENESIS REV04
+========================================================= */
+
+const UI = {
+  splash: document.getElementById("screenSplash"),
+  home: document.getElementById("screenProjectHome"),
+  project: document.getElementById("screenProject"),
+  survey: document.getElementById("screenSurveyHome"),
+  point: document.getElementById("screenPoint"),
+  linear: document.getElementById("screenLinear")
+};
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => {
+    s.classList.remove("active");
+  });
+
+  const target = document.getElementById(id);
+  if (target) target.classList.add("active");
+
+  APP.currentScreen = id;
+}
+
+/* -------- Navigation -------- */
+
+function goHome() {
+  showScreen("screenProjectHome");
+}
+
+function goProject() {
+  showScreen("screenProject");
+}
+
+function goSurvey() {
+  showScreen("screenSurveyHome");
+}
+
+function goLinear() {
+  showScreen("screenLinear");
+}
+
+function goPoint() {
+  showScreen("screenPoint");
+}
+
+/* -------- Bind Events -------- */
+
+function bindNavigation() {
+
+  // Splash
+  $("#btnStart")?.addEventListener("click", goHome);
+
+  // Home
+  $("#btnNewProject")?.addEventListener("click", goProject);
+
+  // Back
+  $("#btnBackHome")?.addEventListener("click", goHome);
+
+  $("#btnBackProject")?.addEventListener("click", goHome);
+
+  $("#btnExitLinear")?.addEventListener("click", goSurvey);
+
+  $("#btnExitPoint")?.addEventListener("click", goSurvey);
+
+}
