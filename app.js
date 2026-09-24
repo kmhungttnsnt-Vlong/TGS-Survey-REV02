@@ -190,3 +190,146 @@ function bindNavigation() {
   $("#btnExitPoint")?.addEventListener("click", goSurvey);
 
 }
+/* ==========================================================
+   APP.JS — A3
+   Project Workflow
+   Baseline: TGS Genesis REV01
+   Phụ thuộc: db.js + A1 + A2
+========================================================== */
+
+/* =========================
+   LOAD DRAFT BANNER
+========================= */
+
+async function loadDraftBanner(){
+
+    const draft = await DB.getDraft();
+
+    if(draft){
+
+        App.project = draft;
+
+        $("draftBanner")?.classList.remove("hidden");
+
+    }else{
+
+        $("draftBanner")?.classList.add("hidden");
+
+    }
+
+}
+
+/* =========================
+   CREATE PROJECT
+========================= */
+
+async function createNewProject(){
+
+    const name = $("projectName").value.trim();
+    const code = $("projectCode").value.trim();
+    const location = $("projectLocation").value.trim();
+
+    if(name===""){
+
+        alert("Vui lòng nhập tên công trình");
+        return;
+
+    }
+
+    const project = await DB.createProject({
+
+        name,
+        code,
+        location
+
+    });
+
+    App.project = project;
+
+    $("surveyProjectTitle").textContent = project.name;
+    $("linearProjectName").textContent = project.name;
+
+    showScreen("screenSurveyHome");
+
+}
+
+/* =========================
+   CONTINUE DRAFT
+========================= */
+
+async function continueDraft(){
+
+    const draft = await DB.getDraft();
+
+    if(!draft){
+
+        alert("Không có công trình chưa hoàn thành");
+        return;
+
+    }
+
+    App.project = draft;
+
+    $("surveyProjectTitle").textContent = draft.name;
+    $("linearProjectName").textContent = draft.name;
+
+    showScreen("screenSurveyHome");
+
+}
+
+/* =========================
+   SAVED PROJECTS
+========================= */
+
+async function openSavedProjects(){
+
+    const projects = await DB.getAll();
+
+    const completed = projects.filter(
+        p=>p.status==="completed"
+    );
+
+    if(completed.length===0){
+
+        alert("Chưa có công trình đã lưu");
+        return;
+
+    }
+
+    const p = completed[0];
+
+    App.project = p;
+
+    $("surveyProjectTitle").textContent = p.name;
+    $("linearProjectName").textContent = p.name;
+
+    showScreen("screenSurveyHome");
+
+}
+
+/* =========================
+   BIND A3
+========================= */
+
+document.addEventListener("DOMContentLoaded", async ()=>{
+
+    await DB.init();
+
+    await loadDraftBanner();
+
+    $("btnSaveProject")?.addEventListener(
+        "click",
+        createNewProject
+    );
+
+    $("btnContinueDraft")?.addEventListener(
+        "click",
+        continueDraft
+    );
+
+    $("btnOpenProject")?.addEventListener(
+        "click",
+        openSavedProjects
+    );
+
+});
