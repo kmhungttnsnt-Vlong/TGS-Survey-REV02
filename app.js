@@ -153,7 +153,7 @@ function showScreen(id) {
 async function goHome() {
 
     if (typeof loadDraftBanner === "function") {
-        await loadDraftBanner();
+        await refreshHome();
     }
 
     showScreen("screenProjectHome");
@@ -308,7 +308,8 @@ async function openSavedProjects(){
 
     $("surveyProjectTitle").textContent = p.name;
     $("linearProjectName").textContent = p.name;
-
+   
+    clearProjectForm();
     showScreen("screenSurveyHome");
 
 }
@@ -339,3 +340,26 @@ document.addEventListener("DOMContentLoaded", async ()=>{
     );
 
 });
+/* ==========================================================
+   A3.1 — FORM CONTROLLER
+========================================================== */
+
+function clearProjectForm(){
+
+    $("projectName").value = "";
+    $("projectCode").value = "";
+    $("projectLocation").value = "";
+
+}
+
+/* ==========================================================
+   A3.2 — HOME REFRESH
+========================================================== */
+
+async function refreshHome(){
+
+    await loadDraftBanner();
+
+    showScreen("screenProjectHome");
+
+}
