@@ -99,3 +99,98 @@ document.addEventListener("DOMContentLoaded",()=>{
 
 /* ======================== END A1 ========================= */
 
+/* =========================================================
+   GROUP 1 — CORE SYSTEM
+   A2 — NAVIGATION ENGINE REV01
+   BASELINE WEBAPP 2.0
+   Status : QA
+========================================================= */
+
+/* =========================================================
+   A2.1 NAVIGATION API
+========================================================= */
+
+function goHome(){
+
+  showScreen("screenProjectHome");
+
+}
+
+function goProject(){
+
+  showScreen("screenProject");
+
+}
+
+function goSurveyHome(){
+
+  showScreen("screenSurveyHome");
+
+}
+
+function goLinear(){
+
+  showScreen("screenLinear");
+
+}
+
+function goPoint(){
+
+  showScreen("screenPoint");
+
+}
+
+/* =========================================================
+   A2.2 BACK NAVIGATION
+========================================================= */
+
+function goBack(){
+
+  switch(AppState.currentScreen){
+
+    case "screenProject":
+      goHome();
+      break;
+
+    case "screenSurveyHome":
+      goProject();
+      break;
+
+    case "screenLinear":
+      goSurveyHome();
+      break;
+
+    case "screenPoint":
+      goSurveyHome();
+      break;
+
+    default:
+      goHome();
+
+  }
+
+}
+
+/* =========================================================
+   A2.3 EVENT BINDING
+========================================================= */
+
+document.addEventListener("DOMContentLoaded",()=>{
+
+  $("btnStart")?.addEventListener("click",goHome);
+
+  $("btnNewProject")?.addEventListener("click",goProject);
+
+  $("btnBackProject")?.addEventListener("click",goBack);
+
+  $("btnBackSurvey")?.addEventListener("click",goBack);
+
+  $("btnBackLinear")?.addEventListener("click",goBack);
+
+  $("btnBackPoint")?.addEventListener("click",goBack);
+
+  console.log("A2 Navigation Ready");
+
+});
+
+/* ======================== END A2 ========================= */
