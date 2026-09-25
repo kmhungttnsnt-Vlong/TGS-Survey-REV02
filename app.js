@@ -62,6 +62,7 @@ function showScreen(screenId){
 /* ---------- App Ready ---------- */
 console.log("TGS Platform Genesis 2.0");
 console.log("A1 Core Bootstrap Ready");
+
 /* =========================================================
    CORE SYSTEM
    A2 — NAVIGATION ENGINE REV01
@@ -107,12 +108,14 @@ $("btnExitLinear")?.addEventListener("click", goSurveyHome);
 $("btnExitPoint")?.addEventListener("click", goSurveyHome);
 
 console.log("A2 Navigation Ready");
+
 /* =========================================================
- * BASELINE WEBAPP 2.0
- * GROUP 1 — CORE SYSTEM
- * A3 — PROJECT WORKFLOW
- * Status: REV02
- * ========================================================= */
+   BASELINE WEBAPP 2.0
+   GROUP 1 — CORE SYSTEM
+   A3 — PROJECT WORKFLOW
+   Status : REV01
+   Phụ thuộc : A1 + A2 + DB
+========================================================= */
 
 let currentProject = null;
 
@@ -131,12 +134,13 @@ async function refreshDraftBanner(){
         currentProject = draft;
     }else{
         banner.classList.add("hidden");
+        currentProject = null;
     }
 }
 
-/* ---------- Create New ---------- */
+/* ---------- Tạo công trình mới ---------- */
 
-function createNewProject(){
+function openNewProject(){
 
     currentProject = null;
 
@@ -147,7 +151,40 @@ function createNewProject(){
     showScreen("screenProject");
 }
 
-/* ---------- Continue Draft ---------- */
+/* ---------- Lưu Project ---------- */
+
+async function saveProject(){
+
+    const name = $("projectName").value.trim();
+    const code = $("projectCode").value.trim();
+    const location = $("projectLocation").value.trim();
+
+    if(name === ""){
+        alert("Vui lòng nhập tên công trình");
+        return;
+    }
+
+    const project = {
+        id : currentProject?.id || crypto.randomUUID(),
+        name,
+        code,
+        location,
+        status : "draft",
+        createdAt : currentProject?.createdAt || Date.now(),
+        updatedAt : Date.now()
+    };
+
+    await DB.saveProject(project);
+
+    currentProject = project;
+
+    $("surveyProjectTitle").textContent = project.name;
+    $("linearProjectName").textContent = project.name;
+
+    showScreen("screenSurveyHome");
+}
+
+/* ---------- Tiếp tục Draft ---------- */
 
 async function continueDraft(){
 
@@ -166,44 +203,9 @@ async function continueDraft(){
     showScreen("screenSurveyHome");
 }
 
-/* ---------- Save Project ---------- */
+/* ---------- Trở về Home ---------- */
 
-async function saveProject(){
-
-    const name = $("projectName").value.trim();
-    const code = $("projectCode").value.trim();
-    const location = $("projectLocation").value.trim();
-
-    if(!name){
-        alert("Nhập tên công trình");
-        return;
-    }
-
-    const project = {
-        id: currentProject?.id || crypto.randomUUID(),
-        name,
-        code,
-        location,
-        status : "draft",
-        createdAt : Date.now(),
-        updatedAt : Date.now()
-    };
-
-    await DB.saveProject(project);
-
-    currentProject = project;
-
-    $("surveyProjectTitle").textContent = name;
-    $("linearProjectName").textContent = name;
-
-    await refreshDraftBanner();
-
-    showScreen("screenSurveyHome");
-}
-
-/* ---------- Back Home ---------- */
-
-async function goHome(){
+async function backToHome(){
 
     await refreshDraftBanner();
 
@@ -212,14 +214,14 @@ async function goHome(){
 
 /* ---------- Events ---------- */
 
-$("btnNewProject")?.addEventListener("click", createNewProject);
-
-$("btnContinueDraft")?.addEventListener("click", continueDraft);
+$("btnNewProject")?.addEventListener("click", openNewProject);
 
 $("btnSaveProject")?.addEventListener("click", saveProject);
 
-$("btnBackHome")?.addEventListener("click", goHome);
+$("btnContinueDraft")?.addEventListener("click", continueDraft);
 
-$("btnBackProject")?.addEventListener("click", goHome);
+$("btnBackHome")?.addEventListener("click", backToHome);
 
-console.log("A3 Project Ready");
+$("btnBackProject")?.addEventListener("click", backToHome);
+
+console.log("A3 Project Workflow Ready");
