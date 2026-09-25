@@ -100,97 +100,64 @@ document.addEventListener("DOMContentLoaded",()=>{
 /* ======================== END A1 ========================= */
 
 /* =========================================================
-   GROUP 1 — CORE SYSTEM
-   A2 — NAVIGATION ENGINE REV01
-   BASELINE WEBAPP 2.0
+   CORE SYSTEM
+   A2 — NAVIGATION ENGINE REV02
    Status : QA
-========================================================= */
+   Phụ thuộc : A1
+   ========================================================= */
 
-/* =========================================================
-   A2.1 NAVIGATION API
-========================================================= */
+/* ---------- Navigation API ---------- */
 
-function goHome(){
+function goSplash() {
+  showScreen("screenSplash");
+}
 
+function goHome() {
   showScreen("screenProjectHome");
-
 }
 
-function goProject(){
-
+function goProject() {
   showScreen("screenProject");
-
 }
 
-function goSurveyHome(){
-
+function goSurveyHome() {
   showScreen("screenSurveyHome");
-
 }
 
-function goLinear(){
-
+function goLinear() {
   showScreen("screenLinear");
-
 }
 
-function goPoint(){
-
+function goPoint() {
   showScreen("screenPoint");
-
 }
 
-/* =========================================================
-   A2.2 BACK NAVIGATION
-========================================================= */
+/* ---------- Register Buttons ---------- */
 
-function goBack(){
+function registerNavigation() {
 
-  switch(AppState.currentScreen){
+  $("btnStart")?.addEventListener("click", goHome);
 
-    case "screenProject":
-      goHome();
-      break;
+  $("btnNewProject")?.addEventListener("click", goProject);
 
-    case "screenSurveyHome":
-      goProject();
-      break;
+  $("btnBackProject")?.addEventListener("click", goHome);
 
-    case "screenLinear":
-      goSurveyHome();
-      break;
+  $("btnBackSurvey")?.addEventListener("click", goProject);
 
-    case "screenPoint":
-      goSurveyHome();
-      break;
+  $("btnSurveyLine")?.addEventListener("click", goLinear);
 
-    default:
-      goHome();
+  $("btnSurveyPoint")?.addEventListener("click", goPoint);
 
-  }
+  $("btnBackLinear")?.addEventListener("click", goSurveyHome);
 
+  $("btnBackPoint")?.addEventListener("click", goSurveyHome);
 }
 
-/* =========================================================
-   A2.3 EVENT BINDING
-========================================================= */
+/* ---------- Auto Initialize ---------- */
 
-document.addEventListener("DOMContentLoaded",()=>{
+registerNavigation();
 
-  $("btnStart")?.addEventListener("click",goHome);
-
-  $("btnNewProject")?.addEventListener("click",goProject);
-
-  $("btnBackProject")?.addEventListener("click",goBack);
-
-  $("btnBackSurvey")?.addEventListener("click",goBack);
-
-  $("btnBackLinear")?.addEventListener("click",goBack);
-
-  $("btnBackPoint")?.addEventListener("click",goBack);
-
-  console.log("A2 Navigation Ready");
-
-});
+console.log("A2 Navigation Ready");
 
 /* ======================== END A2 ========================= */
+
