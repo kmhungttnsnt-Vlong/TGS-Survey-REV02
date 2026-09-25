@@ -113,18 +113,16 @@ console.log("A2 Navigation Ready");
    BASELINE WEBAPP 2.0
    GROUP 1 — CORE SYSTEM
    A3 — PROJECT WORKFLOW
-   Status : REV01
-   Phụ thuộc : A1 + A2 + DB
+   REV02
 ========================================================= */
 
 let currentProject = null;
 
-/* ---------- Draft Banner ---------- */
+/* ---------- Banner ---------- */
 
 async function refreshDraftBanner(){
 
     const draft = await DB.getDraftProject();
-
     const banner = $("draftBanner");
 
     if(!banner) return;
@@ -138,7 +136,7 @@ async function refreshDraftBanner(){
     }
 }
 
-/* ---------- Tạo công trình mới ---------- */
+/* ---------- New Project ---------- */
 
 function openNewProject(){
 
@@ -151,7 +149,7 @@ function openNewProject(){
     showScreen("screenProject");
 }
 
-/* ---------- Lưu Project ---------- */
+/* ---------- Save ---------- */
 
 async function saveProject(){
 
@@ -160,18 +158,18 @@ async function saveProject(){
     const location = $("projectLocation").value.trim();
 
     if(name === ""){
-        alert("Vui lòng nhập tên công trình");
+        alert("Nhập tên công trình");
         return;
     }
 
     const project = {
-        id : currentProject?.id || crypto.randomUUID(),
+        id: currentProject?.id || crypto.randomUUID(),
         name,
         code,
         location,
-        status : "draft",
-        createdAt : currentProject?.createdAt || Date.now(),
-        updatedAt : Date.now()
+        status: "draft",
+        createdAt: currentProject?.createdAt || Date.now(),
+        updatedAt: Date.now()
     };
 
     await DB.saveProject(project);
@@ -181,10 +179,12 @@ async function saveProject(){
     $("surveyProjectTitle").textContent = project.name;
     $("linearProjectName").textContent = project.name;
 
+    console.log("A3 SAVE OK");
+
     showScreen("screenSurveyHome");
 }
 
-/* ---------- Tiếp tục Draft ---------- */
+/* ---------- Continue ---------- */
 
 async function continueDraft(){
 
@@ -203,7 +203,7 @@ async function continueDraft(){
     showScreen("screenSurveyHome");
 }
 
-/* ---------- Trở về Home ---------- */
+/* ---------- Home ---------- */
 
 async function backToHome(){
 
@@ -212,16 +212,12 @@ async function backToHome(){
     showScreen("screenProjectHome");
 }
 
-/* ---------- Events ---------- */
+/* ---------- Bind Event ---------- */
 
-$("btnNewProject")?.addEventListener("click", openNewProject);
+$("btnNewProject")?.onclick = openNewProject;
+$("btnSaveProject")?.onclick = saveProject;
+$("btnContinueDraft")?.onclick = continueDraft;
+$("btnBackHome")?.onclick = backToHome;
+$("btnBackProject")?.onclick = backToHome;
 
-$("btnSaveProject")?.addEventListener("click", saveProject);
-
-$("btnContinueDraft")?.addEventListener("click", continueDraft);
-
-$("btnBackHome")?.addEventListener("click", backToHome);
-
-$("btnBackProject")?.addEventListener("click", backToHome);
-
-console.log("A3 Project Workflow Ready");
+console.log("A3 Project Ready");
