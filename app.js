@@ -1,15 +1,22 @@
 /* =========================================================
-   CORE SYSTEM
-   A1 — CORE BOOTSTRAP REV01
+   GROUP 1 — CORE SYSTEM
+   A1 — CORE BOOTSTRAP REV02
+   BASELINE WEBAPP 2.0
    Status : LOCKED
-   ========================================================= */
+========================================================= */
 
 'use strict';
 
-/* ---------- DOM Helper ---------- */
+/* =========================================================
+   A1.1 DOM HELPER
+========================================================= */
+
 const $ = (id) => document.getElementById(id);
 
-/* ---------- Screen Registry ---------- */
+/* =========================================================
+   A1.2 SCREEN REGISTRY
+========================================================= */
+
 const SCREENS = [
   "screenSplash",
   "screenProjectHome",
@@ -19,23 +26,26 @@ const SCREENS = [
   "screenPoint"
 ];
 
-/* ---------- Global App State ---------- */
+/* =========================================================
+   A1.3 GLOBAL APPLICATION STATE
+========================================================= */
+
 const AppState = {
 
   currentScreen : "screenSplash",
 
   project : {
-    id        : null,
-    name      : "",
-    code      : "",
-    location  : "",
-    status    : "draft"
+    id       : null,
+    name     : "",
+    code     : "",
+    location : "",
+    status   : "draft"
   },
 
   survey : {
-    type      : null,
-    pointCount: 0,
-    length    : 0
+    type       : null,
+    pointCount : 0,
+    length     : 0
   },
 
   gps : {
@@ -47,7 +57,10 @@ const AppState = {
 
 };
 
-/* ---------- Screen Controller ---------- */
+/* =========================================================
+   A1.4 SCREEN CONTROLLER
+========================================================= */
+
 function showScreen(screenId){
 
   SCREENS.forEach(id=>{
@@ -57,167 +70,32 @@ function showScreen(screenId){
   $(screenId)?.classList.add("active");
 
   AppState.currentScreen = screenId;
-}
 
-/* ---------- App Ready ---------- */
-console.log("TGS Platform Genesis 2.0");
-console.log("A1 Core Bootstrap Ready");
+}
 
 /* =========================================================
-   CORE SYSTEM
-   A2 — NAVIGATION ENGINE REV01
-   Status : LOCKED
-   ========================================================= */
-
-/* ---------- Navigation API ---------- */
-
-function goHome() {
-  showScreen("screenProjectHome");
-}
-
-function goSplash() {
-  showScreen("screenSplash");
-}
-
-function goProjectForm() {
-  showScreen("screenProject");
-}
-
-function goSurveyHome() {
-  showScreen("screenSurveyHome");
-}
-
-function goLinearSurvey() {
-  showScreen("screenLinear");
-}
-
-function goPointSurvey() {
-  showScreen("screenPoint");
-}
-
-/* ---------- Event Binding ---------- */
-
-$("btnStart")?.addEventListener("click", goHome);
-
-$("btnBackHome")?.addEventListener("click", goHome);
-
-$("btnBackProject")?.addEventListener("click", goProjectForm);
-
-$("btnExitLinear")?.addEventListener("click", goSurveyHome);
-
-$("btnExitPoint")?.addEventListener("click", goSurveyHome);
-
-console.log("A2 Navigation Ready");
-
-/* =========================================================
-   BASELINE WEBAPP 2.0
-   GROUP 1 — CORE SYSTEM
-   A3 — PROJECT WORKFLOW
-   REV02
+   A1.5 SPLASH BOOTSTRAP
 ========================================================= */
 
-let currentProject = null;
+function bootSplash(){
 
-/* ---------- Banner ---------- */
+  showScreen("screenSplash");
 
-async function refreshDraftBanner(){
-
-    const draft = await DB.getDraftProject();
-    const banner = $("draftBanner");
-
-    if(!banner) return;
-
-    if(draft){
-        banner.classList.remove("hidden");
-        currentProject = draft;
-    }else{
-        banner.classList.add("hidden");
-        currentProject = null;
-    }
 }
 
-/* ---------- New Project ---------- */
+/* =========================================================
+   A1.6 SYSTEM READY
+========================================================= */
 
-function openNewProject(){
+document.addEventListener("DOMContentLoaded",()=>{
 
-    currentProject = null;
+  bootSplash();
 
-    $("projectName").value = "";
-    $("projectCode").value = "";
-    $("projectLocation").value = "";
+  console.log("TGS Platform Genesis 2.0");
+  console.log("Baseline WebApp 2.0");
+  console.log("A1 Core Bootstrap Ready");
 
-    showScreen("screenProject");
-}
+});
 
-/* ---------- Save ---------- */
+/* ======================== END A1 ========================= */
 
-async function saveProject(){
-
-    const name = $("projectName").value.trim();
-    const code = $("projectCode").value.trim();
-    const location = $("projectLocation").value.trim();
-
-    if(name === ""){
-        alert("Nhập tên công trình");
-        return;
-    }
-
-    const project = {
-        id: currentProject?.id || crypto.randomUUID(),
-        name,
-        code,
-        location,
-        status: "draft",
-        createdAt: currentProject?.createdAt || Date.now(),
-        updatedAt: Date.now()
-    };
-
-    await DB.saveProject(project);
-
-    currentProject = project;
-
-    $("surveyProjectTitle").textContent = project.name;
-    $("linearProjectName").textContent = project.name;
-
-    console.log("A3 SAVE OK");
-
-    showScreen("screenSurveyHome");
-}
-
-/* ---------- Continue ---------- */
-
-async function continueDraft(){
-
-    const draft = await DB.getDraftProject();
-
-    if(!draft){
-        alert("Không có công trình chưa hoàn thành");
-        return;
-    }
-
-    currentProject = draft;
-
-    $("surveyProjectTitle").textContent = draft.name;
-    $("linearProjectName").textContent = draft.name;
-
-    showScreen("screenSurveyHome");
-}
-
-/* ---------- Home ---------- */
-
-async function backToHome(){
-
-    await refreshDraftBanner();
-
-    showScreen("screenProjectHome");
-}
-
-/* ---------- Bind Event ---------- */
-
-$("btnNewProject")?.onclick = openNewProject;
-$("btnSaveProject")?.onclick = saveProject;
-$("btnContinueDraft")?.onclick = continueDraft;
-$("btnBackHome")?.onclick = backToHome;
-$("btnBackProject")?.onclick = backToHome;
-
-console.log("A3 Project Ready");
