@@ -107,3 +107,118 @@ $("btnExitLinear")?.addEventListener("click", goSurveyHome);
 $("btnExitPoint")?.addEventListener("click", goSurveyHome);
 
 console.log("A2 Navigation Ready");
+/* =========================================================
+   CORE SYSTEM
+   A3 — PROJECT WORKFLOW REV01
+   Status : QA
+   ========================================================= */
+
+/* ---------- Draft Banner ---------- */
+
+async function refreshDraftBanner(){
+
+  const draft = await DB.getDraft();
+
+  if(draft){
+
+    AppState.project = {...draft};
+
+    $("draftBanner")?.classList.remove("hidden");
+
+  }else{
+
+    $("draftBanner")?.classList.add("hidden");
+
+  }
+
+}
+
+/* ---------- New Project ---------- */
+
+function openNewProject(){
+
+  $("projectName").value     = AppState.project.name || "";
+  $("projectCode").value     = AppState.project.code || "";
+  $("projectLocation").value = AppState.project.location || "";
+
+  goProjectForm();
+
+}
+
+/* ---------- Save Draft ---------- */
+
+async function saveProject(){
+
+  const name = $("projectName").value.trim();
+  const code = $("projectCode").value.trim();
+  const location = $("projectLocation").value.trim();
+
+  if(!name){
+    alert("Vui lòng nhập tên công trình");
+    return;
+  }
+
+  const draft = {
+
+    id : AppState.project.id || Date.now(),
+
+    name,
+    code,
+    location,
+
+    status : "draft",
+    updatedAt : Date.now()
+
+  };
+
+  await DB.saveDraft(draft);
+
+  AppState.project = {...draft};
+
+  $("surveyProjectTitle").textContent = draft.name;
+
+  goSurveyHome();
+
+}
+
+/* ---------- Continue Draft ---------- */
+
+async function continueDraft(){
+
+  const draft = await DB.getDraft();
+
+  if(!draft) return;
+
+  AppState.project = {...draft};
+
+  $("surveyProjectTitle").textContent = draft.name;
+
+  goSurveyHome();
+
+}
+
+/* ---------- Navigation Override ---------- */
+
+const _goHome = goHome;
+
+goHome = async function(){
+
+  _goHome();
+
+  await refreshDraftBanner();
+
+};
+
+/* ---------- Events ---------- */
+
+$("btnNewProject")?.addEventListener("click", openNewProject);
+
+$("btnSaveProject")?.addEventListener("click", saveProject);
+
+$("btnContinueDraft")?.addEventListener("click", continueDraft);
+
+/* ---------- Init ---------- */
+
+refreshDraftBanner();
+
+console.log("A3 Project Workflow Ready");
