@@ -103,14 +103,19 @@ document.addEventListener("DOMContentLoaded",()=>{
    CORE SYSTEM
    A2 — NAVIGATION ENGINE REV02
    Status : QA
-   Phụ thuộc : A1
-   ========================================================= */
+   Theo WA2 / TGS-HO-301
+   Trách nhiệm:
+   - Điều hướng giữa các màn hình
+   - Back Navigation
+   - Gắn Event Listener
+   Không làm:
+   - DB
+   - GPS
+   - Leaflet
+   - Lưu dữ liệu
+========================================================= */
 
-/* ---------- Navigation API ---------- */
-
-function goSplash() {
-  showScreen("screenSplash");
-}
+/* ---------- Public API ---------- */
 
 function goHome() {
   showScreen("screenProjectHome");
@@ -132,32 +137,44 @@ function goPoint() {
   showScreen("screenPoint");
 }
 
-/* ---------- Register Buttons ---------- */
-
-function registerNavigation() {
-
-  $("btnStart")?.addEventListener("click", goHome);
-
-  $("btnNewProject")?.addEventListener("click", goProject);
-
-  $("btnBackProject")?.addEventListener("click", goHome);
-
-  $("btnBackSurvey")?.addEventListener("click", goProject);
-
-  $("btnSurveyLine")?.addEventListener("click", goLinear);
-
-  $("btnSurveyPoint")?.addEventListener("click", goPoint);
-
-  $("btnBackLinear")?.addEventListener("click", goSurveyHome);
-
-  $("btnBackPoint")?.addEventListener("click", goSurveyHome);
+function goSavedProject() {
+  showScreen("screenSavedProject");
 }
 
-/* ---------- Auto Initialize ---------- */
+/* ---------- Event Binding ---------- */
 
-registerNavigation();
+function bindNavigation() {
+
+  // Splash
+  $("btnStart")?.addEventListener("click", goHome);
+
+  // Home
+  $("btnNewProject")?.addEventListener("click", goProject);
+  $("btnOpenProject")?.addEventListener("click", goSavedProject);
+
+  // Project
+  $("btnBackProject")?.addEventListener("click", goHome);
+
+  // Lưu project -> chỉ điều hướng
+  $("btnSaveProject")?.addEventListener("click", goSurveyHome);
+
+  // Survey Home
+  $("btnBackSurvey")?.addEventListener("click", goProject);
+  $("btnSurveyLine")?.addEventListener("click", goLinear);
+  $("btnSurveyPoint")?.addEventListener("click", goPoint);
+
+  // Linear
+  $("btnBackLinear")?.addEventListener("click", goSurveyHome);
+
+  // Point
+  $("btnBackPoint")?.addEventListener("click", goSurveyHome);
+
+  // Saved Project
+  $("btnBackSaved")?.addEventListener("click", goHome);
+}
+
+/* ---------- Initialize ---------- */
+
+bindNavigation();
 
 console.log("A2 Navigation Ready");
-
-/* ======================== END A2 ========================= */
-
