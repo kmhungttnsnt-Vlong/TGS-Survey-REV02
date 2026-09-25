@@ -180,104 +180,56 @@ bindNavigation();
 console.log("A2 Navigation Ready");
 
 /* =========================================================
-   GROUP 1 — CORE SYSTEM
-   A3 — PROJECT LIFECYCLE REV01
-   BASELINE WEBAPP 2.0
+   A3 — PROJECT WORKFLOW REV02
    Status : QA
-========================================================= */
+   WA2 Baseline
+   ========================================================= */
 
-/* ---------- Banner ---------- */
+/* ---------- Banner Draft ---------- */
+function refreshProjectBanner() {
 
-async function refreshDraftBanner(){
+  const banner = $("bannerDraft");
+  const btn = $("btnResumeProject");
 
-  const draft = await loadDraft();
+  const hasDraft =
+      AppState.project.name !== "" &&
+      AppState.project.status === "draft";
 
-  const banner = $("draftBanner");
-
-  if(!banner) return;
-
-  if(draft){
-    banner.classList.remove("hidden");
-    AppState.project = draft;
-  }else{
-    banner.classList.add("hidden");
-  }
-
+  if (banner) banner.style.display = hasDraft ? "flex" : "none";
+  if (btn) btn.style.display = hasDraft ? "inline-flex" : "none";
 }
 
-/* ---------- New Project ---------- */
-
-function openNewProject(){
+/* ---------- Lưu Form Công Trình ---------- */
+function saveProjectWorkflow() {
 
   AppState.project = {
-    id       : null,
-    name     : "",
-    code     : "",
-    location : "",
-    status   : "draft"
+    id: Date.now(),
+    name: $("projectName").value.trim(),
+    code: $("projectCode").value.trim(),
+    location: $("projectLocation").value.trim(),
+    status: "draft"
   };
 
-  $("projectName").value     = "";
-  $("projectCode").value     = "";
-  $("projectLocation").value = "";
-
+  refreshProjectBanner();
+  goSurveyHome();
 }
 
-/* ---------- Save Workflow ---------- */
+/* ---------- Tiếp tục Draft ---------- */
+function resumeDraftProject() {
 
-async function saveProjectWorkflow(){
-
-  const name = $("projectName").value.trim();
-
-  if(name===""){
-    alert("Vui lòng nhập tên công trình");
-    return;
+  if (AppState.project.status === "draft") {
+    goSurveyHome();
   }
-
-  AppState.project = {
-    id       : AppState.project.id || crypto.randomUUID(),
-    name,
-    code     : $("projectCode").value.trim(),
-    location : $("projectLocation").value.trim(),
-    status   : "draft"
-  };
-
-  await saveProject(AppState.project);
-
 }
 
-/* ---------- Continue Draft ---------- */
+/* ---------- Sự kiện ---------- */
+$("btnSaveProject")?.addEventListener("click", saveProjectWorkflow);
+$("btnResumeProject")?.addEventListener("click", resumeDraftProject);
 
-async function continueDraft(){
+/* ---------- Khởi tạo ---------- */
+refreshProjectBanner();
 
-  const draft = await loadDraft();
-
-  if(!draft){
-    alert("Không có công trình chưa hoàn thành");
-    return;
-  }
-
-  AppState.project = draft;
-
-}
-
-/* ---------- Home ---------- */
-
-async function backToHome(){
-
-  await refreshDraftBanner();
-
-}
-
-/* ---------- Event ---------- */
-
-$("btnNewProject")?.addEventListener("click",openNewProject);
-
-$("btnSaveProject")?.addEventListener("click",saveProjectWorkflow);
-
-$("btnContinueDraft")?.addEventListener("click",continueDraft);
-
-console.log("A3 Project Lifecycle Ready");
+console.log("A3 Project Workflow Ready");
 
 /* =========================================================
    GROUP 1 — CORE SYSTEM
