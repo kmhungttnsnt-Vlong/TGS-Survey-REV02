@@ -1,19 +1,21 @@
 /* ==========================================================
    TGS PLATFORM GENESIS 2.0
-   APP.JS — A1 REV02
-   CORE BOOTSTRAP + SCREEN ROUTER
-   BASELINE LOCKED
+   APP.JS
+   BLOCK A1 REV04 (LOCKED)
+   CORE FRAMEWORK
 ========================================================== */
 
 /* ==========================================================
-   A1.1 APP STATE
+   A1.1 APPLICATION STATE
 ========================================================== */
 
 const APP = {
 
     currentScreen : "screenSplash",
 
-    project : null
+    currentProject : null,
+
+    initialized : false
 
 };
 
@@ -31,7 +33,7 @@ function $(id){
    A1.3 SCREEN REGISTRY
 ========================================================== */
 
-const SCREENS = [
+const SCREEN_IDS = [
 
     "screenSplash",
 
@@ -48,72 +50,65 @@ const SCREENS = [
 ];
 
 /* ==========================================================
-   A1.4 ROUTER
+   A1.4 SCREEN ROUTER
 ========================================================== */
 
-function showScreen(id){
+function showScreen(screenId){
 
-    SCREENS.forEach(screen=>{
+    SCREEN_IDS.forEach(id=>{
 
-        const el = $(screen);
+        const el = $(id);
 
-        if(el) el.classList.remove("active");
+        if(el){
+
+            el.classList.remove("active");
+
+        }
 
     });
 
-    const target = $(id);
+    const target = $(screenId);
 
     if(target){
 
         target.classList.add("active");
 
-        APP.currentScreen = id;
+        APP.currentScreen = screenId;
 
     }
 
 }
 
 /* ==========================================================
-   A1.5 BOOTSTRAP
+   A1.5 CORE INITIALIZATION
 ========================================================== */
 
-document.addEventListener("DOMContentLoaded",()=>{
+function initApp(){
 
-    // Splash
-    $("btnStart")?.addEventListener("click",goHome);
+    if(APP.initialized) return;
 
-    // Home
-    $("btnNewProject")?.addEventListener("click",goProject);
+    APP.initialized = true;
 
-    $("btnContinueDraft")?.addEventListener("click",continueDraft);
-
-    $("btnOpenProject")?.addEventListener("click",openSavedProjects);
-
-    // Project
-    $("btnBackHome")?.addEventListener("click",goHome);
-
-    $("btnSaveProject")?.addEventListener("click",createNewProject);
-
-    // Survey Home
-    $("btnBackProject")?.addEventListener("click",goHome);
-
-    $("btnPointSurvey")?.addEventListener("click",goPoint);
-
-    $("btnLinearSurvey")?.addEventListener("click",goLinear);
-
-    // Exit
-    $("btnExitPoint")?.addEventListener("click",goSurvey);
-
-    $("btnExitLinear")?.addEventListener("click",goSurvey);
-
-    // Initial Screen
     showScreen("screenSplash");
 
-});
+    console.log("TGS A1 REV04 READY");
+
+}
 
 /* ==========================================================
-   END A1
+   A1.6 BOOTSTRAP
 ========================================================== */
+
+document.addEventListener(
+
+    "DOMContentLoaded",
+
+    initApp
+
+);
+
+/* ================= END A1 ================= */
+
 /* =========================================================
    APP.JS — A2
    Navigation & Event Binding
