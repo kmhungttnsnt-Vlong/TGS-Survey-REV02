@@ -180,64 +180,67 @@ bindNavigation();
 console.log("A2 Navigation Ready");
 
 /* =========================================================
-   A3 — PROJECT WORKFLOW REV03
-   WA2 Baseline
+   A3 — PROJECT WORKFLOW REV01
+   WA2 / TGS-HO-301
    Status : QA
    ========================================================= */
 
 /* ---------- Banner Draft ---------- */
 
-function refreshProjectBanner(){
+function refreshProjectBanner() {
+
+  const banner = $("bannerDraft");
+
+  if (!banner) return;
 
   const hasDraft =
-      AppState.project.status === "draft" &&
-      AppState.project.name !== "";
+    AppState.project.status === "draft" &&
+    AppState.project.name !== "";
 
-  $("bannerDraft")?.classList.toggle("hidden", !hasDraft);
+  banner.classList.toggle("hidden", !hasDraft);
 }
 
 /* ---------- Xóa Form ---------- */
 
-function clearProjectForm(){
+function clearProjectForm() {
 
   $("projectName").value = "";
   $("projectCode").value = "";
   $("projectLocation").value = "";
+
 }
 
-/* ---------- Tạo công trình mới ---------- */
+/* ---------- Mở Form Tạo mới ---------- */
 
-const _goProject = goProject;
-
-goProject = function(){
+$("btnNewProject")?.addEventListener("click", () => {
 
   clearProjectForm();
-  _goProject();
+  goProject();
 
-};
-
-/* ---------- Quay về Home ---------- */
-
-const _goHome = goHome;
-
-goHome = function(){
-
-  refreshProjectBanner();
-  _goHome();
-
-};
+});
 
 /* ---------- Lưu Workflow ---------- */
 
-function saveProjectWorkflow(){
+function saveProjectWorkflow() {
 
-  AppState.project = {
-    id: Date.now(),
-    name: $("projectName").value.trim(),
-    code: $("projectCode").value.trim(),
-    location: $("projectLocation").value.trim(),
-    status: "draft"
-  };
+  const name = $("projectName").value.trim();
+  const code = $("projectCode").value.trim();
+  const location = $("projectLocation").value.trim();
+
+  if (!name || !code || !location) {
+
+    alert("Vui lòng nhập đầy đủ thông tin công trình.");
+    return;
+
+  }
+
+  AppState.project.id = Date.now();
+  AppState.project.name = name;
+  AppState.project.code = code;
+  AppState.project.location = location;
+  AppState.project.status = "draft";
+
+  refreshProjectBanner();
 
   goSurveyHome();
 
@@ -245,20 +248,21 @@ function saveProjectWorkflow(){
 
 /* ---------- Tiếp tục Draft ---------- */
 
-function resumeDraftProject(){
+function resumeDraftProject() {
 
-  if(AppState.project.status === "draft"){
+  if (AppState.project.status !== "draft") return;
 
-    goSurveyHome();
-
-  }
+  goSurveyHome();
 
 }
 
 /* ---------- Event ---------- */
 
 $("btnSaveProject")?.addEventListener("click", saveProjectWorkflow);
+
 $("btnResumeProject")?.addEventListener("click", resumeDraftProject);
+
+/* ---------- Khởi tạo ---------- */
 
 refreshProjectBanner();
 
