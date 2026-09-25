@@ -62,3 +62,48 @@ function showScreen(screenId){
 /* ---------- App Ready ---------- */
 console.log("TGS Platform Genesis 2.0");
 console.log("A1 Core Bootstrap Ready");
+/* =========================================================
+   CORE SYSTEM
+   A2 — NAVIGATION ENGINE REV01
+   Status : LOCKED
+   ========================================================= */
+
+/* ---------- Navigation API ---------- */
+
+function goHome() {
+  showScreen("screenProjectHome");
+}
+
+function goSplash() {
+  showScreen("screenSplash");
+}
+
+function goProjectForm() {
+  showScreen("screenProject");
+}
+
+function goSurveyHome() {
+  showScreen("screenSurveyHome");
+}
+
+function goLinearSurvey() {
+  showScreen("screenLinear");
+}
+
+function goPointSurvey() {
+  showScreen("screenPoint");
+}
+
+/* ---------- Event Binding ---------- */
+
+$("btnStart")?.addEventListener("click", goHome);
+
+$("btnBackHome")?.addEventListener("click", goHome);
+
+$("btnBackProject")?.addEventListener("click", goProjectForm);
+
+$("btnExitLinear")?.addEventListener("click", goSurveyHome);
+
+$("btnExitPoint")?.addEventListener("click", goSurveyHome);
+
+console.log("A2 Navigation Ready");
