@@ -180,27 +180,56 @@ bindNavigation();
 console.log("A2 Navigation Ready");
 
 /* =========================================================
-   A3 — PROJECT WORKFLOW REV02
-   Status : QA
+   A3 — PROJECT WORKFLOW REV03
    WA2 Baseline
+   Status : QA
    ========================================================= */
 
 /* ---------- Banner Draft ---------- */
-function refreshProjectBanner() {
 
-  const banner = $("bannerDraft");
-  const btn = $("btnResumeProject");
+function refreshProjectBanner(){
 
   const hasDraft =
-      AppState.project.name !== "" &&
-      AppState.project.status === "draft";
+      AppState.project.status === "draft" &&
+      AppState.project.name !== "";
 
-  if (banner) banner.style.display = hasDraft ? "flex" : "none";
-  if (btn) btn.style.display = hasDraft ? "inline-flex" : "none";
+  $("bannerDraft")?.classList.toggle("hidden", !hasDraft);
 }
 
-/* ---------- Lưu Form Công Trình ---------- */
-function saveProjectWorkflow() {
+/* ---------- Xóa Form ---------- */
+
+function clearProjectForm(){
+
+  $("projectName").value = "";
+  $("projectCode").value = "";
+  $("projectLocation").value = "";
+}
+
+/* ---------- Tạo công trình mới ---------- */
+
+const _goProject = goProject;
+
+goProject = function(){
+
+  clearProjectForm();
+  _goProject();
+
+};
+
+/* ---------- Quay về Home ---------- */
+
+const _goHome = goHome;
+
+goHome = function(){
+
+  refreshProjectBanner();
+  _goHome();
+
+};
+
+/* ---------- Lưu Workflow ---------- */
+
+function saveProjectWorkflow(){
 
   AppState.project = {
     id: Date.now(),
@@ -210,23 +239,27 @@ function saveProjectWorkflow() {
     status: "draft"
   };
 
-  refreshProjectBanner();
   goSurveyHome();
+
 }
 
 /* ---------- Tiếp tục Draft ---------- */
-function resumeDraftProject() {
 
-  if (AppState.project.status === "draft") {
+function resumeDraftProject(){
+
+  if(AppState.project.status === "draft"){
+
     goSurveyHome();
+
   }
+
 }
 
-/* ---------- Sự kiện ---------- */
+/* ---------- Event ---------- */
+
 $("btnSaveProject")?.addEventListener("click", saveProjectWorkflow);
 $("btnResumeProject")?.addEventListener("click", resumeDraftProject);
 
-/* ---------- Khởi tạo ---------- */
 refreshProjectBanner();
 
 console.log("A3 Project Workflow Ready");
