@@ -1,0 +1,90 @@
+/* =========================================================
+   TGS PLATFORM GENESIS 2.0
+   MODULE: VN2000.JS — COORDINATE TRANSFORMATION
+   WGS84 (BL) -> VN2000 TM (XY)
+========================================================= */
+
+const VN2000 = (() => {
+
+    // Tham số Elipsoid WGS-84 dùng cho VN-2000
+    const a = 6378137.0;             // Bán trục lớn
+    const f = 1 / 298.257223563;     // Độ dẹt
+    const b = a * (1 - f);           // Bán trục nhỏ
+    const e2 = (a * a - b * b) / (a * a); // e^2
+    const ePrime2 = (a * a - b * b) / (b * b); // e'^2
+
+    // Danh bạ kinh tuyến trục (L0) phổ biến (độ thập phân)
+    const MERIDIANS = {
+        "HANOI": 105.0,
+        "HOCHIMINH": 105.75,
+        "DANANG": 107.75,
+        "CANTHO": 105.0,
+        "BINHDUONG": 105.75,
+        "DONGNAI": 107.0,
+        "LONGAN": 105.5,
+        "TIENGIANG": 105.75,
+        "VINHLONG": 105.5,
+        "TRAVINH": 106.0,
+        "DEFAULT": 105.0 // Kinh tuyến trục mặc định (Múi 3°)
+    };
+
+    /**
+     * Chuyển đổi từ WGS84 (Latitude, Longitude thập phân) sang VN-2000 (X - Bắc, Y - Đông)
+     * @param {number} lat - Vĩ độ (WGS84 Latitude)
+     * @param {number} lon - Kinh độ (WGS84 Longitude)
+     * @param {number} centralMeridian - Kinh tuyến trục L0 (VD: 105.0, 105.75...)
+     * @param {number} scaleFactor - Hệ số co giãn k0 (Múi 3° là 0.9999; Múi 6° là 0.9996)
+     * @returns {{x: number, y: number, text: string}}
+     */
+    function forward(lat, lon, centralMeridian = 105.0, scaleFactor = 0.9999) {
+        const phi = (lat * Math.PI) / 180;
+        const lambda = (lon * Math.PI) / 180;
+        const lambda0 = (centralMeridian * Math.PI) / 180;
+
+        const k0 = scaleFactor;
+        const falseEasting = 500000.0;
+        const falseNorthing = 0.0;
+
+        const deltaLambda = lambda - lambda0;
+
+        // Bán kính cong chính
+        const N = a / Math.sqrt(1 - e2 * Math.sin(phi) * Math.sin(phi));
+        const T = Math.tan(phi) * Math.tan(phi);
+        const C = ePrime2 * Math.cos(phi) * Math.cos(phi);
+        const A = deltaLambda * Math.cos(phi);
+
+        // Chiều dài cung kinh tuyến M
+        const M = a * (
+            (1 - e2 / 4 - 3 * Math.pow(e2, 2) / 64 - 5 * Math.pow(e2, 3) / 256) * phi
+            - (3 * e2 / 8 + 3 * Math.pow(e2, 2) / 32 + 45 * Math.pow(e2, 3) / 1024) * Math.sin(2 * phi)
+            + (15 * Math.pow(e2, 2) / 256 + 45 * Math.pow(e2, 3) / 1024) * Math.sin(4 * phi)
+            - (35 * Math.pow(e2, 3) / 3072) * Math.sin(6 * phi)
+        );
+
+        // Tọa độ Easting (Y)
+        const y = falseEasting + k0 * N * (
+            A + (1 - T + C) * Math.pow(A, 3) / 6
+            + (5 - 18 * T + Math.pow(T, 2) + 72 * C - 58 * ePrime2) * Math.pow(A, 5) / 120
+        );
+
+        // Tọa độ Northing (X)
+        const x = falseNorthing + k0 * (
+            M + N * Math.tan(phi) * (
+                Math.pow(A, 2) / 2
+                + (5 - T + 9 * C + 4 * Math.pow(C, 2)) * Math.pow(A, 4) / 24
+                + (61 - 58 * T + Math.pow(T, 2) + 600 * C - 330 * ePrime2) * Math.pow(A, 6) / 720
+            )
+        );
+
+        return {
+            x: Number(x.toFixed(3)),
+            y: Number(y.toFixed(3)),
+            text: `X:${x.toFixed(2)} | Y:${y.toFixed(2)}`
+        };
+    }
+
+    return {
+        forward,
+        MERIDIANS
+    };
+})();
