@@ -1,16 +1,28 @@
 /* =========================================================
    TGS PLATFORM GENESIS 2.0
-   BASELINE B4 — APP.JS (LOGIC CONTRACT)
-   MODULES: A1-A4 (CORE), L1-L5 (LINEAR), P1-P2 (POINT), Z1 (INIT)
+   BASELINE B4 — APP.JS (LOGIC CONTRACT - FULL QA READY)
+   MODULES:
+     - A1 Core Bootstrap & State
+     - A2 Navigation Engine
+     - A3 Project Lifecycle
+     - A4 Persistence Gateway
+     - L1 Resume Manager
+     - L2 MapEngine (GIS Core)
+     - L3 GPSManager (Smart GNSS - 20 Samples Weighted QA-03)
+     - L4 Survey Line Logic
+     - L5 GIS Layer Engine
+     - P1 Station Workflow & P2 Point GPS
+     - P6 Sync Builder & QA-05 Dataset Export
+     - Z1 Initialize (Bootstrap Assembler)
 ========================================================= */
 
 const TGS = (() => {
 
     /* =====================================================
-       COORDINATE TRANSFORMATION HELPER: VN-2000
-       Phép chiếu TM WGS84 -> VN2000 (Múi 3° k0 = 0.9999)
+       COORDINATE TRANSFORMATION SERVICE (VN-2000 ENGINE)
+       Chuẩn quy chuẩn đo đạc: Múi 3° (k0 = 0.9999, X0 = 500,000m)
     ===================================================== */
-    const VN2000Engine = {
+    const VN2000Service = {
         forward(lat, lon, L0 = 105.5) {
             const a = 6378137.0;
             const f = 1 / 298.257223563;
@@ -18,7 +30,7 @@ const TGS = (() => {
             const e2 = (a * a - b * b) / (a * a);
             const ePrime2 = (a * a - b * b) / (b * b);
             const k0 = 0.9999;
-            const x0 = 500000.0;
+            const falseEasting = 500000.0;
 
             const phi = (lat * Math.PI) / 180;
             const lambda = (lon * Math.PI) / 180;
@@ -37,7 +49,7 @@ const TGS = (() => {
                 - (35 * Math.pow(e2, 3) / 3072) * Math.sin(6 * phi)
             );
 
-            const y = x0 + k0 * N * (
+            const y = falseEasting + k0 * N * (
                 A + (1 - T + C) * Math.pow(A, 3) / 6
                 + (5 - 18 * T + Math.pow(T, 2) + 72 * C - 58 * ePrime2) * Math.pow(A, 5) / 120
             );
@@ -51,8 +63,9 @@ const TGS = (() => {
             );
 
             return {
-                x: Number(x.toFixed(2)),
-                y: Number(y.toFixed(2))
+                x: Number(x.toFixed(3)),
+                y: Number(y.toFixed(3)),
+                text: `X:${x.toFixed(2)} | Y:${y.toFixed(2)}`
             };
         }
     };
@@ -64,7 +77,7 @@ const TGS = (() => {
         currentProject: null,
         lastPosition: null,
         tempStationGPS: null,
-        activeScreen: "screenSplash"
+        isSampling: false
     };
 
     /* =====================================================
@@ -82,18 +95,17 @@ const TGS = (() => {
         },
 
         show(screenKey) {
-            Object.values(Navigation.screens).forEach(el => {
-                if (el) el.classList.remove("active");
+            Object.values(Navigation.screens).forEach(scr => {
+                if (scr) scr.classList.remove("active");
             });
 
             const target = Navigation.screens[screenKey];
             if (target) {
                 target.classList.add("active");
-                State.activeScreen = target.id;
             }
 
             if (screenKey === "linear") {
-                setTimeout(() => MapEngine.invalidate(), 200);
+                setTimeout(() => MapEngine.invalidate(), 250);
             }
         }
     };
@@ -106,7 +118,7 @@ const TGS = (() => {
             if (typeof DB !== "undefined") {
                 return DB.init();
             }
-            return Promise.resolve(false);
+            return Promise.reject(new Error("Không tìm thấy DB.js"));
         },
 
         async getDraft() {
@@ -144,7 +156,7 @@ const TGS = (() => {
                     banner.classList.add("hidden");
                 }
             } catch (err) {
-                console.warn("[ProjectLifecycle] Không tìm thấy bản nháp:", err);
+                console.warn("[ProjectLifecycle] Kiểm tra bản nháp:", err);
             }
         },
 
@@ -154,7 +166,7 @@ const TGS = (() => {
             const location = document.getElementById("projectLocation").value.trim();
 
             if (!name || !code) {
-                alert("Vui lòng điền tên và mã công trình.");
+                alert("Vui lòng nhập tên và mã công trình.");
                 return;
             }
 
@@ -167,6 +179,28 @@ const TGS = (() => {
             if (!State.currentProject) return;
             document.getElementById("surveyProjectTitle").innerText = State.currentProject.name;
             Navigation.show("surveyHome");
+        },
+
+        openCompleteScreen() {
+            if (!State.currentProject) return;
+            const pts = State.currentProject.points || [];
+            const stations = State.currentProject.pointFeatures || [];
+
+            document.getElementById("completeProjectName").innerText = State.currentProject.name;
+            document.getElementById("completeProjectSummary").innerText = `Mã hồ sơ: ${State.currentProject.code} | Địa điểm: ${State.currentProject.location || "Chưa rõ"}`;
+
+            let totalLen = 0;
+            for (let i = 1; i < pts.length; i++) {
+                const p1 = L.latLng(pts[i - 1].lat, pts[i - 1].lng);
+                const p2 = L.latLng(pts[i].lat, pts[i].lng);
+                totalLen += p1.distanceTo(p2);
+            }
+
+            document.getElementById("summaryPoints").innerText = `${pts.length} điểm`;
+            document.getElementById("summaryLength").innerText = totalLen >= 1000 ? `${(totalLen / 1000).toFixed(2)} km` : `${Math.round(totalLen)} m`;
+            document.getElementById("summaryStations").innerText = `${stations.length} đối tượng`;
+
+            Navigation.show("complete");
         }
     };
 
@@ -178,6 +212,7 @@ const TGS = (() => {
         lineLayer: null,
         markerLayer: null,
         currentGPSMarker: null,
+        accuracyCircle: null,
 
         init() {
             if (MapEngine.map) return;
@@ -185,7 +220,7 @@ const TGS = (() => {
             MapEngine.map = L.map("map", { zoomControl: false }).setView([10.762622, 106.660172], 16);
 
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: "© OpenStreetMap contributors",
+                attribution: "© OpenStreetMap contributors | TGS Genesis 2.0",
                 maxZoom: 19
             }).addTo(MapEngine.map);
 
@@ -220,16 +255,35 @@ const TGS = (() => {
                     color: "#FFFFFF",
                     weight: 2,
                     fillOpacity: 1
-                }).bindPopup(`<b>Điểm ${i + 1}</b><br>X: ${pt.vn2000.x}<br>Y: ${pt.vn2000.y}`).addTo(MapEngine.markerLayer);
+                }).bindPopup(`<b>Điểm tim ${i + 1}</b><br>X: ${pt.vn2000.x}<br>Y: ${pt.vn2000.y}<br>Sai số: ±${pt.accuracy}m`).addTo(MapEngine.markerLayer);
             });
 
             MapEngine.lineLayer.setLatLngs(latlngs);
 
             if (latlngs.length > 0) {
-                MapEngine.map.fitBounds(MapEngine.lineLayer.getBounds(), { padding: [30, 30] });
+                MapEngine.map.fitBounds(MapEngine.lineLayer.getBounds(), { padding: [35, 35] });
             }
 
             SurveyLineLogic.calculateMetrics();
+        },
+
+        updateLivePosition(pos) {
+            if (!MapEngine.map) return;
+            MapEngine.map.setView([pos.lat, pos.lng], 18);
+
+            if (!MapEngine.currentGPSMarker) {
+                MapEngine.currentGPSMarker = L.circleMarker([pos.lat, pos.lng], {
+                    radius: 7, fillColor: "#1565C0", color: "#FFFFFF", weight: 2, fillOpacity: 1
+                }).addTo(MapEngine.map);
+
+                MapEngine.accuracyCircle = L.circle([pos.lat, pos.lng], {
+                    radius: pos.accuracy, color: "#1565C0", weight: 1, fillOpacity: 0.15
+                }).addTo(MapEngine.map);
+            } else {
+                MapEngine.currentGPSMarker.setLatLng([pos.lat, pos.lng]);
+                MapEngine.accuracyCircle.setLatLng([pos.lat, pos.lng]);
+                MapEngine.accuracyCircle.setRadius(pos.accuracy);
+            }
         },
 
         zoomIn() { if (MapEngine.map) MapEngine.map.zoomIn(); },
@@ -237,10 +291,13 @@ const TGS = (() => {
     };
 
     /* =====================================================
-       L3: SMART GNSS ENGINE
+       L3: SMART GNSS ENGINE (QA-03: 20 SAMPLES WEIGHTED FILTER)
     ===================================================== */
-    const GPSEngine = {
-        locate(onSuccess) {
+    const GPSManager = {
+        sampleTarget: 20,
+
+        // Lấy nhanh vị trí hiện thời
+        quickLocate(onSuccess) {
             if (!navigator.geolocation) {
                 alert("Thiết bị không hỗ trợ Geolocation.");
                 return;
@@ -253,32 +310,95 @@ const TGS = (() => {
                 pos => {
                     const { latitude, longitude, accuracy } = pos.coords;
                     const L0 = State.currentProject?.meta?.centralMeridian || 105.5;
-                    const vn2000 = VN2000Engine.forward(latitude, longitude, L0);
+                    const vn2000 = VN2000Service.forward(latitude, longitude, L0);
 
-                    State.lastPosition = { lat: latitude, lng: longitude, accuracy, vn2000 };
+                    State.lastPosition = { lat: latitude, lng: longitude, accuracy: Math.round(accuracy), vn2000 };
 
                     gpsText.innerText = "Đã khóa vị trí";
                     document.getElementById("gpsAccuracy").innerText = `± ${Math.round(accuracy)} m`;
                     document.getElementById("vn2000Text").innerText = `${vn2000.x.toFixed(1)}, ${vn2000.y.toFixed(1)}`;
 
-                    if (MapEngine.map) {
-                        MapEngine.map.setView([latitude, longitude], 18);
-                        if (!MapEngine.currentGPSMarker) {
-                            MapEngine.currentGPSMarker = L.circleMarker([latitude, longitude], {
-                                radius: 8, fillColor: "#1565C0", color: "#FFFFFF", weight: 2, fillOpacity: 1
-                            }).addTo(MapEngine.map);
-                        } else {
-                            MapEngine.currentGPSMarker.setLatLng([latitude, longitude]);
-                        }
-                    }
-
+                    MapEngine.updateLivePosition(State.lastPosition);
                     if (typeof onSuccess === "function") onSuccess(State.lastPosition);
                 },
                 err => {
                     gpsText.innerText = "Mất tín hiệu";
                     alert("Lỗi GPS: " + err.message);
                 },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+            );
+        },
+
+        // Thu thập chuỗi 20 mẫu GNSS chính xác cao
+        startSmartGPS(progressCallback, completeCallback) {
+            if (State.isSampling) return;
+            if (!navigator.geolocation) {
+                alert("Thiết bị không hỗ trợ Geolocation.");
+                return;
+            }
+
+            State.isSampling = true;
+            const samples = [];
+            const L0 = State.currentProject?.meta?.centralMeridian || 105.5;
+
+            const watchId = navigator.geolocation.watchPosition(
+                pos => {
+                    const { latitude, longitude, accuracy } = pos.coords;
+                    samples.push({ lat: latitude, lng: longitude, accuracy });
+
+                    if (typeof progressCallback === "function") {
+                        progressCallback(samples.length, GPSManager.sampleTarget);
+                    }
+
+                    if (samples.length >= GPSManager.sampleTarget) {
+                        navigator.geolocation.clearWatch(watchId);
+                        State.isSampling = false;
+
+                        // Tính toán tọa độ đại diện bằng trọng số nghịch đảo phương sai sai số (Inverse-variance weighting)
+                        let sumWeights = 0;
+                        let weightedLat = 0;
+                        let weightedLng = 0;
+                        let minAcc = Infinity;
+
+                        samples.forEach(s => {
+                            const weight = 1 / Math.max(s.accuracy * s.accuracy, 1);
+                            sumWeights += weight;
+                            weightedLat += s.lat * weight;
+                            weightedLng += s.lng * weight;
+                            if (s.accuracy < minAcc) minAcc = s.accuracy;
+                        });
+
+                        const finalLat = weightedLat / sumWeights;
+                        const finalLng = weightedLng / sumWeights;
+                        const finalAcc = Math.round(minAcc);
+                        const finalVN2000 = VN2000Service.forward(finalLat, finalLng, L0);
+
+                        const representative = {
+                            lat: finalLat,
+                            lng: finalLng,
+                            accuracy: finalAcc,
+                            vn2000: finalVN2000,
+                            sampleCount: samples.length
+                        };
+
+                        State.lastPosition = representative;
+                        MapEngine.updateLivePosition(representative);
+
+                        document.getElementById("gpsText").innerText = `Smart GNSS (20/20)`;
+                        document.getElementById("gpsAccuracy").innerText = `± ${finalAcc} m`;
+                        document.getElementById("vn2000Text").innerText = `${finalVN2000.x.toFixed(1)}, ${finalVN2000.y.toFixed(1)}`;
+
+                        if (typeof completeCallback === "function") {
+                            completeCallback(representative);
+                        }
+                    }
+                },
+                err => {
+                    navigator.geolocation.clearWatch(watchId);
+                    State.isSampling = false;
+                    alert("Gián đoạn thu nhận Smart GNSS: " + err.message);
+                },
+                { enableHighAccuracy: true, maximumAge: 0 }
             );
         }
     };
@@ -287,29 +407,38 @@ const TGS = (() => {
        L4: SURVEY LINE LOGIC (FEATURE 01)
     ===================================================== */
     const SurveyLineLogic = {
-        async capturePoint() {
-            if (!State.lastPosition) {
-                GPSEngine.locate(() => SurveyLineLogic.capturePoint());
+        async triggerSmartCapture() {
+            if (!State.currentProject) {
+                alert("Chưa có hồ sơ công trình hiện hành.");
                 return;
             }
 
-            if (!State.currentProject) return;
+            const btnText = document.getElementById("captureBtnText");
 
-            const pointRecord = {
-                id: Date.now().toString(),
-                lat: State.lastPosition.lat,
-                lng: State.lastPosition.lng,
-                accuracy: State.lastPosition.accuracy,
-                vn2000: State.lastPosition.vn2000,
-                timestamp: Date.now()
-            };
+            GPSManager.startSmartGPS(
+                (current, target) => {
+                    btnText.innerText = `Đang gom (${current}/${target})...`;
+                },
+                async (representative) => {
+                    btnText.innerText = "Lấy Smart GPS";
 
-            if (!State.currentProject.points) State.currentProject.points = [];
-            State.currentProject.points.push(pointRecord);
+                    const pointRecord = {
+                        id: Date.now().toString(),
+                        lat: representative.lat,
+                        lng: representative.lng,
+                        accuracy: representative.accuracy,
+                        vn2000: representative.vn2000,
+                        sampleCount: representative.sampleCount,
+                        timestamp: Date.now()
+                    };
 
-            await Persistence.save(State.currentProject);
+                    if (!State.currentProject.points) State.currentProject.points = [];
+                    State.currentProject.points.push(pointRecord);
 
-            MapEngine.renderSurveyData();
+                    await Persistence.save(State.currentProject);
+                    MapEngine.renderSurveyData();
+                }
+            );
         },
 
         calculateMetrics() {
@@ -340,13 +469,22 @@ const TGS = (() => {
             PointSurvey.renderList();
         },
 
-        getGPS() {
-            GPSEngine.locate(pos => {
-                State.tempStationGPS = pos;
-                document.getElementById("pointWGS84Text").innerText = `${pos.lat.toFixed(6)}, ${pos.lng.toFixed(6)}`;
-                document.getElementById("pointVN2000Text").innerText = `X:${pos.vn2000.x} | Y:${pos.vn2000.y}`;
-                document.getElementById("pointAccuracyText").innerText = `± ${Math.round(pos.accuracy)} m`;
-            });
+        getStationGPS() {
+            const btnText = document.getElementById("btnPointGPSText");
+
+            GPSManager.startSmartGPS(
+                (current, target) => {
+                    btnText.innerText = `Đang gom (${current}/${target})...`;
+                },
+                (representative) => {
+                    btnText.innerText = "◎ Thu nhận GNSS trạm";
+                    State.tempStationGPS = representative;
+
+                    document.getElementById("pointWGS84Text").innerText = `${representative.lat.toFixed(6)}, ${representative.lng.toFixed(6)}`;
+                    document.getElementById("pointVN2000Text").innerText = `X:${representative.vn2000.x} | Y:${representative.vn2000.y}`;
+                    document.getElementById("pointAccuracyText").innerText = `± ${representative.accuracy} m (20 mẫu)`;
+                }
+            );
         },
 
         async saveStation() {
@@ -360,7 +498,7 @@ const TGS = (() => {
             }
 
             if (!State.tempStationGPS) {
-                alert("Vui lòng nhấn 'Lấy GPS trạm' trước khi lưu.");
+                alert("Vui lòng bấm 'Thu nhận GNSS trạm' (20 mẫu) trước khi lưu.");
                 return;
             }
 
@@ -371,6 +509,7 @@ const TGS = (() => {
                 note,
                 lat: State.tempStationGPS.lat,
                 lng: State.tempStationGPS.lng,
+                accuracy: State.tempStationGPS.accuracy,
                 vn2000: State.tempStationGPS.vn2000,
                 timestamp: Date.now()
             };
@@ -380,7 +519,7 @@ const TGS = (() => {
 
             await Persistence.save(State.currentProject);
 
-            // Reset Form
+            // Reset UI Form
             document.getElementById("pointNameInput").value = "";
             document.getElementById("pointNoteInput").value = "";
             document.getElementById("pointWGS84Text").innerText = "Chưa thu nhận";
@@ -411,7 +550,7 @@ const TGS = (() => {
                 row.innerHTML = `
                     <div>
                         <strong>${idx + 1}. ${it.name} (${it.type})</strong>
-                        <span>VN2000: X:${it.vn2000.x} | Y:${it.vn2000.y}</span>
+                        <span>VN2000: X:${it.vn2000.x} | Y:${it.vn2000.y} (±${it.accuracy}m)</span>
                     </div>
                     <span style="color:var(--primary); font-weight:700;">✓</span>
                 `;
@@ -421,18 +560,64 @@ const TGS = (() => {
     };
 
     /* =====================================================
-       Z1: APP INITIALIZE & BINDINGS (LOCKED)
+       P6 & QA-05: SYNC BUILDER & DATASET EXPORT
+    ===================================================== */
+    const SyncBuilder = {
+        exportJSON() {
+            if (!State.currentProject) {
+                alert("Không có dữ liệu công trình để xuất.");
+                return;
+            }
+
+            const dataset = {
+                metadata: {
+                    platform: "TGS Platform Genesis 2.0",
+                    baseline: "TGS-HO-301 REV01",
+                    exportTime: new Date().toISOString(),
+                    coordinateSystem: {
+                        geographic: "WGS84",
+                        projected: "VN-2000",
+                        centralMeridian: State.currentProject.meta?.centralMeridian || 105.5
+                    }
+                },
+                project: {
+                    id: State.currentProject.id,
+                    name: State.currentProject.name,
+                    code: State.currentProject.code,
+                    location: State.currentProject.location,
+                    createdAt: State.currentProject.createdAt,
+                    updatedAt: State.currentProject.updatedAt
+                },
+                surveyLine: {
+                    pointCount: (State.currentProject.points || []).length,
+                    points: State.currentProject.points || []
+                },
+                stations: {
+                    stationCount: (State.currentProject.pointFeatures || []).length,
+                    items: State.currentProject.pointFeatures || []
+                }
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataset, null, 2));
+            const downloadAnchor = document.createElement("a");
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `TGS_DATASET_${State.currentProject.code}_${Date.now()}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+    };
+
+    /* =====================================================
+       Z1: APP INITIALIZE & BINDINGS (LOCKED CONTRACT)
     ===================================================== */
     function bindButtons() {
-        // 1. Splash -> Project Home (KHẮC PHỤC TRIỆT ĐỂ LỖI NÚT BẮT ĐẦU)
-        const btnStart = document.getElementById("btnStart");
-        if (btnStart) {
-            btnStart.addEventListener("click", () => {
-                Navigation.show("projectHome");
-            });
-        }
+        // Splash -> Project Home
+        document.getElementById("btnStart").addEventListener("click", () => {
+            Navigation.show("projectHome");
+        });
 
-        // 2. Project Home
+        // Project Home Actions
         document.getElementById("btnNewProject").addEventListener("click", () => {
             document.getElementById("projectName").value = "";
             document.getElementById("projectCode").value = "";
@@ -454,11 +639,11 @@ const TGS = (() => {
             ProjectLifecycle.enterSurveyHome();
         });
 
-        // 3. Project Form -> Save
+        // Project Form Actions
         document.getElementById("btnBackHome").addEventListener("click", () => Navigation.show("projectHome"));
         document.getElementById("btnCreateProject").addEventListener("click", ProjectLifecycle.handleCreate);
 
-        // 4. Survey Home
+        // Survey Home Actions
         document.getElementById("btnBackProject").addEventListener("click", () => Navigation.show("projectHome"));
         
         document.getElementById("btnLinearSurvey").addEventListener("click", () => {
@@ -479,41 +664,45 @@ const TGS = (() => {
             Navigation.show("point");
         });
 
-        // 5. Back Navigation
+        document.getElementById("btnFinishProject").addEventListener("click", ProjectLifecycle.openCompleteScreen);
+        document.getElementById("btnBackFromComplete").addEventListener("click", () => Navigation.show("surveyHome"));
+        document.getElementById("btnExportJSON").addEventListener("click", SyncBuilder.exportJSON);
+
+        // Back from Linear & Point
         document.getElementById("btnExitLinear").addEventListener("click", () => Navigation.show("surveyHome"));
         document.getElementById("btnExitPoint").addEventListener("click", () => Navigation.show("surveyHome"));
 
-        // 6. Map & GPS Actions
+        // Map Tools
         document.getElementById("btnZoomIn").addEventListener("click", MapEngine.zoomIn);
         document.getElementById("btnZoomOut").addEventListener("click", MapEngine.zoomOut);
-        document.getElementById("btnLocate").addEventListener("click", () => GPSEngine.locate());
-        document.getElementById("btnCaptureGPS").addEventListener("click", SurveyLineLogic.capturePoint);
+        document.getElementById("btnLocate").addEventListener("click", () => GPSManager.quickLocate());
+        document.getElementById("btnCaptureGPS").addEventListener("click", SurveyLineLogic.triggerSmartCapture);
 
-        // 7. Point Survey Actions
-        document.getElementById("btnGetPointGPS").addEventListener("click", PointSurvey.getGPS);
+        // Point Survey Tools
+        document.getElementById("btnGetPointGPS").addEventListener("click", PointSurvey.getStationGPS);
         document.getElementById("btnSavePointItem").addEventListener("click", PointSurvey.saveStation);
     }
 
     async function initializeApp() {
-        console.log("[TGS Platform Genesis 2.0] Khởi động hệ thống Baseline REV01...");
+        console.log("[TGS Platform Genesis 2.0] Khởi tạo hệ thống Baseline REV01 hoàn chỉnh...");
         
-        // Luôn gán sự kiện trước tiên
+        // 1. Luôn gán toàn bộ sự kiện nút bấm đầu tiên để đảm bảo tính sẵn sàng của UI
         bindButtons();
 
-        // Nạp Database bất đồng bộ ở tầng dưới
+        // 2. Nạp bất đồng bộ CSDL IndexedDB và khôi phục bản nháp
         try {
             await Persistence.init();
             await ProjectLifecycle.checkDraft();
-            console.log("[TGS Platform Genesis 2.0] Offline Database sẵn sàng.");
+            console.log("[TGS Platform Genesis 2.0] Database và Lifecycle sẵn sàng.");
         } catch (err) {
-            console.error("[TGS Platform Genesis 2.0] Cảnh báo Database:", err);
+            console.error("[TGS Platform Genesis 2.0] Cảnh báo khởi tạo:", err);
         }
     }
 
     return { initializeApp };
 })();
 
-// Khởi chạy khi DOM hoàn tất nạp
+// Kích hoạt khi DOM sẵn sàng
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", TGS.initializeApp);
 } else {
