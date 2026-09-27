@@ -1,382 +1,267 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport"
-      content="width=device-width,initial-scale=1,viewport-fit=cover">
-
-<title>TGS Platform Genesis 2.0</title>
-
-<meta name="theme-color" content="#1565C0">
-
-<!-- Leaflet -->
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-<!-- Design System -->
-<link rel="stylesheet" href="style.css">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>TGS Platform Genesis 2.0</title>
+  <meta name="theme-color" content="#1565C0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-
-<!-- ===================================================== -->
-<!-- APP ROOT -->
-<!-- ===================================================== -->
 
 <div id="app">
 
-<!-- ===================================================== -->
-<!-- SPLASH -->
-<!-- ===================================================== -->
+  <!-- ==================== SCREEN 01: SPLASH ==================== -->
+  <section id="screenSplash" class="screen active">
+    <div class="splash-wrap">
+      <div class="logo-box">TGS</div>
+      <h1>TGS Platform</h1>
+      <h2>Genesis 2.0</h2>
+      <p>Khảo sát & số hóa hiện trường</p>
+      <button id="btnStart" class="btn-primary">Bắt đầu</button>
+    </div>
+  </section>
 
-<section id="screenSplash" class="screen active">
+  <!-- ==================== SCREEN 02: PROJECT HOME ==================== -->
+  <section id="screenProjectHome" class="screen">
+    <header class="topbar">
+      <div class="brand">
+        <strong>TGS</strong><span>Survey</span>
+      </div>
+      <div class="version">Genesis 2.0</div>
+    </header>
 
-<div class="splash-wrap">
+    <div class="page">
+      <div class="page-label">PROJECT</div>
+      <h1>Công trình</h1>
+      <p class="page-desc">Tạo mới hoặc tiếp tục hồ sơ khảo sát hiện trường.</p>
 
-<div class="logo-box">TGS</div>
+      <div id="draftBanner" class="draft-banner hidden">
+        <div>
+          <strong>Bạn có công trình chưa hoàn thành</strong>
+          <p id="draftProjectInfo">Tiếp tục khảo sát hoặc tạo công trình mới.</p>
+        </div>
+        <button id="btnContinueDraft" class="btn-secondary">Tiếp tục</button>
+      </div>
 
-<h1>TGS Platform</h1>
+      <div class="card-action" id="btnNewProject">
+        <div class="icon">＋</div>
+        <div>
+          <h3>Tạo công trình mới</h3>
+          <p>Tạo hồ sơ khảo sát mới</p>
+        </div>
+      </div>
 
-<h2>Genesis 2.0</h2>
+      <div class="card-action" id="btnOpenProject">
+        <div class="icon">▣</div>
+        <div>
+          <h3>Mở công trình đã lưu</h3>
+          <p>Xem các hồ sơ đã hoàn thành</p>
+        </div>
+      </div>
 
-<p>Khảo sát & số hóa hiện trường</p>
+      <div class="status-card">
+        <div class="status-row">
+          <span>Offline Database</span>
+          <strong id="dbStatusText">IndexedDB v4 Sẵn sàng</strong>
+        </div>
+        <div class="status-row">
+          <span>Smart GNSS</span>
+          <strong id="gnssStatusText">Sẵn sàng (20 mẫu)</strong>
+        </div>
+        <div class="status-row">
+          <span>GIS Core</span>
+          <strong>Leaflet / ArcGIS</strong>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<button id="btnStart" class="btn-primary">
-Bắt đầu
-</button>
+  <!-- ==================== SCREEN 03: PROJECT FORM ==================== -->
+  <section id="screenProject" class="screen">
+    <header class="nav-header">
+      <button id="btnBackHome" class="back-btn">←</button>
+      <div>
+        <h2>Tạo công trình</h2>
+        <p>Thông tin cơ bản</p>
+      </div>
+    </header>
+
+    <div class="form-page">
+      <label>Tên công trình</label>
+      <input id="projectName" type="text" placeholder="VD: Trạm CN Trà Điêu">
+
+      <label>Mã công trình</label>
+      <input id="projectCode" type="text" placeholder="VD: TGS-001">
+
+      <label>Địa điểm</label>
+      <input id="projectLocation" type="text" placeholder="Nhập địa điểm">
+
+      <button id="btnCreateProject" class="btn-primary">Tiếp tục</button>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 04: SURVEY HOME ==================== -->
+  <section id="screenSurveyHome" class="screen">
+    <header class="nav-header">
+      <button id="btnBackProject" class="back-btn">←</button>
+      <div>
+        <h2 id="surveyProjectTitle">Công trình</h2>
+        <p>Chọn loại khảo sát</p>
+      </div>
+    </header>
+
+    <div class="survey-home">
+      <div id="btnLinearSurvey" class="survey-card">
+        <h3>Khảo sát tuyến</h3>
+        <p>Tuyến ống cấp nước · Điểm tim · Đo đạc</p>
+      </div>
+
+      <div id="btnPointSurvey" class="survey-card">
+        <h3>Khảo sát điểm</h3>
+        <p>Trạm cấp nước · Bể · Van · Đồng hồ</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 05: LINEAR SURVEY ==================== -->
+  <section id="screenLinear" class="screen">
+    <header class="survey-header">
+      <button id="btnExitLinear" class="back-btn">←</button>
+      <div>
+        <h2>Khảo sát tuyến</h2>
+        <p id="linearProjectName">...</p>
+      </div>
+    </header>
+
+    <div class="linear-layout">
+      <aside class="gis-panel">
+        <div class="gps-pill">
+          <span class="gps-dot"></span>
+          <strong>GPS</strong>
+          <span id="gpsText">Đang chờ...</span>
+        </div>
+
+        <div class="layer-card">
+          <h3>Lớp GIS</h3>
+          <label><input type="checkbox" id="layerSurveyPoints" checked> Điểm khảo sát</label>
+          <label><input type="checkbox" id="layerSurveyLine" checked> Tuyến khảo sát</label>
+          <label><input type="checkbox" checked> Ống</label>
+          <label><input type="checkbox" checked> Van</label>
+          <label><input type="checkbox" checked> Tê / Cút</label>
+          <label><input type="checkbox" checked> Trạm cấp nước</label>
+        </div>
+      </aside>
+
+      <main class="map-wrapper">
+        <div id="map"></div>
+        <div class="map-title">Bản đồ tuyến</div>
+        <div class="map-tools">
+          <button id="btnLocate">◎</button>
+          <button id="btnZoomIn">＋</button>
+          <button id="btnZoomOut">－</button>
+        </div>
+      </main>
+    </div>
+
+    <footer class="survey-footer">
+      <div class="metric">
+        <label>GPS Accuracy</label>
+        <strong id="gpsAccuracy">± -- m</strong>
+      </div>
+      <div class="metric">
+        <label>Tọa độ VN-2000</label>
+        <strong id="vn2000Text">Chưa chuyển</strong>
+      </div>
+      <div class="metric">
+        <label>Số điểm</label>
+        <strong id="pointCount">0</strong>
+      </div>
+      <div class="metric">
+        <label>Chiều dài</label>
+        <strong id="lineLength">0 m</strong>
+      </div>
+      <button id="btnCaptureGPS" class="btn-primary">Lấy GPS</button>
+    </footer>
+  </section>
+
+  <!-- ==================== SCREEN 06: POINT SURVEY ==================== -->
+  <section id="screenPoint" class="screen">
+    <header class="nav-header">
+      <button id="btnExitPoint" class="back-btn">←</button>
+      <div>
+        <h2 id="pointProjectTitle">Khảo sát điểm</h2>
+        <p id="pointProjectSubtitle">Hồ sơ Trạm cấp nước</p>
+      </div>
+    </header>
+
+    <div class="form-page">
+      <label>Loại đối tượng</label>
+      <select id="pointTypeSelect" class="form-select">
+        <option value="station">Trạm cấp nước</option>
+        <option value="tank">Bể chứa / Bể lắng</option>
+        <option value="pump">Nhà trạm / Cụm bơm</option>
+        <option value="valve">Hố van mạng lưới</option>
+        <option value="meter">Cụm đồng hồ tổng</option>
+      </select>
+
+      <label>Tên / Ký hiệu trạm</label>
+      <input id="pointNameInput" type="text" placeholder="VD: Trạm CN Trà Điêu">
+
+      <label>Thông số kỹ thuật / Hiện trạng</label>
+      <input id="pointNoteInput" type="text" placeholder="VD: Bơm 45kW, công suất 1.200 m3/ngđ">
+
+      <div class="status-card" style="margin-top: 14px;">
+        <div class="status-row">
+          <span>Tọa độ WGS84</span>
+          <strong id="pointWGS84Text">Chưa thu nhận</strong>
+        </div>
+        <div class="status-row">
+          <span>Tọa độ VN-2000</span>
+          <strong id="pointVN2000Text">Chưa chuyển</strong>
+        </div>
+        <div class="status-row">
+          <span>Độ chính xác GPS</span>
+          <strong id="pointAccuracyText">± -- m</strong>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:16px;">
+        <button id="btnGetPointGPS" class="btn-secondary" style="flex:1; height:52px;">◎ Lấy GPS trạm</button>
+        <button id="btnSavePointItem" class="btn-primary" style="flex:1; height:52px;">Lưu hồ sơ</button>
+      </div>
+
+      <div style="margin-top:24px;">
+        <h3 style="font-size:17px; margin-bottom:12px;">Danh mục trạm đã khảo sát (<span id="savedPointsCount">0</span>)</h3>
+        <div id="savedPointsList" class="saved-points-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SCREEN 07: COMPLETE ==================== -->
+  <section id="screenProjectComplete" class="screen">
+    <header class="nav-header">
+      <button id="btnBackFromComplete" class="back-btn">←</button>
+      <div>
+        <h2>Hoàn thành khảo sát</h2>
+        <p>Tổng kết hồ sơ</p>
+      </div>
+    </header>
+    <div class="page">
+      <div class="status-card">
+        <h3 id="completeProjectName" style="margin-bottom:12px;">...</h3>
+        <p id="completeProjectSummary" style="color:var(--muted); margin-bottom:20px;">Tổng hợp dữ liệu khảo sát</p>
+        <button id="btnExportJSON" class="btn-primary">Xuất TGS Dataset (JSON)</button>
+      </div>
+    </div>
+  </section>
 
 </div>
 
-</section>
-
-<!-- ===================================================== -->
-<!-- PROJECT HOME -->
-<!-- ===================================================== -->
-
-<section id="screenProjectHome" class="screen">
-
-<header class="topbar">
-
-<div class="brand">
-<strong>TGS</strong>
-<span>Survey</span>
-</div>
-
-<div class="version">
-Genesis 2.0
-</div>
-
-</header>
-
-<div class="page">
-
-<div class="page-label">PROJECT</div>
-
-<h1>Công trình</h1>
-
-<p class="page-desc">
-Tạo mới hoặc tiếp tục hồ sơ khảo sát hiện trường.
-</p>
-
-<div id="draftBanner" class="draft-banner hidden">
-
-<div>
-<strong>Bạn có công trình chưa hoàn thành</strong>
-<p>Tiếp tục khảo sát hoặc tạo công trình mới.</p>
-</div>
-
-<button id="btnContinueDraft"
-class="btn-secondary">
-Tiếp tục
-</button>
-
-</div>
-
-<div class="card-action" id="btnNewProject">
-
-<div class="icon">＋</div>
-
-<div>
-<h3>Tạo công trình mới</h3>
-<p>Tạo hồ sơ khảo sát mới</p>
-</div>
-
-</div>
-
-<div class="card-action" id="btnOpenProject">
-
-<div class="icon">▣</div>
-
-<div>
-<h3>Mở công trình đã lưu</h3>
-<p>Xem các hồ sơ đã hoàn thành</p>
-</div>
-
-</div>
-
-<div class="status-card">
-
-<div class="status-row">
-<span>Offline Database</span>
-<strong>Sẵn sàng</strong>
-</div>
-
-<div class="status-row">
-<span>GPS</span>
-<strong>Sẵn sàng</strong>
-</div>
-
-<div class="status-row">
-<span>GIS</span>
-<strong>ArcGIS</strong>
-</div>
-
-</div>
-
-</div>
-
-</section>
-
-<!-- ===================================================== -->
-<!-- PROJECT INFO -->
-<!-- ===================================================== -->
-
-<section id="screenProject" class="screen">
-
-<header class="nav-header">
-
-<button id="btnBackHome" class="back-btn">
-←
-</button>
-
-<div>
-<h2>Tạo công trình</h2>
-<p>Thông tin cơ bản</p>
-</div>
-
-</header>
-
-<div class="form-page">
-
-<label>Tên công trình</label>
-
-<input id="projectName"
-type="text"
-placeholder="VD: Trạm CN Trà Điêu">
-
-<label>Mã công trình</label>
-
-<input id="projectCode"
-type="text"
-placeholder="VD: TGS-001">
-
-<label>Địa điểm</label>
-
-<input id="projectLocation"
-type="text"
-placeholder="Nhập địa điểm">
-
-<button id="btnSaveProject"
-class="btn-primary">
-Tiếp tục
-</button>
-
-</div>
-
-</section>
-
-<!-- ===================================================== -->
-<!-- SURVEY HOME -->
-<!-- ===================================================== -->
-
-<section id="screenSurveyHome" class="screen">
-
-<header class="nav-header">
-
-<button id="btnBackProject" class="back-btn">
-←
-</button>
-
-<div>
-<h2 id="surveyProjectTitle">Công trình</h2>
-<p>Chọn loại khảo sát</p>
-</div>
-
-</header>
-
-<div class="survey-home">
-
-<div id="btnPointSurvey" class="survey-card">
-
-<h3>Khảo sát điểm</h3>
-
-<p>Van · Tê · Cút · Đồng hồ · Trạm</p>
-
-</div>
-
-<div id="btnLinearSurvey" class="survey-card">
-
-<h3>Khảo sát tuyến</h3>
-
-<p>Tuyến ống cấp nước</p>
-
-</div>
-
-</div>
-
-</section>
-
-<!-- ===================================================== -->
-<!-- LINEAR SURVEY -->
-<!-- ===================================================== -->
-
-<section id="screenLinear" class="screen">
-
-<header class="survey-header">
-
-<button id="btnExitLinear" class="back-btn">
-←
-</button>
-
-<div>
-
-<h2>Khảo sát tuyến</h2>
-
-<p id="linearProjectName">...</p>
-
-</div>
-
-</header>
-
-<div class="linear-layout">
-
-<!-- Left Panel -->
-
-<aside class="gis-panel">
-
-<div class="gps-pill">
-
-<span class="gps-dot"></span>
-
-<strong>GPS</strong>
-
-<span id="gpsText">
-Đang chờ...
-</span>
-
-</div>
-
-<div class="layer-card">
-
-<h3>Lớp GIS</h3>
-
-<label><input type="checkbox" checked> Điểm khảo sát</label>
-<label><input type="checkbox" checked> Tuyến khảo sát</label>
-<label><input type="checkbox" checked> Ống</label>
-<label><input type="checkbox" checked> Van</label>
-<label><input type="checkbox" checked> Tê</label>
-<label><input type="checkbox" checked> Cút</label>
-<label><input type="checkbox"> Trạm cấp nước</label>
-<label><input type="checkbox"> Đồng hồ KH</label>
-
-</div>
-
-</aside>
-
-<!-- MAP -->
-
-<main class="map-wrapper">
-
-<div id="map"></div>
-
-<div class="map-title">
-Bản đồ
-</div>
-
-<div class="map-tools">
-
-<button id="btnLocate">◎</button>
-
-<button id="btnZoomIn">＋</button>
-
-<button id="btnZoomOut">－</button>
-
-</div>
-
-</main>
-
-</div>
-
-<footer class="survey-footer">
-
-<div class="metric">
-<label>GPS</label>
-<strong id="gpsAccuracy">± -- m</strong>
-</div>
-
-<div class="metric">
-<label>Tọa độ</label>
-<strong id="vn2000Text">Chưa chuyển</strong>
-</div>
-
-<div class="metric">
-<label>Điểm</label>
-<strong id="pointCount">0</strong>
-</div>
-
-<div class="metric">
-<label>Chiều dài</label>
-<strong id="lineLength">0 m</strong>
-</div>
-
-<button id="btnAcquireGPS"
-class="btn-primary">
-Lấy GPS
-</button>
-
-</footer>
-
-</section>
-
-<!-- ===================================================== -->
-<!-- POINT SURVEY -->
-<!-- ===================================================== -->
-
-<section id="screenPoint" class="screen">
-
-<header class="nav-header">
-
-<button id="btnExitPoint" class="back-btn">
-←
-</button>
-
-<div>
-<h2>Khảo sát điểm</h2>
-<p>Đang phát triển</p>
-</div>
-
-</header>
-
-</section>
-
-</div>
-
-<!-- ===================================================== -->
-<!-- LIBRARIES -->
-<!-- ===================================================== -->
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<script src="db.js"></script>
-<!-- LIBRARIES -->
+<!-- DEPENDENCY (LOCKED) -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="db.js"></script>
-      
-<script src="vn2000.js"></script>
-
 <script src="app.js"></script>
-
 </body>
 </html>
