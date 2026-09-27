@@ -1,27 +1,29 @@
 /* =========================================================
    TGS PLATFORM GENESIS 2.0
-   BASELINE B4 — APP.JS
-   CONTROLLER & UI INTERACTION LAYER
-   REV01
+   BASELINE B4 — APP.JS (FULL INTEGRATION)
+   ROUTER + GIS + LEAFLET + DB + VN2000
 ========================================================= */
 
 const APP = (() => {
 
-    /* ===========================
-       APPLICATION STATE
-    =========================== */
+    /* =====================================================
+       1. STATE MANAGEMENT
+    ===================================================== */
     const state = {
         currentProject: null,
         lastKnownGPS: null,
+        lastKnownVN2000: null,
         mapInstance: null,
         currentGPSMarker: null,
         surveyPolyline: null,
-        markersLayer: null
+        markersLayer: null,
+        // Mặc định kinh tuyến trục L0 (ví dụ: 105.0, 105.5, hoặc 105.75 tuỳ khu vực)
+        defaultMeridian: 105.5 
     };
 
-    /* ===========================
-       ROUTER / SCREEN MANAGER
-    =========================== */
+    /* =====================================================
+       2. DOM ELEMENTS & ROUTER
+    ===================================================== */
     const screens = {
         splash: document.getElementById("screenSplash"),
         projectHome: document.getElementById("screenProjectHome"),
@@ -42,27 +44,27 @@ const APP = (() => {
             screens[screenKey].classList.add("active");
         }
 
-        // Tự động căn chỉnh kích thước Leaflet khi mở khảo sát tuyến
+        // Tự động căn chỉnh kích thước Leaflet Map khi mở màn hình khảo sát tuyến
         if (screenKey === "linear") {
             setTimeout(() => {
                 GIS.invalidateMap();
-            }, 300);
+            }, 250);
         }
     }
 
-    /* ===========================
-       GIS & MAP MODULE
-    =========================== */
+    /* =====================================================
+       3. GIS & LEAFLET MAP CONTROLLER
+    ===================================================== */
     const GIS = {
         initMap() {
             if (state.mapInstance) return;
 
-            // Tọa độ mặc định (Việt Nam)
-            const defaultCoords = [10.762622, 106.660172];
+            // Tọa độ khởi tạo mặc định (Việt Nam)
+            const initialCoords = [10.762622, 106.660172];
 
             state.mapInstance = L.map("map", {
-                zoomControl: false
-            }).setView(defaultCoords, 16);
+                zoomControl: false // Sử dụng nút zoom tuỳ chỉnh trên thanh công cụ
+            }).setView(initialCoords, 16);
 
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                 attribution: "© OpenStreetMap contributors",
@@ -92,11 +94,24 @@ const APP = (() => {
 
             state.markersLayer.clearLayers();
             const coordinates = [];
-
             const points = state.currentProject.points || [];
+
             points.forEach((pt, index) => {
                 const latlng = [pt.lat, pt.lng];
                 coordinates.push(latlng);
+
+                // Tính hoặc lấy tọa độ VN2000 đã lưu
+                const vnCoord = pt.vn2000 || (typeof VN2000 !== "undefined" 
+                    ? VN2000.forward(pt.lat, pt.lng, state.defaultMeridian) 
+                    : null);
+
+                const popupContent = `
+                    <div style="font-size:13px; line-height:1.4;">
+                        <strong>Điểm ${index + 1}</strong><br>
+                        ${vnCoord ? `X (Bắc): <b>${vnCoord.x.toFixed(2)}</b> m<br>Y (Đông): <b>${vnCoord.y.toFixed(2)}</b> m<br>` : ""}
+                        WGS84: ${pt.lat.toFixed(6)}, ${pt.lng.toFixed(6)}
+                    </div>
+                `;
 
                 L.circleMarker(latlng, {
                     radius: 6,
@@ -104,8 +119,7 @@ const APP = (() => {
                     color: "#FFFFFF",
                     weight: 2,
                     fillOpacity: 1
-                }).bindPopup(`<b>Điểm ${index + 1}</b><br>Lat: ${pt.lat.toFixed(6)}<br>Lng: ${pt.lng.toFixed(6)}`)
-                  .addTo(state.markersLayer);
+                }).bindPopup(popupContent).addTo(state.markersLayer);
             });
 
             state.surveyPolyline.setLatLngs(coordinates);
@@ -121,6 +135,7 @@ const APP = (() => {
             const points = state.currentProject?.points || [];
             document.getElementById("pointCount").innerText = points.length;
 
+            // Tính tổng chiều dài tuyến khảo sát
             let totalDist = 0;
             for (let i = 1; i < points.length; i++) {
                 const p1 = L.latLng(points[i - 1].lat, points[i - 1].lng);
@@ -132,9 +147,20 @@ const APP = (() => {
                 ? `${(totalDist / 1000).toFixed(2)} km`
                 : `${Math.round(totalDist)} m`;
 
+            // Cập nhật nhãn tọa độ VN-2000 ở Footer
             if (points.length > 0) {
-                const lastPoint = points[points.length - 1];
-                document.getElementById("vn2000Text").innerText = `${lastPoint.lat.toFixed(5)}, ${lastPoint.lng.toFixed(5)}`;
+                const lastPt = points[points.length - 1];
+                const vn = lastPt.vn2000 || (typeof VN2000 !== "undefined" 
+                    ? VN2000.forward(lastPt.lat, lastPt.lng, state.defaultMeridian) 
+                    : null);
+
+                if (vn) {
+                    document.getElementById("vn2000Text").innerText = `${vn.x.toFixed(1)}, ${vn.y.toFixed(1)}`;
+                } else {
+                    document.getElementById("vn2000Text").innerText = `${lastPt.lat.toFixed(5)}, ${lastPt.lng.toFixed(5)}`;
+                }
+            } else if (state.lastKnownVN2000) {
+                document.getElementById("vn2000Text").innerText = `${state.lastKnownVN2000.x.toFixed(1)}, ${state.lastKnownVN2000.y.toFixed(1)}`;
             } else {
                 document.getElementById("vn2000Text").innerText = "Chưa chuyển";
             }
@@ -150,7 +176,7 @@ const APP = (() => {
 
         locateCurrentGPS() {
             if (!navigator.geolocation) {
-                alert("Thiết bị không hỗ trợ Geolocation.");
+                alert("Thiết bị hoặc trình duyệt không hỗ trợ Geolocation.");
                 return;
             }
 
@@ -161,6 +187,12 @@ const APP = (() => {
                 pos => {
                     const { latitude, longitude, accuracy } = pos.coords;
                     state.lastKnownGPS = { lat: latitude, lng: longitude, accuracy };
+
+                    // Chuyển đổi sang VN2000 ngay khi có tọa độ WGS84
+                    if (typeof VN2000 !== "undefined") {
+                        state.lastKnownVN2000 = VN2000.forward(latitude, longitude, state.defaultMeridian);
+                        document.getElementById("vn2000Text").innerText = `${state.lastKnownVN2000.x.toFixed(1)}, ${state.lastKnownVN2000.y.toFixed(1)}`;
+                    }
 
                     gpsText.innerText = "Đã khóa vị trí";
                     document.getElementById("gpsAccuracy").innerText = `± ${Math.round(accuracy)} m`;
@@ -183,7 +215,7 @@ const APP = (() => {
                 },
                 err => {
                     gpsText.innerText = "Mất tín hiệu GPS";
-                    alert("Lỗi GPS: " + err.message);
+                    alert("Không thể lấy tín hiệu GPS: " + err.message);
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
@@ -196,8 +228,14 @@ const APP = (() => {
             }
 
             if (!state.currentProject) {
-                alert("Chưa có hồ sơ công trình nào đang mở.");
+                alert("Chưa có hồ sơ công trình nào đang được mở.");
                 return;
+            }
+
+            // Chuyển đổi sang VN2000
+            let vn2000Data = null;
+            if (typeof VN2000 !== "undefined") {
+                vn2000Data = VN2000.forward(state.lastKnownGPS.lat, state.lastKnownGPS.lng, state.defaultMeridian);
             }
 
             const newPoint = {
@@ -205,40 +243,51 @@ const APP = (() => {
                 lat: state.lastKnownGPS.lat,
                 lng: state.lastKnownGPS.lng,
                 accuracy: state.lastKnownGPS.accuracy,
+                vn2000: vn2000Data,
                 timestamp: Date.now()
             };
 
             if (!state.currentProject.points) state.currentProject.points = [];
             state.currentProject.points.push(newPoint);
 
-            // Lưu dữ liệu vào DB
+            // Lưu trạng thái vào IndexedDB
             await DB.save(state.currentProject);
 
-            // Vẽ ngay lên bản đồ
+            // Vẽ điểm mới lên bản đồ
             const latlng = [newPoint.lat, newPoint.lng];
+            const pointIndex = state.currentProject.points.length;
+
+            const popupContent = `
+                <div style="font-size:13px; line-height:1.4;">
+                    <strong>Điểm ${pointIndex}</strong><br>
+                    ${vn2000Data ? `X: <b>${vn2000Data.x.toFixed(2)}</b> m<br>Y: <b>${vn2000Data.y.toFixed(2)}</b> m<br>` : ""}
+                    WGS84: ${newPoint.lat.toFixed(6)}, ${newPoint.lng.toFixed(6)}
+                </div>
+            `;
+
             L.circleMarker(latlng, {
                 radius: 6,
                 fillColor: "#2E7D32",
                 color: "#FFFFFF",
                 weight: 2,
                 fillOpacity: 1
-            }).bindPopup(`<b>Điểm ${state.currentProject.points.length}</b>`).addTo(state.markersLayer);
+            }).bindPopup(popupContent).addTo(state.markersLayer);
 
             state.surveyPolyline.addLatLng(latlng);
             GIS.updateMetrics();
         }
     };
 
-    /* ===========================
-       EVENT LISTENERS BINDING
-    =========================== */
+    /* =====================================================
+       4. EVENT BINDINGS
+    ===================================================== */
     function bindEvents() {
         // Splash -> Project Home
         document.getElementById("btnStart").addEventListener("click", () => {
             navigateTo("projectHome");
         });
 
-        // Project Home Actions
+        // Project Home: Tạo mới công trình
         document.getElementById("btnNewProject").addEventListener("click", () => {
             document.getElementById("projectName").value = "";
             document.getElementById("projectCode").value = "";
@@ -246,12 +295,14 @@ const APP = (() => {
             navigateTo("project");
         });
 
+        // Project Home: Tiếp tục công trình nháp
         document.getElementById("btnContinueDraft").addEventListener("click", () => {
             if (state.currentProject) {
                 openSurveyHome(state.currentProject);
             }
         });
 
+        // Project Home: Mở công trình đã lưu
         document.getElementById("btnOpenProject").addEventListener("click", async () => {
             const list = await DB.getAll();
             if (list.length === 0) {
@@ -262,11 +313,12 @@ const APP = (() => {
             openSurveyHome(state.currentProject);
         });
 
-        // Project Form Actions
+        // Project Form: Quay lại
         document.getElementById("btnBackHome").addEventListener("click", () => {
             navigateTo("projectHome");
         });
 
+        // Project Form: Lưu công trình
         document.getElementById("btnSaveProject").addEventListener("click", async () => {
             const name = document.getElementById("projectName").value.trim();
             const code = document.getElementById("projectCode").value.trim();
@@ -288,7 +340,7 @@ const APP = (() => {
             }
         });
 
-        // Survey Home Actions
+        // Survey Home: Chọn loại khảo sát
         document.getElementById("btnBackProject").addEventListener("click", () => {
             navigateTo("projectHome");
         });
@@ -307,7 +359,7 @@ const APP = (() => {
             navigateTo("linear");
         });
 
-        // Back from Survey to Survey Home
+        // Thoát khỏi khảo sát -> Quay về Survey Home
         document.getElementById("btnExitLinear").addEventListener("click", () => {
             navigateTo("surveyHome");
         });
@@ -316,7 +368,7 @@ const APP = (() => {
             navigateTo("surveyHome");
         });
 
-        // Map Tool Buttons
+        // Thao tác bản đồ & GPS
         document.getElementById("btnZoomIn").addEventListener("click", GIS.zoomIn);
         document.getElementById("btnZoomOut").addEventListener("click", GIS.zoomOut);
         document.getElementById("btnLocate").addEventListener("click", GIS.locateCurrentGPS);
@@ -340,22 +392,22 @@ const APP = (() => {
         }
     }
 
-    /* ===========================
-       INITIALIZE APPLICATION
-    =========================== */
+    /* =====================================================
+       5. INITIALIZE APPLICATION
+    ===================================================== */
     async function init() {
         try {
             await DB.init();
             await refreshDraftBanner();
             bindEvents();
-            console.log("TGS Platform Genesis 2.0: Sẵn sàng hoạt động.");
+            console.log("TGS Platform Genesis 2.0: Khởi chạy hoàn tất.");
         } catch (error) {
-            console.error("Khởi động ứng dụng thất bại:", error);
+            console.error("Lỗi khi khởi động ứng dụng:", error);
         }
     }
 
     return { init };
 })();
 
-// Khởi chạy khi DOM sẵn sàng
+// Khởi chạy khi tài liệu DOM sẵn sàng
 document.addEventListener("DOMContentLoaded", APP.init);
