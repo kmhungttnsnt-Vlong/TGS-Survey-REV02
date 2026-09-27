@@ -411,3 +411,33 @@ const APP = (() => {
 
 // Khởi chạy khi tài liệu DOM sẵn sàng
 document.addEventListener("DOMContentLoaded", APP.init);
+/* =====================================================
+       5. INITIALIZE APPLICATION (BẢN SỬA LỖI)
+    ===================================================== */
+    async function init() {
+        // 1. Luôn gán sự kiện cho các nút bấm TRƯỚC TIÊN
+        // Đảm bảo nút Bắt đầu, chuyển màn hình luôn chạy được ngay
+        bindEvents();
+
+        // 2. Sau đó mới nạp CSDL IndexedDB ngầm
+        try {
+            if (typeof DB !== "undefined") {
+                await DB.init();
+                await refreshDraftBanner();
+            }
+        } catch (error) {
+            console.warn("Lưu ý IndexedDB:", error);
+        }
+
+        console.log("TGS Platform: Đã kích hoạt hệ thống nút bấm thành công.");
+    }
+
+    return { init };
+})();
+
+// Khởi chạy khi DOM sẵn sàng
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", APP.init);
+} else {
+    APP.init();
+}
