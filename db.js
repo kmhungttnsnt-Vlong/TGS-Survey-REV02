@@ -1,18 +1,23 @@
 /* =========================================================
    TGS PLATFORM GENESIS 2.0
    BASELINE B3 — DB.JS
-   DATA LAYER ONLY
-   REV02 (FIXED)
+   DATA CONTRACT (5 OBJECT STORES — VERSION 4)
 ========================================================= */
 
 const DB = (() => {
     const DB_NAME = "TGS_SURVEY_DB";
-    const DB_VERSION = 3;
-    const STORE = "projects";
+    const DB_VERSION = 4;
+
+    const STORES = {
+        PROJECTS: "projects",
+        SURVEYS: "surveys",
+        GIS_OBJECTS: "gisObjects",
+        EVIDENCE: "evidence",
+        TIMELINE: "timeline"
+    };
 
     let database = null;
 
-    // Fallback sinh UUID an toàn khi chạy offline qua file:///
     function generateUUID() {
         if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
             return crypto.randomUUID();
@@ -24,19 +29,43 @@ const DB = (() => {
         });
     }
 
-    /* ===========================
-       INIT DATABASE
-    =========================== */
     async function init() {
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(DB_NAME, DB_VERSION);
 
             request.onupgradeneeded = e => {
                 const db = e.target.result;
-                if (!db.objectStoreNames.contains(STORE)) {
-                    const store = db.createObjectStore(STORE, { keyPath: "id" });
-                    store.createIndex("status", "status", { unique: false });
-                    store.createIndex("updatedAt", "updatedAt", { unique: false });
+
+                // 1. Projects Store
+                if (!db.objectStoreNames.contains(STORES.PROJECTS)) {
+                    const s = db.createObjectStore(STORES.PROJECTS, { keyPath: "id" });
+                    s.createIndex("status", "status", { unique: false });
+                    s.createIndex("updatedAt", "updatedAt", { unique: false });
+                }
+
+                // 2. Surveys Store
+                if (!db.objectStoreNames.contains(STORES.SURVEYS)) {
+                    const s = db.createObjectStore(STORES.SURVEYS, { keyPath: "id" });
+                    s.createIndex("projectId", "projectId", { unique: false });
+                }
+
+                // 3. GIS Objects Store (Pipes, Valves, Stations)
+                if (!db.objectStoreNames.contains(STORES.GIS_OBJECTS)) {
+                    const s = db.createObjectStore(STORES.GIS_OBJECTS, { keyPath: "id" });
+                    s.createIndex("projectId", "projectId", { unique: false });
+                    s.createIndex("layer", "layer", { unique: false });
+                }
+
+                // 4. Evidence Store (Photos / Videos Metadata)
+                if (!db.objectStoreNames.contains(STORES.EVIDENCE)) {
+                    const s = db.createObjectStore(STORES.EVIDENCE, { keyPath: "id" });
+                    s.createIndex("projectId", "projectId", { unique: false });
+                }
+
+                // 5. Timeline Store (Audit Trail)
+                if (!db.objectStoreNames.contains(STORES.TIMELINE)) {
+                    const s = db.createObjectStore(STORES.TIMELINE, { keyPath: "id" });
+                    s.createIndex("projectId", "projectId", { unique: false });
                 }
             };
 
@@ -49,17 +78,15 @@ const DB = (() => {
         });
     }
 
-    function getStore(mode = "readonly") {
+    function getStore(storeName, mode = "readonly") {
         if (!database) {
-            throw new Error("IndexedDB chưa được khởi tạo. Hãy gọi DB.init() trước.");
+            throw new Error("IndexedDB chưa khởi tạo.");
         }
-        const tx = database.transaction(STORE, mode);
-        return tx.objectStore(STORE);
+        const tx = database.transaction(storeName, mode);
+        return tx.objectStore(storeName);
     }
 
-    /* ===========================
-       CREATE PROJECT
-    =========================== */
+    /* PROJECT API */
     async function createProject(data) {
         const project = {
             id: generateUUID(),
@@ -70,88 +97,44 @@ const DB = (() => {
             updatedAt: Date.now(),
             status: "draft",
             surveyType: null,
-            points: [],
-            lines: [],
-            meta: {}
+            points: [],         // Tim tuyến khảo sát
+            pointFeatures: [],  // Trạm, hố van, thiết bị
+            meta: {
+                centralMeridian: data.centralMeridian || 105.5
+            }
         };
-        return save(project);
+        return saveProject(project);
     }
 
-    /* ===========================
-       SAVE / UPDATE
-    =========================== */
-    async function save(project) {
+    async function saveProject(project) {
         project.updatedAt = Date.now();
         return new Promise((resolve, reject) => {
-            const req = getStore("readwrite").put(project);
+            const req = getStore(STORES.PROJECTS, "readwrite").put(project);
             req.onsuccess = () => resolve(project);
             req.onerror = () => reject(req.error);
         });
     }
 
-    /* ===========================
-       GET DRAFT
-    =========================== */
-    async function getDraft() {
-        const list = await getAll();
+    async function getDraftProject() {
+        const list = await getAllProjects();
         return list.find(p => p.status === "draft") || null;
     }
 
-    /* ===========================
-       GET BY ID
-    =========================== */
-    async function getById(id) {
+    async function getProjectById(id) {
         return new Promise((resolve, reject) => {
-            const req = getStore("readonly").get(id);
+            const req = getStore(STORES.PROJECTS, "readonly").get(id);
             req.onsuccess = () => resolve(req.result || null);
             req.onerror = () => reject(req.error);
         });
     }
 
-    /* ===========================
-       GET ALL
-    =========================== */
-    async function getAll() {
+    async function getAllProjects() {
         return new Promise((resolve, reject) => {
-            const req = getStore("readonly").getAll();
+            const req = getStore(STORES.PROJECTS, "readonly").getAll();
             req.onsuccess = () => {
-                const arr = (req.result || []).sort(
-                    (a, b) => b.updatedAt - a.updatedAt
-                );
+                const arr = (req.result || []).sort((a, b) => b.updatedAt - a.updatedAt);
                 resolve(arr);
             };
-            req.onerror = () => reject(req.error);
-        });
-    }
-
-    /* ===========================
-       COMPLETE PROJECT
-    =========================== */
-    async function complete(id) {
-        const p = await getById(id);
-        if (!p) return null;
-        p.status = "completed";
-        return save(p);
-    }
-
-    /* ===========================
-       DELETE
-    =========================== */
-    async function remove(id) {
-        return new Promise((resolve, reject) => {
-            const req = getStore("readwrite").delete(id);
-            req.onsuccess = () => resolve(true);
-            req.onerror = () => reject(req.error);
-        });
-    }
-
-    /* ===========================
-       CLEAR
-    =========================== */
-    async function clear() {
-        return new Promise((resolve, reject) => {
-            const req = getStore("readwrite").clear();
-            req.onsuccess = () => resolve(true);
             req.onerror = () => reject(req.error);
         });
     }
@@ -159,12 +142,9 @@ const DB = (() => {
     return {
         init,
         createProject,
-        save,
-        getDraft,
-        getById,
-        getAll,
-        complete,
-        remove,
-        clear
+        saveProject,
+        getDraftProject,
+        getProjectById,
+        getAllProjects
     };
 })();
