@@ -75,8 +75,8 @@
           <strong id="gnssStatusText">Bộ gom 20 mẫu chuẩn hóa</strong>
         </div>
         <div class="status-row">
-          <span>GIS Core</span>
-          <strong>Leaflet / ArcGIS Engine</strong>
+          <span>Media & Camera</span>
+          <strong>Camera Session Sẵn sàng</strong>
         </div>
       </div>
     </div>
@@ -123,8 +123,8 @@
       </div>
 
       <div id="btnPointSurvey" class="survey-card">
-        <h3>Khảo sát điểm</h3>
-        <p>Trạm cấp nước · Bể · Van · Đồng hồ</p>
+        <h3>Khảo sát điểm / Trạm</h3>
+        <p>Trạm cấp nước · Bể · Camera & Video hiện trường</p>
       </div>
 
       <div id="btnFinishProject" class="survey-card" style="border: 2px dashed #1565C0;">
@@ -196,13 +196,13 @@
     </footer>
   </section>
 
-  <!-- ==================== SCREEN 06: POINT SURVEY ==================== -->
+  <!-- ==================== SCREEN 06: POINT SURVEY (CAMERA & MEDIA INTEGRATED) ==================== -->
   <section id="screenPoint" class="screen">
     <header class="nav-header">
       <button id="btnExitPoint" class="back-btn">←</button>
       <div>
         <h2 id="pointProjectTitle">Khảo sát điểm</h2>
-        <p id="pointProjectSubtitle">Hồ sơ Trạm cấp nước</p>
+        <p id="pointProjectSubtitle">Hồ sơ Trạm & Camera Hiện trường</p>
       </div>
     </header>
 
@@ -219,9 +219,13 @@
       <label>Tên / Ký hiệu trạm</label>
       <input id="pointNameInput" type="text" placeholder="VD: Trạm CN Trà Điêu">
 
+      <label>Hạng mục / Bộ phận</label>
+      <input id="pointSectionInput" type="text" placeholder="VD: Tuyến ống D300 / Bể lắng số 1">
+
       <label>Thông số kỹ thuật / Hiện trạng</label>
       <input id="pointNoteInput" type="text" placeholder="VD: Bơm 45kW, công suất 1.200 m3/ngđ">
 
+      <!-- GPS Card -->
       <div class="status-card" style="margin-top: 14px;">
         <div class="status-row">
           <span>Tọa độ WGS84</span>
@@ -237,14 +241,51 @@
         </div>
       </div>
 
-      <div style="display:flex; gap:12px; margin-top:16px;">
-        <button id="btnGetPointGPS" class="btn-secondary" style="flex:1; height:52px;">
-          <span id="btnPointGPSText">◎ Thu nhận GNSS trạm</span>
+      <div style="margin-top:12px;">
+        <button id="btnGetPointGPS" class="btn-secondary" style="width:100%; height:48px;">
+          <span id="btnPointGPSText">◎ Thu nhận Smart GNSS trạm</span>
         </button>
-        <button id="btnSavePointItem" class="btn-primary" style="flex:1; height:52px;">Lưu hồ sơ</button>
       </div>
 
-      <div style="margin-top:24px;">
+      <!-- CAMERA & VIDEO SESSION -->
+      <div class="camera-card">
+        <div class="camera-header">
+          <h3>🎥 Camera & Video Hiện trường</h3>
+          <span id="cameraRecBadge" class="rec-badge">⚪ SẴN SÀNG</span>
+        </div>
+
+        <div class="video-container">
+          <video id="cameraPreview" autoplay playsinline muted></video>
+        </div>
+
+        <div class="camera-actions">
+          <button id="btnToggleCamera" class="btn-camera blue">Mở Camera</button>
+          <button id="btnRecordVideo" class="btn-camera red">🔴 Quay Video</button>
+          <button id="btnSnapPhoto" class="btn-camera orange">📷 Chụp ảnh</button>
+        </div>
+
+        <!-- Video Preview if recorded -->
+        <div id="videoRecordedNotice" class="video-notice hidden">
+          <span>✓ Đã ghi 1 Video hiện trường</span>
+          <button id="btnPreviewVideo" class="btn-small">Xem lại</button>
+        </div>
+
+        <!-- Media Timeline -->
+        <div style="margin-top:16px;">
+          <label style="margin-bottom:8px;">Ảnh hiện trường đã chụp (<span id="photoCount">0</span>)</label>
+          <div id="cameraTimeline" class="camera-timeline"></div>
+        </div>
+      </div>
+
+      <!-- SAVE BUTTON -->
+      <div style="margin-top:20px;">
+        <button id="btnSavePointItem" class="btn-primary" style="height:56px;">
+          Lưu hồ sơ trạm & Media
+        </button>
+      </div>
+
+      <!-- SAVED LIST -->
+      <div style="margin-top:28px;">
         <h3 style="font-size:17px; margin-bottom:12px;">Danh mục trạm đã khảo sát (<span id="savedPointsCount">0</span>)</h3>
         <div id="savedPointsList" class="saved-points-list"></div>
       </div>
@@ -289,7 +330,7 @@
 
 </div>
 
-<!-- DEPENDENCY LOCKED: index.html -> style.css -> db.js -> app.js -->
+<!-- DEPENDENCY LOCKED -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="db.js"></script>
 <script src="app.js"></script>
