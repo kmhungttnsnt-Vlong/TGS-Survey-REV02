@@ -1,0 +1,22 @@
+{
+  "name": "TGS Platform Genesis 2.0",
+  "short_name": "TGS Survey",
+  "description": "Ứng dụng khảo sát hạ tầng cấp nước và tuyến ống",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d1b2a",
+  "theme_color": "#1565C0",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
