@@ -855,7 +855,7 @@ const TGS = (() => {
                 return;
             }
 
-            // Đồng bộ trạng thái hoàn thành
+            // Đồng bộ trạng thái hoàn thành vào database
             A1_State.currentProject.status = "completed";
             A1_State.currentProject.updatedAt = Date.now();
             await A4_Persistence.saveProject(A1_State.currentProject);
@@ -868,7 +868,7 @@ const TGS = (() => {
                     id: A1_State.currentProject.id,
                     name: A1_State.currentProject.name,
                     code: A1_State.currentProject.code,
-                    status: "completed", // Đã hoàn thành
+                    status: "completed",
                     location: A1_State.currentProject.location,
                     createdAt: A1_State.currentProject.createdAt,
                     updatedAt: A1_State.currentProject.updatedAt
@@ -890,15 +890,8 @@ const TGS = (() => {
             document.body.appendChild(dl);
             dl.click();
             dl.remove();
-        }
 
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataset, null, 2));
-            const dl = document.createElement("a");
-            dl.setAttribute("href", dataStr);
-            dl.setAttribute("download", `TGS_DATASET_${A1_State.currentProject.code}_${Date.now()}.json`);
-            document.body.appendChild(dl);
-            dl.click();
-            dl.remove();
+            alert("Đã xuất hồ sơ công trình hoàn thành thành công!");
         }
     };
 
@@ -947,8 +940,8 @@ const TGS = (() => {
                 A3_ProjectLifecycle.enterSurveyHome();
             });
 
-            document.getElementById("btnBackHome").addEventListener("click", () => {
-                A3_ProjectLifecycle.verifyDraft();
+            document.getElementById("btnBackHome").addEventListener("click", async () => {
+                await A3_ProjectLifecycle.verifyDraft();
                 A2_Navigation.show("projectHome");
             });
 
@@ -956,8 +949,8 @@ const TGS = (() => {
                 A3_ProjectLifecycle.createNewProject();
             });
 
-            document.getElementById("btnBackProject").addEventListener("click", () => {
-                A3_ProjectLifecycle.verifyDraft();
+            document.getElementById("btnBackProject").addEventListener("click", async () => {
+                await A3_ProjectLifecycle.verifyDraft();
                 A2_Navigation.show("projectHome");
             });
 
@@ -979,8 +972,11 @@ const TGS = (() => {
                 A3_ProjectLifecycle.openCompleteSummary();
             });
 
-            document.getElementById("btnBackFromComplete").addEventListener("click", () => {
-                A2_Navigation.show("surveyHome");
+            // Quay về Project Home sau khi hoàn thành và ẩn Draft Banner
+            document.getElementById("btnBackFromComplete").addEventListener("click", async () => {
+                A1_State.currentProject = null;
+                await A3_ProjectLifecycle.verifyDraft();
+                A2_Navigation.show("projectHome");
             });
 
             document.getElementById("btnExitLinear").addEventListener("click", () => {
