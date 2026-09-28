@@ -2,17 +2,26 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
   <title>TGS Platform Genesis 2.0</title>
+
+  <!-- ==================== PWA / MOBILE APP ICONS ==================== -->
+  <!-- Khai báo Web App Manifest cho Android (Chrome) -->
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#1565C0">
 
-  <!-- Thêm dòng này để tắt yêu cầu favicon.ico tự động của trình duyệt: -->
-  <link rel="icon" href="data:,">
-  
-  <!-- Leaflet GIS -->
+  <!-- Hỗ trợ iOS (iPhone / iPad / Safari) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TGS Survey">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <!-- Favicon cho trình duyệt máy tính (Tránh lỗi 404 favicon.ico) -->
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="shortcut icon" href="icon-192.png">
+
+  <!-- ==================== STYLESHEETS ==================== -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  
-  <!-- Design System Style -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -78,8 +87,8 @@
           <strong id="gnssStatusText">Bộ gom 20 mẫu chuẩn hóa</strong>
         </div>
         <div class="status-row">
-          <span>Media & Camera</span>
-          <strong>Camera Session Sẵn sàng</strong>
+          <span>GIS Core</span>
+          <strong>Leaflet / ArcGIS Engine</strong>
         </div>
       </div>
     </div>
@@ -126,8 +135,8 @@
       </div>
 
       <div id="btnPointSurvey" class="survey-card">
-        <h3>Khảo sát điểm / Trạm</h3>
-        <p>Trạm cấp nước · Bể · Camera & Video hiện trường</p>
+        <h3>Khảo sát điểm</h3>
+        <p>Trạm cấp nước · Bể · Van · Đồng hồ</p>
       </div>
 
       <div id="btnFinishProject" class="survey-card" style="border: 2px dashed #1565C0;">
@@ -199,13 +208,13 @@
     </footer>
   </section>
 
-  <!-- ==================== SCREEN 06: POINT SURVEY (CAMERA & MEDIA INTEGRATED) ==================== -->
+  <!-- ==================== SCREEN 06: POINT SURVEY ==================== -->
   <section id="screenPoint" class="screen">
     <header class="nav-header">
       <button id="btnExitPoint" class="back-btn">←</button>
       <div>
         <h2 id="pointProjectTitle">Khảo sát điểm</h2>
-        <p id="pointProjectSubtitle">Hồ sơ Trạm & Camera Hiện trường</p>
+        <p id="pointProjectSubtitle">Hồ sơ Trạm cấp nước</p>
       </div>
     </header>
 
@@ -223,12 +232,12 @@
       <input id="pointNameInput" type="text" placeholder="VD: Trạm CN Trà Điêu">
 
       <label>Hạng mục / Bộ phận</label>
-      <input id="pointSectionInput" type="text" placeholder="VD: Tuyến ống D300 / Bể lắng số 1">
+      <input id="pointSectionInput" type="text" placeholder="VD: Bể lắng số 1, Gian máy bơm">
 
       <label>Thông số kỹ thuật / Hiện trạng</label>
       <input id="pointNoteInput" type="text" placeholder="VD: Bơm 45kW, công suất 1.200 m3/ngđ">
 
-      <!-- GPS Card -->
+      <!-- Trạng thái tọa độ trạm -->
       <div class="status-card" style="margin-top: 14px;">
         <div class="status-row">
           <span>Tọa độ WGS84</span>
@@ -244,51 +253,44 @@
         </div>
       </div>
 
-      <div style="margin-top:12px;">
-        <button id="btnGetPointGPS" class="btn-secondary" style="width:100%; height:48px;">
+      <div style="display:flex; gap:12px; margin-top:16px;">
+        <button id="btnGetPointGPS" class="btn-secondary" style="flex:1; height:52px;">
           <span id="btnPointGPSText">◎ Thu nhận Smart GNSS trạm</span>
         </button>
       </div>
 
-      <!-- CAMERA & VIDEO SESSION -->
-      <div class="camera-card">
-        <div class="camera-header">
-          <h3>🎥 Camera & Video Hiện trường</h3>
-          <span id="cameraRecBadge" class="rec-badge">⚪ SẴN SÀNG</span>
+      <!-- CAMERA & MEDIA SESSION (P3 / P4) -->
+      <div class="camera-card" style="margin-top: 20px; background:#fff; padding:16px; border-radius:18px; box-shadow:var(--shadow);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <strong style="font-size:15px;">Camera Hiện Trường</strong>
+          <span id="cameraRecBadge" class="rec-badge" style="font-size:12px; font-weight:700; color:var(--muted);">⚪ TẮT</span>
         </div>
 
-        <div class="video-container">
-          <video id="cameraPreview" autoplay playsinline muted></video>
+        <div class="video-container" style="position:relative; width:100%; height:220px; background:#000; border-radius:14px; overflow:hidden;">
+          <video id="cameraPreview" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover;"></video>
         </div>
 
-        <div class="camera-actions">
-          <button id="btnToggleCamera" class="btn-camera blue">Mở Camera</button>
-          <button id="btnRecordVideo" class="btn-camera red">🔴 Quay Video</button>
-          <button id="btnSnapPhoto" class="btn-camera orange">📷 Chụp ảnh</button>
+        <div class="camera-actions" style="display:flex; gap:10px; margin-top:12px;">
+          <button id="btnToggleCamera" class="btn-secondary" style="flex:1;">Mở Camera</button>
+          <button id="btnSnapPhoto" class="btn-secondary" style="flex:1;">📷 Chụp ảnh</button>
+          <button id="btnRecordVideo" class="btn-secondary" style="flex:1;">🔴 Quay Video</button>
         </div>
 
-        <!-- Video Preview if recorded -->
-        <div id="videoRecordedNotice" class="video-notice hidden">
-          <span>✓ Đã ghi 1 Video hiện trường</span>
-          <button id="btnPreviewVideo" class="btn-small">Xem lại</button>
+        <div id="videoRecordedNotice" class="hidden" style="margin-top:10px; font-size:13px; color:var(--success); display:flex; justify-content:space-between; align-items:center;">
+          <span>✓ Đã ghi video bằng chứng</span>
+          <button id="btnPreviewVideo" style="border:none; background:none; color:var(--primary); font-weight:700; cursor:pointer;">Xem lại</button>
         </div>
 
-        <!-- Media Timeline -->
-        <div style="margin-top:16px;">
-          <label style="margin-bottom:8px;">Ảnh hiện trường đã chụp (<span id="photoCount">0</span>)</label>
-          <div id="cameraTimeline" class="camera-timeline"></div>
+        <!-- TIMELINE ẢNH -->
+        <div style="margin-top:14px;">
+          <small style="color:var(--muted);">Ảnh hiện trường đã chụp (<span id="photoCount">0</span>):</small>
+          <div id="cameraTimeline" class="camera-timeline" style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-top:8px;"></div>
         </div>
       </div>
 
-      <!-- SAVE BUTTON -->
-      <div style="margin-top:20px;">
-        <button id="btnSavePointItem" class="btn-primary" style="height:56px;">
-          Lưu hồ sơ trạm & Media
-        </button>
-      </div>
+      <button id="btnSavePointItem" class="btn-primary" style="margin-top:20px; height:54px;">Lưu hồ sơ trạm</button>
 
-      <!-- SAVED LIST -->
-      <div style="margin-top:28px;">
+      <div style="margin-top:24px;">
         <h3 style="font-size:17px; margin-bottom:12px;">Danh mục trạm đã khảo sát (<span id="savedPointsCount">0</span>)</h3>
         <div id="savedPointsList" class="saved-points-list"></div>
       </div>
@@ -333,7 +335,7 @@
 
 </div>
 
-<!-- DEPENDENCY LOCKED -->
+<!-- ==================== DEPENDENCIES (LOCKED) ==================== -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="db.js"></script>
 <script src="app.js"></script>
