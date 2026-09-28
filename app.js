@@ -242,7 +242,12 @@ const TGS = (() => {
         async openCompleteSummary() {
             if (!A1_State.currentProject) return;
 
-            // Truy vấn số liệu từ L4 và P1 thay vì tự tính toán
+            // 1. Chốt trạng thái hồ sơ thành completed và lưu vào DB
+            A1_State.currentProject.status = "completed";
+            A1_State.currentProject.updatedAt = Date.now();
+            await A4_Persistence.saveProject(A1_State.currentProject);
+
+            // 2. Lấy số liệu tổng hợp từ các module chuyên biệt
             const lineSummary = L4_SurveyLineLogic.getSummary();
             const stationSummary = P1_StationWorkflow.getSummary();
 
