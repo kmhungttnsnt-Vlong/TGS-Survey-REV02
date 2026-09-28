@@ -849,11 +849,16 @@ const TGS = (() => {
 
     // P6: Sync Builder (Enterprise Dataset Packaging)
     const P6_SyncBuilder = {
-        buildDataset() {
+        async buildDataset() {
             if (!A1_State.currentProject) {
                 alert("Không có hồ sơ công trình hiện hành.");
                 return;
             }
+
+            // Đồng bộ trạng thái hoàn thành
+            A1_State.currentProject.status = "completed";
+            A1_State.currentProject.updatedAt = Date.now();
+            await A4_Persistence.saveProject(A1_State.currentProject);
 
             const dataset = {
                 contract: "TGS-HO-301 REV01",
@@ -863,6 +868,7 @@ const TGS = (() => {
                     id: A1_State.currentProject.id,
                     name: A1_State.currentProject.name,
                     code: A1_State.currentProject.code,
+                    status: "completed", // Đã hoàn thành
                     location: A1_State.currentProject.location,
                     createdAt: A1_State.currentProject.createdAt,
                     updatedAt: A1_State.currentProject.updatedAt
@@ -876,6 +882,15 @@ const TGS = (() => {
                     features: A1_State.currentProject.pointFeatures || []
                 }
             };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataset, null, 2));
+            const dl = document.createElement("a");
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `TGS_DATASET_${A1_State.currentProject.code}_${Date.now()}.json`);
+            document.body.appendChild(dl);
+            dl.click();
+            dl.remove();
+        }
 
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataset, null, 2));
             const dl = document.createElement("a");
