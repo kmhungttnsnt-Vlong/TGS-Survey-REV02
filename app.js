@@ -28,9 +28,6 @@
 
 const TGS = (() => {
 
-    /* =====================================================
-       INTERNAL EVENT BUS (DECOUPLING COMMUNICATIONS)
-    ===================================================== */
     const EventBus = {
         events: {},
         on(event, listener) {
@@ -44,10 +41,6 @@ const TGS = (() => {
         }
     };
 
-    /* =====================================================
-       MATHEMATICAL SERVICE: VN-2000 PROJECTION ENGINE
-       Standard Transverse Mercator (k0 = 0.9999, X0 = 500,000m)
-    ===================================================== */
     const VN2000Service = {
         forward(lat, lon, L0 = 105.5) {
             const a = 6378137.0;
@@ -99,8 +92,6 @@ const TGS = (() => {
     /* =====================================================
        GROUP 1: CORE SYSTEM
     ===================================================== */
-
-    // A1: Core Bootstrap & Pure State (Không chứa State nội bộ của Feature)
     const A1_State = {
         currentProject: null,
         activeSurveySession: null,
@@ -112,7 +103,6 @@ const TGS = (() => {
         }
     };
 
-    // A4: Persistence Gateway (Adapter duy nhất giao tiếp với db.js)
     const A4_Persistence = {
         async init() {
             if (typeof DB !== "undefined") {
@@ -139,20 +129,11 @@ const TGS = (() => {
             return DB.getAllProjects();
         },
 
-        // Lưu bản ghi kiểm tra audit trail
         async logTimeline(projectId, action, metadata = {}) {
-            const entry = {
-                id: Date.now().toString(),
-                projectId,
-                action,
-                metadata,
-                timestamp: Date.now()
-            };
-            return entry;
+            return DB.saveTimeline({ projectId, action, metadata });
         }
     };
 
-    // A2: Navigation Engine (Pure Screen Router & Lifecycle Hooks)
     const A2_Navigation = {
         screens: {
             splash: document.getElementById("screenSplash"),
@@ -169,26 +150,22 @@ const TGS = (() => {
             const targetScreenEl = this.screens[screenKey];
 
             if (!targetScreenEl) {
-                console.error(`[Navigation] Screen '${screenKey}' không tồn tại trong UI Contract.`);
+                console.error(`[Navigation] Screen '${screenKey}' không tồn tại.`);
                 return;
             }
 
-            // Phát tín hiệu rời màn hình cũ
             EventBus.emit("screen:leave", { from: previousScreen, to: screenKey });
 
-            // Cập nhật DOM
             Object.values(this.screens).forEach(scr => {
                 if (scr) scr.classList.remove("active");
             });
             targetScreenEl.classList.add("active");
             A1_State.currentScreen = screenKey;
 
-            // Phát tín hiệu đã vào màn hình mới
             EventBus.emit("screen:enter", { screen: screenKey });
         }
     };
 
-    // A3: Project Lifecycle Coordinator
     const A3_ProjectLifecycle = {
         async verifyDraft() {
             try {
@@ -242,12 +219,10 @@ const TGS = (() => {
         async openCompleteSummary() {
             if (!A1_State.currentProject) return;
 
-            // 1. Chốt trạng thái hồ sơ thành completed và lưu vào DB
             A1_State.currentProject.status = "completed";
             A1_State.currentProject.updatedAt = Date.now();
             await A4_Persistence.saveProject(A1_State.currentProject);
 
-            // 2. Lấy số liệu tổng hợp từ các module chuyên biệt
             const lineSummary = L4_SurveyLineLogic.getSummary();
             const stationSummary = P1_StationWorkflow.getSummary();
 
@@ -266,8 +241,6 @@ const TGS = (() => {
     /* =====================================================
        GROUP 2: FEATURE 01 — KHẢO SÁT TUYẾN
     ===================================================== */
-
-    // L1: Resume Manager
     const L1_ResumeManager = {
         resumeLinearSession() {
             if (!A1_State.currentProject) return;
@@ -283,7 +256,6 @@ const TGS = (() => {
         }
     };
 
-    // L2: Map Engine (ArcGIS Default Tile Renderer)
     const L2_MapEngine = {
         map: null,
         markerLayer: null,
@@ -295,7 +267,6 @@ const TGS = (() => {
             const mapContainer = document.getElementById("map");
             if (!mapContainer || this.map) return;
 
-            // ArcGIS World Imagery Basemap
             const arcgisUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
             
             this.map = L.map("map", {
@@ -379,7 +350,6 @@ const TGS = (() => {
         zoomOut() { if (this.map) this.map.zoomOut(); }
     };
 
-    // L3: Smart GNSS Engine (20 Samples Weighted Filter & Provenance)
     const L3_SmartGNSS = {
         sampleTarget: 20,
         isSampling: false,
@@ -426,7 +396,6 @@ const TGS = (() => {
         },
 
         evaluateSamples(samples, L0) {
-            // Lọc phương sai nghịch đảo sai số
             let sumWeight = 0;
             let sumLat = 0;
             let sumLng = 0;
@@ -460,7 +429,6 @@ const TGS = (() => {
         }
     };
 
-    // L4: Survey Line Logic (Line Geometry Owner)
     const L4_SurveyLineLogic = {
         async captureRoutePoint() {
             if (!A1_State.currentProject) {
@@ -492,7 +460,6 @@ const TGS = (() => {
 
                     await A4_Persistence.saveProject(A1_State.currentProject);
 
-                    // Cập nhật Render trên bản đồ và UI HUD
                     L2_MapEngine.renderRoute(A1_State.currentProject.points);
                     L2_MapEngine.updateLivePosition(evaluatedObservation);
                     L4_SurveyLineLogic.updateUI();
@@ -530,7 +497,6 @@ const TGS = (() => {
         }
     };
 
-    // L5: GIS Layer Engine
     const L5_GISLayerEngine = {
         bindLayerToggles() {
             const togglePts = document.getElementById("layerSurveyPoints");
@@ -554,8 +520,6 @@ const TGS = (() => {
     /* =====================================================
        GROUP 3: FEATURE 02 — KHẢO SÁT ĐIỂM / TRẠM
     ===================================================== */
-
-    // P3: Camera & Video Session (Independent Lifecycle)
     const P3_CameraSession = {
         videoEl: document.getElementById("cameraPreview"),
         recBadge: document.getElementById("cameraRecBadge"),
@@ -656,7 +620,6 @@ const TGS = (() => {
             const ctx = canvas.getContext("2d");
             ctx.drawImage(this.videoEl, 0, 0, canvas.width, canvas.height);
 
-            // Watermark hiện trường
             ctx.fillStyle = "rgba(0,0,0,0.65)";
             ctx.fillRect(0, canvas.height - 48, canvas.width, 48);
             ctx.fillStyle = "#00E5FF";
@@ -667,7 +630,6 @@ const TGS = (() => {
         }
     };
 
-    // P4: Media Manager (Manages Media Timeline & Storage)
     const P4_MediaManager = {
         timelineEl: document.getElementById("cameraTimeline"),
         currentPhotos: [],
@@ -713,7 +675,6 @@ const TGS = (() => {
         }
     };
 
-    // P2: Point GNSS Observer
     const P2_PointGNSS = {
         observedPoint: null,
 
@@ -746,7 +707,6 @@ const TGS = (() => {
         }
     };
 
-    // P1: Station Workflow
     const P1_StationWorkflow = {
         initUI() {
             if (!A1_State.currentProject) return;
@@ -799,7 +759,6 @@ const TGS = (() => {
 
             await A4_Persistence.saveProject(A1_State.currentProject);
 
-            // Dọn dẹp form và phiên làm việc
             P3_CameraSession.stopCamera();
             P4_MediaManager.resetMediaSession();
             P2_PointGNSS.reset();
@@ -847,7 +806,6 @@ const TGS = (() => {
         }
     };
 
-    // P6: Sync Builder (Enterprise Dataset Packaging)
     const P6_SyncBuilder = {
         async buildDataset() {
             if (!A1_State.currentProject) {
@@ -855,7 +813,6 @@ const TGS = (() => {
                 return;
             }
 
-            // Đồng bộ trạng thái hoàn thành vào database
             A1_State.currentProject.status = "completed";
             A1_State.currentProject.updatedAt = Date.now();
             await A4_Persistence.saveProject(A1_State.currentProject);
@@ -900,7 +857,6 @@ const TGS = (() => {
     ===================================================== */
     const Z1_AppInitialize = {
         bindGlobalEvents() {
-            // Decoupled Router Hooks qua EventBus
             EventBus.on("screen:leave", ({ from }) => {
                 if (from === "screenPoint") {
                     P3_CameraSession.stopCamera();
@@ -913,12 +869,11 @@ const TGS = (() => {
                 }
             });
 
-            // 1. Splash & Navigation
+            // Navigation & Lifecycle
             document.getElementById("btnStart").addEventListener("click", () => {
                 A2_Navigation.show("projectHome");
             });
 
-            // 2. Project Lifecycle
             document.getElementById("btnNewProject").addEventListener("click", () => {
                 document.getElementById("projectName").value = "";
                 document.getElementById("projectCode").value = "";
@@ -930,14 +885,49 @@ const TGS = (() => {
                 if (A1_State.currentProject) A3_ProjectLifecycle.enterSurveyHome();
             });
 
+            // Mở bảng danh sách tất cả các công trình đã lưu
             document.getElementById("btnOpenProject").addEventListener("click", async () => {
                 const list = await A4_Persistence.getAllProjects();
                 if (list.length === 0) {
                     alert("Chưa có công trình nào được lưu.");
                     return;
                 }
-                A1_State.currentProject = list[0];
-                A3_ProjectLifecycle.enterSurveyHome();
+
+                const container = document.getElementById("projectListItems");
+                container.innerHTML = "";
+
+                list.forEach(proj => {
+                    const item = document.createElement("div");
+                    item.className = "project-item-card";
+                    
+                    const dateStr = new Date(proj.updatedAt || proj.createdAt).toLocaleString("vi-VN");
+                    const statusText = proj.status === "completed" ? "Đã xong" : "Bản nháp";
+                    const statusClass = proj.status === "completed" ? "completed" : "draft";
+
+                    item.innerHTML = `
+                        <div>
+                            <strong>${proj.name} (${proj.code})</strong>
+                            <span>${dateStr} · ${proj.location || "Chưa có địa điểm"}</span>
+                        </div>
+                        <span class="badge-status ${statusClass}">${statusText}</span>
+                    `;
+
+                    // Bấm vào công trình nào thì mở đúng công trình đó
+                    item.addEventListener("click", () => {
+                        A1_State.currentProject = proj;
+                        document.getElementById("modalProjectList").classList.add("hidden");
+                        A3_ProjectLifecycle.enterSurveyHome();
+                    });
+
+                    container.appendChild(item);
+                });
+
+                document.getElementById("modalProjectList").classList.remove("hidden");
+            });
+
+            // Đóng bảng danh sách công trình
+            document.getElementById("btnCloseProjectList").addEventListener("click", () => {
+                document.getElementById("modalProjectList").classList.add("hidden");
             });
 
             document.getElementById("btnBackHome").addEventListener("click", async () => {
@@ -954,7 +944,7 @@ const TGS = (() => {
                 A2_Navigation.show("projectHome");
             });
 
-            // 3. Survey Route Selection
+            // Survey Routing
             document.getElementById("btnLinearSurvey").addEventListener("click", () => {
                 L1_ResumeManager.resumeLinearSession();
             });
@@ -972,7 +962,6 @@ const TGS = (() => {
                 A3_ProjectLifecycle.openCompleteSummary();
             });
 
-            // Quay về Project Home sau khi hoàn thành và ẩn Draft Banner
             document.getElementById("btnBackFromComplete").addEventListener("click", async () => {
                 A1_State.currentProject = null;
                 await A3_ProjectLifecycle.verifyDraft();
@@ -987,7 +976,7 @@ const TGS = (() => {
                 A2_Navigation.show("surveyHome");
             });
 
-            // 4. Linear Map & GNSS Tools
+            // Linear Survey Tools
             document.getElementById("btnZoomIn").addEventListener("click", () => L2_MapEngine.zoomIn());
             document.getElementById("btnZoomOut").addEventListener("click", () => L2_MapEngine.zoomOut());
             document.getElementById("btnLocate").addEventListener("click", () => {
@@ -1001,7 +990,7 @@ const TGS = (() => {
 
             L5_GISLayerEngine.bindLayerToggles();
 
-            // 5. Point Survey & Media Session
+            // Point Survey & Camera Tools
             document.getElementById("btnGetPointGPS").addEventListener("click", () => {
                 P2_PointGNSS.observePointPosition();
             });
@@ -1036,7 +1025,7 @@ const TGS = (() => {
                 P1_StationWorkflow.saveStationRecord();
             });
 
-            // 6. Dataset Export
+            // Export
             document.getElementById("btnExportJSON").addEventListener("click", () => {
                 P6_SyncBuilder.buildDataset();
             });
@@ -1044,11 +1033,8 @@ const TGS = (() => {
 
         async startup() {
             console.log("[TGS Platform Genesis 2.0] Initializing Architecture Locked REV04...");
-            
-            // Khởi tạo các bộ lắng nghe sự kiện
             this.bindGlobalEvents();
 
-            // Khởi tạo Persistence Gateway (DB v4) và khôi phục nháp
             try {
                 await A4_Persistence.init();
                 await A3_ProjectLifecycle.verifyDraft();
@@ -1064,7 +1050,6 @@ const TGS = (() => {
     };
 })();
 
-// Khởi chạy khi DOM sẵn sàng
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", TGS.initialize);
 } else {
