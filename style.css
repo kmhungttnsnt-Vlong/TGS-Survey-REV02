@@ -1,7 +1,7 @@
 /* ==========================================================
    TGS PLATFORM GENESIS 2.0
    BASELINE B2 - STYLE.CSS (FULL DESIGN SYSTEM)
-   COMPATIBLE WITH INDEX & APP BASELINE B4 (GIS & CAMERA EXTENSION)
+   DOCUMENT ID: TGS-HO-301 REV01 COMPLIANT
 ========================================================== */
 
 :root {
@@ -18,7 +18,6 @@
   --shadow: 0 10px 24px rgba(15, 23, 42, .08);
 }
 
-/* ================= RESET & GENERAL ================= */
 * {
   margin: 0;
   padding: 0;
@@ -43,7 +42,6 @@ button, input, select, textarea {
   display: none !important;
 }
 
-/* ================= APP ROOT & SCREENS ================= */
 #app {
   width: 100%;
   height: 100%;
@@ -178,10 +176,6 @@ button, input, select, textarea {
   box-shadow: 0 1px 0 rgba(0, 0, 0, .06);
 }
 
-.brand {
-  font-size: 18px;
-}
-
 .brand strong {
   color: var(--primary);
   font-size: 22px;
@@ -190,6 +184,7 @@ button, input, select, textarea {
 .brand span {
   margin-left: 4px;
   color: #334155;
+  font-size: 18px;
 }
 
 .version {
@@ -470,7 +465,7 @@ button, input, select, textarea {
 .map-wrapper {
   flex: 1;
   position: relative;
-  background: #DCECF8;
+  background: #0B132B;
 }
 
 #map {
@@ -556,7 +551,7 @@ button, input, select, textarea {
   font-size: 15px;
 }
 
-/* ================= FEATURE 02: CAMERA & MEDIA EXTENSION ================= */
+/* ================= CAMERA & MEDIA SYSTEM ================= */
 .camera-card {
   background: #fff;
   border-radius: 18px;
@@ -633,17 +628,9 @@ button, input, select, textarea {
   transform: scale(0.97);
 }
 
-.btn-camera.blue {
-  background: #1976D2;
-}
-
-.btn-camera.red {
-  background: var(--danger);
-}
-
-.btn-camera.orange {
-  background: #F57C00;
-}
+.btn-camera.blue { background: #1976D2; }
+.btn-camera.red { background: var(--danger); }
+.btn-camera.orange { background: #F57C00; }
 
 .video-notice {
   background: #E8F5E9;
@@ -734,51 +721,105 @@ button, input, select, textarea {
   color: var(--muted);
 }
 
-/* ================= LEAFLET FIX ================= */
-.leaflet-container {
-  background: #DCECF8;
-  font: inherit;
+/* ================= MODAL CHỌN CÔNG TRÌNH ================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
 }
 
-/* ================= MOBILE RESPONSIVE ================= */
+.modal-content {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 17px;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.project-list-items {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-item-card {
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 14px;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.project-item-card:active {
+  background: #F1F5F9;
+  transform: scale(0.98);
+}
+
+.project-item-card strong {
+  display: block;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.project-item-card span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.badge-status {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.badge-status.draft { background: #FFF8E1; color: #B45309; }
+.badge-status.completed { background: #E8F5E9; color: #2E7D32; }
+
+/* ================= RESPONSIVE ================= */
 @media (max-width: 768px) {
-  .page, .form-page, .survey-home {
-    padding: 16px;
-  }
-
-  .page h1 {
-    font-size: 30px;
-  }
-
-  .linear-layout {
-    flex-direction: column;
-    height: calc(100% - 210px);
-  }
-
-  .gis-panel {
-    width: 100%;
-    height: 110px;
-    border-right: none;
-    border-bottom: 1px solid #E2E8F0;
-  }
-
-  .survey-footer {
-    grid-template-columns: repeat(2, 1fr);
-    height: 146px;
-  }
-
-  #btnCaptureGPS {
-    grid-column: 1 / 3;
-  }
-
-  .camera-actions {
-    flex-direction: row;
-    gap: 6px;
-  }
-
-  .btn-camera {
-    font-size: 12px;
-    padding: 0 4px;
-  }
+  .page, .form-page, .survey-home { padding: 16px; }
+  .page h1 { font-size: 30px; }
+  .linear-layout { flex-direction: column; height: calc(100% - 210px); }
+  .gis-panel { width: 100%; height: 110px; border-right: none; border-bottom: 1px solid #E2E8F0; }
+  .survey-footer { grid-template-columns: repeat(2, 1fr); height: 146px; }
+  #btnCaptureGPS { grid-column: 1 / 3; }
+  .camera-actions { flex-direction: row; gap: 6px; }
+  .btn-camera { font-size: 12px; padding: 0 4px; }
 }
-/* ================= END BASELINE B2 ================= */
