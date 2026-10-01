@@ -1029,6 +1029,39 @@ const TGS = (() => {
             document.getElementById("btnExportJSON").addEventListener("click", () => {
                 P6_SyncBuilder.buildDataset();
             });
+           // TRÍCH XUẤT VÀ TẢI TOÀN BỘ VIDEO TỪ DỮ LIỆU ĐÃ LƯU
+            const btnDownloadVideos = document.getElementById("btnDownloadAllVideos");
+            if (btnDownloadVideos) {
+                btnDownloadVideos.addEventListener("click", async () => {
+                    if (!A1_State.currentProject) {
+                        alert("Vui lòng mở một công trình đã lưu trước.");
+                        return;
+                    }
+
+                    const stations = A1_State.currentProject.pointFeatures || [];
+                    let foundVideos = 0;
+
+                    stations.forEach((st, idx) => {
+                        const videoData = st.evidence?.video;
+                        if (videoData) {
+                            foundVideos++;
+                            // Tạo thẻ tải về ảo để lưu file video
+                            const a = document.createElement("a");
+                            a.href = videoData;
+                            a.download = `VIDEO_${A1_State.currentProject.code}_${st.name || 'Tram'}_${idx + 1}.webm`;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                        }
+                    });
+
+                    if (foundVideos > 0) {
+                        alert(`Đã tìm thấy và kích hoạt tải về ${foundVideos} video hiện trường!`);
+                    } else {
+                        alert("Không tìm thấy video nào được lưu trong hồ sơ công trình này.");
+                    }
+                });
+            }
         },
 
         async startup() {
