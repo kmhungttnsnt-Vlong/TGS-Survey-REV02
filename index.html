@@ -79,7 +79,7 @@
       <div class="status-card">
         <div class="status-row">
           <span>Offline Database</span>
-          <strong id="dbStatusText">IndexedDB v4 Sẵn sàng</strong>
+          <strong id="dbStatusText">IndexedDB v5 Sẵn sàng</strong>
         </div>
         <div class="status-row">
           <span>Smart GNSS Engine</span>
@@ -117,7 +117,7 @@
     </div>
   </section>
 
-  <!-- ==================== SCREEN 04: SURVEY HUB (CHỌN HOẶC XEM LẠI) ==================== -->
+  <!-- ==================== SCREEN 04: SURVEY HUB ==================== -->
   <section id="screenSurveyHome" class="screen">
     <header class="nav-header">
       <button id="btnBackProject" class="back-btn">←</button>
@@ -160,7 +160,7 @@
     </div>
   </section>
 
-  <!-- ==================== SCREEN 05: LINEAR SURVEY (FULL SCREEN GIS) ==================== -->
+  <!-- ==================== SCREEN 05: LINEAR SURVEY ==================== -->
   <section id="screenLinear" class="screen">
     <header class="survey-header-floating">
       <button id="btnExitLinear" class="back-btn-floating">←</button>
@@ -174,7 +174,7 @@
     <div class="map-wrapper-fullscreen">
       <div id="map"></div>
 
-      <!-- Menu lớp GIS nổi (ẩn/hiện thông minh) -->
+      <!-- Menu lớp GIS nổi -->
       <div id="layerPopupCard" class="layer-popup-card hidden">
         <h4>Lớp bản đồ GIS</h4>
         <label><input type="checkbox" id="layerSurveyPoints" checked> Điểm khảo sát</label>
@@ -183,7 +183,7 @@
         <label><input type="checkbox" checked> Trạm cấp nước</label>
       </div>
 
-      <!-- Cụm công cụ bản đồ góc dưới phải (Thumb Zone) -->
+      <!-- Cụm công cụ bản đồ góc dưới phải -->
       <div class="map-tools-bottom">
         <button id="btnLocate" class="tool-circle" title="Vị trí hiện tại">◎</button>
         <button id="btnZoomIn" class="tool-circle">＋</button>
@@ -198,14 +198,14 @@
         <div><span>Sai số:</span> <strong id="gpsAccuracy">± -- m</strong></div>
       </div>
 
-      <!-- Nút Chốt điểm Smart GPS siêu to ở đáy -->
+      <!-- Nút Chốt điểm Smart GPS -->
       <button id="btnCaptureGPS" class="btn-giant-gps">
         <span id="captureBtnText">◎ CHỐT ĐIỂM SMART GPS</span>
       </button>
     </div>
   </section>
 
-  <!-- ==================== SCREEN 06: POINT SURVEY (FORM & CAMERA FULLSCREEN) ==================== -->
+  <!-- ==================== SCREEN 06: POINT SURVEY ==================== -->
   <section id="screenPoint" class="screen">
     <header class="nav-header">
       <button id="btnExitPoint" class="back-btn">←</button>
@@ -222,7 +222,7 @@
         <option value="Hạng mục">Hạng mục (Khảo sát chuyên đề từng hạng mục)</option>
       </select>
 
-      <!-- Khối chọn Hạng mục (ẩn khi chọn Toàn trạm) -->
+      <!-- Khối chọn Hạng mục -->
       <div id="sectionCategoryGroup" class="hidden" style="margin-top: 10px;">
         <label>Hạng mục / Bộ phận</label>
         <select id="sectionSelect" class="form-select">
@@ -306,7 +306,7 @@
       </div>
     </div>
 
-    <!-- KHUNG CAMERA TOÀN MÀN HÌNH CHUYÊN NGHIỆP (FULL-SCREEN OVERLAY) -->
+    <!-- KHUNG CAMERA TOÀN MÀN HÌNH -->
     <div id="fullscreenCameraOverlay" class="fullscreen-cam-overlay hidden">
       <video id="cameraPreviewFS" autoplay playsinline muted></video>
       
@@ -317,7 +317,7 @@
         <button id="btnFlipCam" class="fs-tool-btn">🔄</button>
       </div>
 
-      <!-- Thanh chọn Zoom nhanh (1x, 2x, 3x, 5x) -->
+      <!-- Thanh chọn Zoom -->
       <div class="fs-zoom-bar">
         <button class="zoom-btn active" data-zoom="1">1x</button>
         <button class="zoom-btn" data-zoom="2">2x</button>
@@ -325,13 +325,13 @@
         <button class="zoom-btn" data-zoom="5">5x</button>
       </div>
 
-      <!-- Bottom HUD Thao tác ngón cái -->
+      <!-- Bottom HUD -->
       <div class="fs-cam-bottom-hud">
         <button id="btnSnapPhotoFS" class="fs-btn-snap" title="Chụp ảnh nhanh">📷</button>
         <button id="btnRecordVideoFS" class="fs-btn-record" title="Bắt đầu / Dừng quay">
           <span class="fs-rec-circle"></span>
         </button>
-        <div style="width:50px;"></div> <!-- Cân đối bố cục -->
+        <div style="width:50px;"></div>
       </div>
     </div>
   </section>
@@ -394,7 +394,7 @@
     </div>
   </section>
 
-  <!-- ==================== MODAL: MỞ CÔNG TRÌNH ĐÃ LƯU (CÓ TÌM KIẾM) ==================== -->
+  <!-- ==================== MODAL: MỞ CÔNG TRÌNH ĐÃ LƯU ==================== -->
   <div id="modalProjectList" class="modal-overlay hidden">
     <div class="modal-content">
       <div class="modal-header">
