@@ -1,9 +1,13 @@
 /* =========================================================
    TGS PLATFORM GENESIS 2.0
-   BASELINE B6 — APP.JS (BLOB MEDIA ENGINE REV06)
+   BASELINE B7 — APP.JS (DRIVE SYNC INTEGRATED)
+   WEBHOOK: https://script.google.com/macros/s/AKfycbxZNciRxAWP_ZSP7r7t7IF8s2uD3sy9rOVs9_jMXrVdt17kzt85ZywNXhqe6OioIAl3LQ/exec
 ========================================================= */
 
 const TGS = (() => {
+
+    // WEBHOOK URL GOOGLE APPS SCRIPT ĐÃ KÍCH HOẠT
+    const GOOGLE_DRIVE_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxZNciRxAWP_ZSP7r7t7IF8s2uD3sy9rOVs9_jMXrVdt17kzt85ZywNXhqe6OioIAl3LQ/exec";
 
     const EventBus = {
         events: {},
@@ -66,9 +70,6 @@ const TGS = (() => {
         }
     };
 
-    /* =====================================================
-       TIỆN ÍCH CHIA SẺ VÀ TẢI VỀ
-    ===================================================== */
     async function shareOrDownloadFile(file, fallbackFileName) {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
@@ -108,7 +109,7 @@ const TGS = (() => {
                 await DB.init();
                 return true;
             }
-            throw new Error("Data Contract Violation: Không tìm thấy DB.js");
+            throw new Error("Không tìm thấy DB.js");
         },
         async getDraftProject() { return DB.getDraftProject(); },
         async createProject(data) { return DB.createProject(data); },
@@ -222,12 +223,13 @@ const TGS = (() => {
             document.getElementById("summaryLength").innerText = lineSummary.lengthText;
             document.getElementById("summaryStations").innerText = `${stationSummary.count} đối tượng`;
 
+            document.getElementById("driveSyncStatus").classList.add("hidden");
             A2_Navigation.show("complete");
         }
     };
 
     /* =====================================================
-       GROUP 2: FEATURE 01 — FULLSCREEN GIS LINEAR SURVEY
+       GROUP 2: FULLSCREEN GIS LINEAR SURVEY
     ===================================================== */
     const L1_ResumeManager = {
         resumeLinearSession() {
@@ -926,7 +928,7 @@ const TGS = (() => {
     };
 
     /* =====================================================
-       GROUP 5: BOOTSTRAP & EVENTS
+       GROUP 5: BOOTSTRAP, EVENTS & CLOUD SYNC
     ===================================================== */
     const Z1_AppInitialize = {
         bindGlobalEvents() {
@@ -1060,100 +1062,141 @@ const TGS = (() => {
                 if (navigator.vibrate) navigator.vibrate(80);
             });
 
-            // XUẤT JSON KHÔNG NÉN VIDEO ĐỂ TRÁNH QUÁ TẢI
-            document.getElementById("btnExportJSON").addEventListener("click", async () => {
-                if (!A1_State.currentProject) return;
-                A1_State.currentProject.status = "completed";
-                A1_State.currentProject.updatedAt = Date.now();
-                await A4_Persistence.saveProject(A1_State.currentProject);
+            /* =========================================================
+               TÍNH NĂNG ĐỒNG BỘ 1 CHẠM LÊN GOOGLE DRIVE (WEBHOOK)
+            ========================================================= */
+            const btnSyncDrive = document.getElementById("btnSyncDrive");
+            const driveStatusEl = document.getElementById("driveSyncStatus");
 
-                const cleanStations = (A1_State.currentProject.pointFeatures || []).map(st => {
-                    return {
-                        id: st.id,
-                        type: st.type,
-                        name: st.name,
-                        section: st.section,
-                        note: st.note,
-                        coordinates: st.coordinates,
-                        provenance: st.provenance,
-                        evidence: {
-                            photos: st.evidence?.photos || [],
-                            hasVideoRecorded: Boolean(st.evidence?.videoBlob || st.evidence?.video)
-                        }
-                    };
-                });
-
-                const dataset = {
-                    contract: "TGS-HO-301 REV01",
-                    platform: "TGS Platform Genesis 2.0",
-                    exportedAt: new Date().toISOString(),
-                    project: {
-                        id: A1_State.currentProject.id,
-                        name: A1_State.currentProject.name,
-                        code: A1_State.currentProject.code,
-                        status: "completed",
-                        location: A1_State.currentProject.location,
-                        createdAt: A1_State.currentProject.createdAt,
-                        updatedAt: A1_State.currentProject.updatedAt
-                    },
-                    linearSurvey: {
-                        lineSummary: L4_SurveyLineLogic.getSummary(),
-                        points: A1_State.currentProject.points || []
-                    },
-                    pointSurvey: {
-                        stationCount: cleanStations.length,
-                        features: cleanStations
-                    }
-                };
-
-                const fileName = `TGS_DATASET_${A1_State.currentProject.code}_${Date.now()}.json`;
-                const jsonBlob = new Blob([JSON.stringify(dataset, null, 2)], { type: "application/json" });
-                const jsonFile = new File([jsonBlob], fileName, { type: "application/json" });
-                await shareOrDownloadFile(jsonFile, fileName);
-            });
-
-            // CHIA SẺ FILE VIDEO GỐC DẠNG BLOB NHỊ PHÂN
-            document.getElementById("btnShareVideos").addEventListener("click", async () => {
-                if (!A1_State.currentProject) return;
-                const stations = A1_State.currentProject.pointFeatures || [];
-                let sharedCount = 0;
-
-                for (let idx = 0; idx < stations.length; idx++) {
-                    const blobData = stations[idx].evidence?.videoBlob;
-                    if (blobData instanceof Blob) {
-                        const fileName = `VIDEO_${A1_State.currentProject.code}_${idx + 1}.webm`;
-                        const file = new File([blobData], fileName, { type: blobData.type || "video/webm" });
-                        await shareOrDownloadFile(file, fileName);
-                        sharedCount++;
-                    } else if (stations[idx].evidence?.video) {
-                        const res = await fetch(stations[idx].evidence.video);
-                        const b = await res.blob();
-                        const fileName = `VIDEO_${A1_State.currentProject.code}_${idx + 1}.webm`;
-                        const file = new File([b], fileName, { type: "video/webm" });
-                        await shareOrDownloadFile(file, fileName);
-                        sharedCount++;
-                    }
-                }
-
-                if (sharedCount === 0) alert("Không tìm thấy video nào được lưu.");
-            });
-           
-           // XUẤT VÀ CHIA SẺ TOÀN BỘ ẢNH HIỆN TRƯỜNG (ZALO / DRIVE / TẢI VỀ)
-            const btnSharePhotos = document.getElementById("btnSharePhotos");
-            if (btnSharePhotos) {
-                btnSharePhotos.addEventListener("click", async () => {
+            if (btnSyncDrive) {
+                btnSyncDrive.addEventListener("click", async () => {
                     if (!A1_State.currentProject) {
-                        alert("Vui lòng mở một công trình đã lưu trước.");
+                        alert("Không có hồ sơ công trình hiện hành.");
                         return;
                     }
 
+                    driveStatusEl.classList.remove("hidden");
+                    driveStatusEl.style.color = "#E65100";
+                    driveStatusEl.innerText = "⏳ Đang đóng gói hồ sơ kỹ thuật...";
+                    btnSyncDrive.disabled = true;
+
+                    try {
+                        const proj = A1_State.currentProject;
+                        const stations = proj.pointFeatures || [];
+                        const photosPayload = [];
+                        const videosPayload = [];
+
+                        // 1. Gom ảnh hiện trường
+                        for (let sIdx = 0; sIdx < stations.length; sIdx++) {
+                            const st = stations[sIdx];
+                            const photos = st.evidence?.photos || [];
+                            for (let pIdx = 0; pIdx < photos.length; pIdx++) {
+                                photosPayload.push({
+                                    fileName: `ANH_${proj.code}_${(st.section || 'HM').replace(/[^a-zA-Z0-9]/g, '_')}_${pIdx + 1}.jpg`,
+                                    data: photos[pIdx].image
+                                });
+                            }
+
+                            // 2. Gom video hiện trường (nếu có)
+                            if (st.evidence?.videoBlob instanceof Blob) {
+                                driveStatusEl.innerText = "⏳ Đang chuẩn bị luồng video đẩy lên Drive...";
+                                const reader = new FileReader();
+                                const base64Promise = new Promise(resolve => {
+                                    reader.onloadend = () => resolve(reader.result);
+                                    reader.readAsDataURL(st.evidence.videoBlob);
+                                });
+                                const vData = await base64Promise;
+                                videosPayload.push({
+                                    fileName: `VIDEO_${proj.code}_${(st.section || 'Tram').replace(/[^a-zA-Z0-9]/g, '_')}.webm`,
+                                    mimeType: st.evidence.videoBlob.type || "video/webm",
+                                    data: vData
+                                });
+                            } else if (st.evidence?.video) {
+                                videosPayload.push({
+                                    fileName: `VIDEO_${proj.code}_${(st.section || 'Tram').replace(/[^a-zA-Z0-9]/g, '_')}.webm`,
+                                    mimeType: "video/webm",
+                                    data: st.evidence.video
+                                });
+                            }
+                        }
+
+                        driveStatusEl.innerText = `☁️ Đang đồng bộ lên Google Drive (${photosPayload.length} ảnh, ${videosPayload.length} video)...`;
+
+                        const cleanStations = stations.map(st => ({
+                            id: st.id,
+                            type: st.type,
+                            name: st.name,
+                            section: st.section,
+                            note: st.note,
+                            coordinates: st.coordinates,
+                            provenance: st.provenance,
+                            evidence: {
+                                photoCount: st.evidence?.photos?.length || 0,
+                                hasVideo: Boolean(st.evidence?.videoBlob || st.evidence?.video)
+                            }
+                        }));
+
+                        const dataset = {
+                            contract: "TGS-HO-301 REV01",
+                            platform: "TGS Platform Genesis 2.0",
+                            exportedAt: new Date().toISOString(),
+                            project: proj,
+                            linearSurvey: {
+                                lineSummary: L4_SurveyLineLogic.getSummary(),
+                                points: proj.points || []
+                            },
+                            pointSurvey: {
+                                stationCount: cleanStations.length,
+                                features: cleanStations
+                            }
+                        };
+
+                        const payload = {
+                            project: {
+                                name: proj.name,
+                                code: proj.code
+                            },
+                            dataset: dataset,
+                            photos: photosPayload,
+                            videos: videosPayload
+                        };
+
+                        const response = await fetch(GOOGLE_DRIVE_WEBHOOK_URL, {
+                            method: "POST",
+                            body: JSON.stringify(payload)
+                        });
+
+                        const resJson = await response.json();
+
+                        if (resJson.status === "success") {
+                            driveStatusEl.style.color = "#2E7D32";
+                            driveStatusEl.innerHTML = `✓ Đồng bộ thành công! <a href="${resJson.folderUrl}" target="_blank" style="color:#1565C0; text-decoration:underline; font-weight:bold;">Mở thư mục trên Google Drive</a>`;
+                            alert("Đã đồng bộ toàn bộ hồ sơ vào Google Drive thành công!");
+                        } else {
+                            throw new Error(resJson.message);
+                        }
+
+                    } catch (err) {
+                        driveStatusEl.style.color = "#D32F2F";
+                        driveStatusEl.innerText = "✕ Lỗi đồng bộ: " + err.message;
+                        alert("Không thể đồng bộ lên Google Drive: " + err.message);
+                    } finally {
+                        btnSyncDrive.disabled = false;
+                    }
+                });
+            }
+
+            // Xuất album ảnh thủ công (phòng hờ khi không có mạng)
+            const btnSharePhotos = document.getElementById("btnSharePhotos");
+            if (btnSharePhotos) {
+                btnSharePhotos.addEventListener("click", async () => {
+                    if (!A1_State.currentProject) return;
                     const stations = A1_State.currentProject.pointFeatures || [];
                     const photoFiles = [];
 
                     for (let sIdx = 0; sIdx < stations.length; sIdx++) {
                         const st = stations[sIdx];
                         const photos = st.evidence?.photos || [];
-
                         for (let pIdx = 0; pIdx < photos.length; pIdx++) {
                             const p = photos[pIdx];
                             if (p.image) {
@@ -1162,41 +1205,62 @@ const TGS = (() => {
                                     const blob = await res.blob();
                                     const cleanSection = (st.section || "HangMuc").replace(/[^a-zA-Z0-9]/g, "_");
                                     const fileName = `ANH_${A1_State.currentProject.code}_${cleanSection}_${pIdx + 1}.jpg`;
-                                    const file = new File([blob], fileName, { type: "image/jpeg" });
-                                    photoFiles.push(file);
+                                    photoFiles.push(new File([blob], fileName, { type: "image/jpeg" }));
                                 } catch (e) {
-                                    console.warn("Lỗi đọc ảnh:", e);
+                                    console.warn(e);
                                 }
                             }
                         }
                     }
 
                     if (photoFiles.length === 0) {
-                        alert("Không tìm thấy bức ảnh nào được chụp trong hồ sơ công trình này.");
+                        alert("Không tìm thấy ảnh nào trong hồ sơ.");
                         return;
                     }
 
-                    // Nếu hỗ trợ chia sẻ nhiều file cùng lúc qua Zalo/Drive
                     if (navigator.canShare && navigator.canShare({ files: photoFiles })) {
                         try {
                             await navigator.share({
                                 files: photoFiles,
                                 title: `Album ảnh hiện trường ${A1_State.currentProject.name}`,
-                                text: `Trọn bộ ${photoFiles.length} ảnh khảo sát trọng điểm ${A1_State.currentProject.code}`
+                                text: `Album ${photoFiles.length} ảnh ${A1_State.currentProject.code}`
                             });
                             return;
                         } catch (err) {
-                            if (err.name === 'AbortError') return;
+                            if (err.name !== 'AbortError') console.warn(err);
                         }
                     }
 
-                    // Phương án dự phòng: Tự động tải lần lượt từng ảnh về máy
-                    alert(`Đang tiến hành tải xuống ${photoFiles.length} ảnh hiện trường...`);
                     for (const pFile of photoFiles) {
                         await shareOrDownloadFile(pFile, pFile.name);
                     }
                 });
             }
+
+            // Xuất JSON thủ công
+            document.getElementById("btnExportJSON").addEventListener("click", async () => {
+                if (!A1_State.currentProject) return;
+                const proj = A1_State.currentProject;
+                const fileName = `TGS_DATASET_${proj.code}_${Date.now()}.json`;
+                const jsonBlob = new Blob([JSON.stringify(proj, null, 2)], { type: "application/json" });
+                await shareOrDownloadFile(new File([jsonBlob], fileName, { type: "application/json" }), fileName);
+            });
+
+            // Tải Video thủ công
+            document.getElementById("btnShareVideos").addEventListener("click", async () => {
+                if (!A1_State.currentProject) return;
+                const stations = A1_State.currentProject.pointFeatures || [];
+                let count = 0;
+                for (let idx = 0; idx < stations.length; idx++) {
+                    const b = stations[idx].evidence?.videoBlob;
+                    if (b instanceof Blob) {
+                        const fileName = `VIDEO_${A1_State.currentProject.code}_${idx + 1}.webm`;
+                        await shareOrDownloadFile(new File([b], fileName, { type: b.type || "video/webm" }), fileName);
+                        count++;
+                    }
+                }
+                if (count === 0) alert("Không tìm thấy video nào.");
+            });
         },
 
         renderProjectList(list) {
@@ -1239,7 +1303,7 @@ const TGS = (() => {
                 await A4_Persistence.init();
                 await A3_ProjectLifecycle.verifyDraft();
             } catch (err) {
-                console.error("Lỗi khởi tạo hệ thống:", err);
+                console.error("Lỗi khởi tạo:", err);
             }
         }
     };
