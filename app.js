@@ -1137,6 +1137,66 @@ const TGS = (() => {
 
                 if (sharedCount === 0) alert("Không tìm thấy video nào được lưu.");
             });
+           
+           // XUẤT VÀ CHIA SẺ TOÀN BỘ ẢNH HIỆN TRƯỜNG (ZALO / DRIVE / TẢI VỀ)
+            const btnSharePhotos = document.getElementById("btnSharePhotos");
+            if (btnSharePhotos) {
+                btnSharePhotos.addEventListener("click", async () => {
+                    if (!A1_State.currentProject) {
+                        alert("Vui lòng mở một công trình đã lưu trước.");
+                        return;
+                    }
+
+                    const stations = A1_State.currentProject.pointFeatures || [];
+                    const photoFiles = [];
+
+                    for (let sIdx = 0; sIdx < stations.length; sIdx++) {
+                        const st = stations[sIdx];
+                        const photos = st.evidence?.photos || [];
+
+                        for (let pIdx = 0; pIdx < photos.length; pIdx++) {
+                            const p = photos[pIdx];
+                            if (p.image) {
+                                try {
+                                    const res = await fetch(p.image);
+                                    const blob = await res.blob();
+                                    const cleanSection = (st.section || "HangMuc").replace(/[^a-zA-Z0-9]/g, "_");
+                                    const fileName = `ANH_${A1_State.currentProject.code}_${cleanSection}_${pIdx + 1}.jpg`;
+                                    const file = new File([blob], fileName, { type: "image/jpeg" });
+                                    photoFiles.push(file);
+                                } catch (e) {
+                                    console.warn("Lỗi đọc ảnh:", e);
+                                }
+                            }
+                        }
+                    }
+
+                    if (photoFiles.length === 0) {
+                        alert("Không tìm thấy bức ảnh nào được chụp trong hồ sơ công trình này.");
+                        return;
+                    }
+
+                    // Nếu hỗ trợ chia sẻ nhiều file cùng lúc qua Zalo/Drive
+                    if (navigator.canShare && navigator.canShare({ files: photoFiles })) {
+                        try {
+                            await navigator.share({
+                                files: photoFiles,
+                                title: `Album ảnh hiện trường ${A1_State.currentProject.name}`,
+                                text: `Trọn bộ ${photoFiles.length} ảnh khảo sát trọng điểm ${A1_State.currentProject.code}`
+                            });
+                            return;
+                        } catch (err) {
+                            if (err.name === 'AbortError') return;
+                        }
+                    }
+
+                    // Phương án dự phòng: Tự động tải lần lượt từng ảnh về máy
+                    alert(`Đang tiến hành tải xuống ${photoFiles.length} ảnh hiện trường...`);
+                    for (const pFile of photoFiles) {
+                        await shareOrDownloadFile(pFile, pFile.name);
+                    }
+                });
+            }
         },
 
         renderProjectList(list) {
