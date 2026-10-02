@@ -7,7 +7,7 @@ const TGS = (() => {
 
     // CẤU HÌNH MẶC ĐỊNH & BẢO MẬT
     const CONFIG = {
-        DEFAULT_SERVER_URL: "https://markers-rick-muslim-collins.trycloudflare.com",
+        DEFAULT_SERVER_URL: "https://code-any-bicycle-salaries.trycloudflare.com",
         TGS_API_KEY: "TGS_SECURE_TOKEN_2026_VINHLONG",
         // Danh sách PIN kích hoạt thiết bị (Dành riêng cho anh em đội khảo sát)
         ALLOWED_PINS: {
