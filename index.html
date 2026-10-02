@@ -86,8 +86,8 @@
           <strong id="gnssStatusText">Bộ gom 20 mẫu chuẩn hóa</strong>
         </div>
         <div class="status-row">
-          <span>GIS Core</span>
-          <strong>Leaflet / ArcGIS Imagery</strong>
+          <span>Cloud Webhook</span>
+          <strong style="color:var(--primary);">Google Drive Kết nối</strong>
         </div>
       </div>
     </div>
@@ -155,7 +155,7 @@
       <!-- Kết thúc khảo sát & chia sẻ -->
       <div id="btnFinishProject" class="survey-card" style="border: 2px dashed #1565C0;">
         <h3>Kết thúc & Chia sẻ hồ sơ</h3>
-        <p>Tổng kết chỉ số · Chia sẻ trực tiếp Zalo / Google Drive</p>
+        <p>Tổng kết chỉ số · Đồng bộ Google Drive / Zalo</p>
       </div>
     </div>
   </section>
@@ -310,14 +310,12 @@
     <div id="fullscreenCameraOverlay" class="fullscreen-cam-overlay hidden">
       <video id="cameraPreviewFS" autoplay playsinline muted></video>
       
-      <!-- Top HUD -->
       <div class="fs-cam-top-hud">
         <button id="btnCloseFullscreenCam" class="fs-close-btn">✕</button>
         <span id="fsRecBadge" class="fs-rec-badge">⚪ SẴN SÀNG</span>
         <button id="btnFlipCam" class="fs-tool-btn">🔄</button>
       </div>
 
-      <!-- Thanh chọn Zoom -->
       <div class="fs-zoom-bar">
         <button class="zoom-btn active" data-zoom="1">1x</button>
         <button class="zoom-btn" data-zoom="2">2x</button>
@@ -325,7 +323,6 @@
         <button class="zoom-btn" data-zoom="5">5x</button>
       </div>
 
-      <!-- Bottom HUD -->
       <div class="fs-cam-bottom-hud">
         <button id="btnSnapPhotoFS" class="fs-btn-snap" title="Chụp ảnh nhanh">📷</button>
         <button id="btnRecordVideoFS" class="fs-btn-record" title="Bắt đầu / Dừng quay">
@@ -352,12 +349,12 @@
     </div>
   </section>
 
-  <!-- ==================== SCREEN 08: COMPLETE & SHARE ==================== -->
+  <!-- ==================== SCREEN 08: COMPLETE & GOOGLE DRIVE SYNC ==================== -->
   <section id="screenProjectComplete" class="screen">
     <header class="nav-header">
       <button id="btnBackFromComplete" class="back-btn">←</button>
       <div>
-        <h2>Hoàn thành & Chia sẻ</h2>
+        <h2>Hoàn thành & Đồng bộ</h2>
         <p>Đóng gói hồ sơ TGS Dataset</p>
       </div>
     </header>
@@ -380,22 +377,26 @@
         </div>
         <div class="status-row">
           <span>Trạng thái hồ sơ</span>
-          <strong style="color:var(--primary);">Sẵn sàng xuất (Locked)</strong>
+          <strong style="color:var(--primary);">Sẵn sàng đồng bộ (Locked)</strong>
         </div>
 
-        <!-- NÚT XUẤT JSON -->
-        <button id="btnExportJSON" class="btn-primary" style="margin-top:20px;">
-          📤 Xuất & Chia sẻ TGS Dataset (JSON)
+        <!-- CỤM ĐỒNG BỘ GOOGLE DRIVE -->
+        <button id="btnSyncDrive" class="btn-primary" style="margin-top:20px; background:#0F9D58; height:54px; font-size:16px;">
+          ☁️ Đồng bộ lên Google Drive
+        </button>
+        <div id="driveSyncStatus" style="font-size:13px; text-align:center; margin-top:8px; font-weight:700;" class="hidden"></div>
+
+        <!-- CỤM XUẤT THỦ CÔNG DỰ PHÒNG (ZALO / TẢI VỀ) -->
+        <button id="btnSharePhotos" class="btn-secondary" style="margin-top:14px; width:100%; height:48px; background:#FFF3E0; color:#E65100; font-weight:bold; border:1px solid #FF9800;">
+          📷 Xuất / Tải Album Ảnh Hiện Trường
         </button>
 
-        <!-- NÚT MỚI: XUẤT TRỌN BỘ ALBUM ẢNH HIỆN TRƯỜNG -->
-        <button id="btnSharePhotos" class="btn-secondary" style="margin-top:12px; width:100%; height:52px; background:#FFF3E0; color:#E65100; font-weight:bold; border:1px solid #FF9800;">
-          📷 Xuất & Chia sẻ Album Ảnh Hiện Trường
+        <button id="btnExportJSON" class="btn-secondary" style="margin-top:10px; width:100%; height:48px; background:#E3F2FD; color:#1565C0; font-weight:bold;">
+          📤 Xuất TGS Dataset (JSON)
         </button>
 
-        <!-- NÚT XUẤT VIDEO -->
-        <button id="btnShareVideos" class="btn-secondary" style="margin-top:12px; width:100%; height:52px; background:#E8F5E9; color:#2E7D32; font-weight:bold; border:1px solid #4CAF50;">
-          🎥 Chia sẻ Video Hiện Trường (Zalo / Drive)
+        <button id="btnShareVideos" class="btn-secondary" style="margin-top:10px; width:100%; height:48px; background:#E8F5E9; color:#2E7D32; font-weight:bold; border:1px solid #4CAF50;">
+          🎥 Tải Video Hiện Trường (.webm)
         </button>
       </div>
     </div>
@@ -409,14 +410,13 @@
         <button id="btnCloseProjectList" class="modal-close-btn">✕</button>
       </div>
       
-      <!-- Thanh tìm kiếm thông minh -->
       <div style="padding: 12px 16px; border-bottom: 1px solid #E2E8F0;">
         <input id="searchProjectInput" type="text" placeholder="🔍 Tìm theo tên hoặc mã trạm..." 
                style="width: 100%; height: 42px; border-radius: 10px; border: 1px solid #CBD5E1; padding: 0 12px; font-size: 14px;">
       </div>
 
       <div id="projectListItems" class="project-list-items">
-        <!-- Danh sách công trình render động -->
+        <!-- Render động -->
       </div>
     </div>
   </div>
