@@ -7,7 +7,7 @@
 const TGS = (() => {
 
     // WEBHOOK URL GOOGLE APPS SCRIPT ĐÃ KÍCH HOẠT
-    const GOOGLE_DRIVE_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxZNciRxAWP_ZSP7r7t7IF8s2uD3sy9rOVs9_jMXrVdt17kzt85ZywNXhqe6OioIAl3LQ/exec";
+    const GOOGLE_DRIVE_WEBHOOK_URL = "https://markers-rick-muslim-collins.trycloudflare.com";
 
     const EventBus = {
         events: {},
