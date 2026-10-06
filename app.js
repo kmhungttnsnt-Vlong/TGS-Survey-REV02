@@ -153,13 +153,28 @@ const TGS = (() => {
 
         async verifyDraft() {
             try {
-                const draft = await A4_Persistence.getDraftProject();
+                const all = await A4_Persistence.getAllProjects();
                 const banner = document.getElementById("draftBanner");
                 const info = document.getElementById("draftProjectInfo");
 
-                if (draft) {
-                    A1_State.currentProject = draft;
-                    info.innerText = `Công trình: ${draft.name} (${draft.code})`;
+                if (!all || all.length === 0) {
+                    banner.classList.add("hidden");
+                    return;
+                }
+
+                // Sắp xếp công trình mới cập nhật nhất lên đầu
+                all.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
+
+                // Ưu tiên tìm công trình đang dở dang (draft hoặc mới khởi tạo)
+                let activeDraft = all.find(p => p.status === "draft" || !p.status);
+
+                if (activeDraft) {
+                    A1_State.currentProject = activeDraft;
+                    const pts = activeDraft.points ? activeDraft.points.length : 0;
+                    const items = activeDraft.pointFeatures ? activeDraft.pointFeatures.length : 0;
+
+                    info.innerHTML = `Công trình: <b>${activeDraft.name}</b> (${activeDraft.code})<br>` +
+                        `<small style="color:#64748B;">Hiện trạng: ${pts} điểm tuyến · ${items} đối tượng trạm</small>`;
                     banner.classList.remove("hidden");
                 } else {
                     banner.classList.add("hidden");
@@ -185,6 +200,9 @@ const TGS = (() => {
                     code,
                     location,
                     centralMeridian: 105.5,
+                    status: "draft",
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
                     author: A0_AuthManager.currentUser?.name || "KTV Hiện trường"
                 });
                 A1_State.currentProject = newProj;
@@ -213,7 +231,7 @@ const TGS = (() => {
         async openCompleteSummary() {
             if (!A1_State.currentProject) return;
 
-            A1_State.currentProject.status = "completed";
+            // KHÔNG tự ý gán completed ở đây để bảo toàn công trình dở dang
             A1_State.currentProject.updatedAt = Date.now();
             await A4_Persistence.saveProject(A1_State.currentProject);
 
@@ -280,9 +298,13 @@ const TGS = (() => {
                 this.listContainer.innerHTML = filtered.map(p => {
                     const ptsCount = p.points ? p.points.length : 0;
                     const featsCount = p.pointFeatures ? p.pointFeatures.length : 0;
-                    const statusTag = p.status === "completed" 
-                        ? `<span style="background:#DCFCE7; color:#15803D; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:700;">Đã hoàn thành</span>`
-                        : `<span style="background:#FEF9C3; color:#A16207; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:700;">Đang khảo sát</span>`;
+                    const isDone = p.status === "completed";
+
+                    const statusTag = isDone 
+                        ? `<span style="background:#E2E8F0; color:#475569; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:700;">🔒 Đã hoàn thành</span>`
+                        : `<span style="background:#FEF9C3; color:#A16207; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:700;">⏳ Chưa hoàn thành</span>`;
+
+                    const btnActionText = isDone ? "Mở / Khảo sát thêm" : "Tiếp tục đo";
 
                     return `
                         <div class="project-item-card" data-code="${p.code}" style="padding:14px 16px; border-bottom:1px solid #E2E8F0; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
@@ -296,7 +318,7 @@ const TGS = (() => {
                                     📍 ${ptsCount} điểm tuyến · 🏢 ${featsCount} đối tượng trạm
                                 </div>
                             </div>
-                            <button class="btn-select-proj btn-secondary" data-code="${p.code}" style="padding:6px 14px; font-weight:bold; white-space:nowrap;">Mở</button>
+                            <button class="btn-select-proj btn-secondary" data-code="${p.code}" style="padding:6px 12px; font-weight:bold; font-size:12px; white-space:nowrap;">${btnActionText}</button>
                         </div>
                     `;
                 }).join("");
@@ -317,6 +339,22 @@ const TGS = (() => {
         async selectProject(code) {
             const target = A1_State.cachedProjects.find(p => p.code === code);
             if (!target) return;
+
+            // Xử lý cơ chế mở khóa khảo sát bổ sung cho công trình đã hoàn thành
+            if (target.status === "completed") {
+                const reopen = confirm(
+                    `Công trình "${target.name}" (${target.code}) đã hoàn thành.\n\n` +
+                    `Bạn có muốn MỞ KHÓA để khảo sát bổ sung thêm điểm tuyến / hạng mục không?\n` +
+                    `• Bấm OK: Mở khóa để tiếp tục khảo sát bổ sung.\n` +
+                    `• Bấm Hủy (Cancel): Chỉ vào xem và xuất hồ sơ báo cáo.`
+                );
+
+                if (reopen) {
+                    target.status = "draft";
+                    target.updatedAt = Date.now();
+                    await A4_Persistence.saveProject(target);
+                }
+            }
 
             A1_State.currentProject = target;
             this.closeModal();
@@ -1152,7 +1190,6 @@ const TGS = (() => {
                 return;
             }
 
-            // Tải từng ảnh về máy
             photoList.forEach((item, index) => {
                 setTimeout(() => {
                     const a = document.createElement("a");
@@ -1161,7 +1198,7 @@ const TGS = (() => {
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
-                }, index * 250); // Cách nhau 250ms để trình duyệt không chặn tải hàng loạt
+                }, index * 250);
             });
 
             alert(`Đang bắt đầu tải ${photoList.length} ảnh hiện trường về máy của bạn!`);
@@ -1456,7 +1493,7 @@ const TGS = (() => {
             const btnSync = document.getElementById("btnSyncDrive");
             if (btnSync) btnSync.addEventListener("click", () => Z2_SyncEngine.executeSync());
 
-            // === BỔ SUNG SỰ KIỆN: XUẤT DỮ LIỆU & MEDIA DỰ PHÒNG ===
+            // Cụm nút Xuất dữ liệu & Media dự phòng
             const btnExpJSON = document.getElementById("btnExportJSON");
             if (btnExpJSON) btnExpJSON.addEventListener("click", () => Z3_ExportManager.exportJSON());
 
@@ -1465,7 +1502,6 @@ const TGS = (() => {
 
             const btnExpVideos = document.getElementById("btnShareVideos");
             if (btnExpVideos) btnExpVideos.addEventListener("click", () => Z3_ExportManager.exportVideos());
-            // =======================================================
         },
 
         async startup() {
