@@ -265,7 +265,6 @@ const TGS = (() => {
                     return;
                 }
 
-                // Sắp xếp công trình mới nhất lên đầu
                 projects.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
 
                 const filtered = projects.filter(p => {
@@ -302,7 +301,6 @@ const TGS = (() => {
                     `;
                 }).join("");
 
-                // Gán sự kiện click cho từng mục trong danh sách
                 this.listContainer.querySelectorAll(".project-item-card").forEach(item => {
                     item.addEventListener("click", async () => {
                         const code = item.getAttribute("data-code");
@@ -961,6 +959,261 @@ const TGS = (() => {
     };
 
     /* =====================================================
+       5.1 MODULE HẬU KIỂM & XEM LẠI MEDIA (SCREEN 07)
+    ===================================================== */
+    const R1_ReviewMediaManager = {
+        container: document.getElementById("reviewMediaContainer"),
+        titleEl: document.getElementById("reviewProjectName"),
+
+        openReview() {
+            if (!A1_State.currentProject) {
+                alert("Chưa chọn hồ sơ công trình.");
+                return;
+            }
+
+            if (this.titleEl) {
+                this.titleEl.innerText = `${A1_State.currentProject.name} (${A1_State.currentProject.code})`;
+            }
+
+            this.renderMediaContent();
+            A2_Navigation.show("reviewMedia");
+        },
+
+        renderMediaContent() {
+            if (!this.container) return;
+            this.container.innerHTML = "";
+
+            const proj = A1_State.currentProject;
+            const items = proj.pointFeatures || [];
+
+            let allPhotos = [];
+            let allVideos = [];
+
+            items.forEach((it, idx) => {
+                const photos = it.evidence?.photos || [];
+                photos.forEach(p => {
+                    allPhotos.push({
+                        ...p,
+                        section: it.section,
+                        type: it.type,
+                        itemIndex: idx + 1
+                    });
+                });
+
+                if (it.evidence?.videoBlob) {
+                    allVideos.push({
+                        blob: it.evidence.videoBlob,
+                        section: it.section,
+                        type: it.type,
+                        itemIndex: idx + 1
+                    });
+                }
+            });
+
+            if (allPhotos.length === 0 && allVideos.length === 0) {
+                this.container.innerHTML = `
+                    <div style="text-align:center; padding:40px 16px; color:#64748B;">
+                        <div style="font-size:36px; margin-bottom:8px;">📷</div>
+                        <p>Chưa có hình ảnh hoặc video nào được ghi nhận cho công trình này.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = "";
+
+            if (allVideos.length > 0) {
+                html += `
+                    <div style="margin-bottom:24px;">
+                        <h3 style="font-size:16px; color:#1E293B; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                            🎥 Video thuyết minh hiện trường (${allVideos.length})
+                        </h3>
+                        <div style="display:flex; flex-direction:column; gap:14px;">
+                `;
+
+                allVideos.forEach((v, vIdx) => {
+                    const videoUrl = URL.createObjectURL(v.blob);
+                    const sizeMb = (v.blob.size / 1024 / 1024).toFixed(1);
+                    html += `
+                        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px; overflow:hidden;">
+                            <strong style="font-size:14px; color:#0F172A; display:block; margin-bottom:6px;">
+                                Video ${vIdx + 1}: [${v.type}] ${v.section} (${sizeMb} MB)
+                            </strong>
+                            <video src="${videoUrl}" controls playsinline style="width:100%; max-height:240px; border-radius:8px; background:#000;"></video>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            }
+
+            if (allPhotos.length > 0) {
+                html += `
+                    <div>
+                        <h3 style="font-size:16px; color:#1E293B; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                            📷 Album ảnh hiện trường có tọa độ (${allPhotos.length})
+                        </h3>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px;">
+                `;
+
+                allPhotos.forEach(p => {
+                    html += `
+                        <div style="background:#FFF; border:1px solid #E2E8F0; border-radius:10px; overflow:hidden; display:flex; flex-direction:column;">
+                            <img src="${p.image}" style="width:100%; height:110px; object-fit:cover; display:block;" onclick="window.open('${p.image}')">
+                            <div style="padding:6px 8px; font-size:11px; color:#475569; background:#F8FAFC;">
+                                <strong style="display:block; color:#0F172A; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.section}</strong>
+                                <span>${p.label || ""}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            }
+
+            this.container.innerHTML = html;
+        }
+    };
+
+    /* =====================================================
+       5.2 MODULE XUẤT DỮ LIỆU & TẢI FILE DỰ PHÒNG (SCREEN 08)
+    ===================================================== */
+    const Z3_ExportManager = {
+        // 1. Xuất Dataset JSON
+        exportJSON() {
+            const proj = A1_State.currentProject;
+            if (!proj) {
+                alert("Chưa chọn công trình.");
+                return;
+            }
+
+            const stations = proj.pointFeatures || [];
+            const cleanStations = stations.map(st => ({
+                id: st.id,
+                type: st.type,
+                name: st.name,
+                section: st.section,
+                note: st.note,
+                coordinates: st.coordinates,
+                provenance: st.provenance,
+                evidence: {
+                    photoCount: st.evidence?.photos?.length || 0,
+                    hasVideo: Boolean(st.evidence?.videoBlob)
+                }
+            }));
+
+            const dataset = {
+                contract: "TGS-HO-301 REV02",
+                platform: "TGS Platform Genesis 2.0",
+                exportedAt: new Date().toISOString(),
+                surveyor: A0_AuthManager.currentUser?.name || "Kỹ thuật viên",
+                project: proj,
+                linearSurvey: {
+                    lineSummary: L4_SurveyLineLogic.getSummary(),
+                    points: proj.points || []
+                },
+                pointSurvey: {
+                    stationCount: cleanStations.length,
+                    features: cleanStations
+                }
+            };
+
+            const jsonStr = JSON.stringify(dataset, null, 2);
+            const blob = new Blob([jsonStr], { type: "application/json" });
+            const fileName = `DATASET_${proj.code}_${new Date().toISOString().slice(0, 10)}.json`;
+
+            this.triggerDownload(blob, fileName);
+            alert(`Đã xuất tập dữ liệu JSON: ${fileName}`);
+        },
+
+        // 2. Tải toàn bộ album ảnh hiện trường
+        exportPhotos() {
+            const proj = A1_State.currentProject;
+            if (!proj) {
+                alert("Chưa chọn công trình.");
+                return;
+            }
+
+            const stations = proj.pointFeatures || [];
+            let photoList = [];
+
+            stations.forEach(st => {
+                const photos = st.evidence?.photos || [];
+                photos.forEach((p, pIdx) => {
+                    photoList.push({
+                        image: p.image,
+                        fileName: `ANH_${proj.code}_${(st.section || "HM").replace(/[^a-zA-Z0-9]/g, "_")}_${pIdx + 1}.jpg`
+                    });
+                });
+            });
+
+            if (photoList.length === 0) {
+                alert("Công trình này hiện chưa có ảnh nào để tải.");
+                return;
+            }
+
+            // Tải từng ảnh về máy
+            photoList.forEach((item, index) => {
+                setTimeout(() => {
+                    const a = document.createElement("a");
+                    a.href = item.image;
+                    a.download = item.fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }, index * 250); // Cách nhau 250ms để trình duyệt không chặn tải hàng loạt
+            });
+
+            alert(`Đang bắt đầu tải ${photoList.length} ảnh hiện trường về máy của bạn!`);
+        },
+
+        // 3. Tải Video hiện trường
+        exportVideos() {
+            const proj = A1_State.currentProject;
+            if (!proj) {
+                alert("Chưa chọn công trình.");
+                return;
+            }
+
+            const stations = proj.pointFeatures || [];
+            let videoList = [];
+
+            stations.forEach(st => {
+                if (st.evidence?.videoBlob instanceof Blob) {
+                    videoList.push({
+                        blob: st.evidence.videoBlob,
+                        fileName: `VIDEO_${proj.code}_${(st.section || "ToanTram").replace(/[^a-zA-Z0-9]/g, "_")}.mp4`
+                    });
+                }
+            });
+
+            if (videoList.length === 0) {
+                alert("Công trình này hiện chưa có video nào được quay.");
+                return;
+            }
+
+            videoList.forEach((item, index) => {
+                setTimeout(() => {
+                    this.triggerDownload(item.blob, item.fileName);
+                }, index * 300);
+            });
+
+            alert(`Đang tải ${videoList.length} video hiện trường về máy!`);
+        },
+
+        triggerDownload(blob, fileName) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+    };
+
+    /* =====================================================
        6. ĐỒNG BỘ NÂNG CAO 2 PHA (PHÂN LUỒNG MÁY CHỦ / GOOGLE DRIVE)
     ===================================================== */
     const Z2_SyncEngine = {
@@ -1109,7 +1362,7 @@ const TGS = (() => {
                 if (A1_State.currentProject) A3_ProjectLifecycle.enterSurveyHome();
             });
 
-            // Nút Tạo công trình mới: Tự động tăng mã TGS-005...
+            // Nút Tạo công trình mới
             document.getElementById("btnNewProject").addEventListener("click", async () => {
                 document.getElementById("projectName").value = "";
                 document.getElementById("projectLocation").value = "";
@@ -1118,7 +1371,7 @@ const TGS = (() => {
                 A2_Navigation.show("project");
             });
 
-            // === BỔ SUNG SỰ KIỆN: MỞ VÀ TÌM KIẾM CÔNG TRÌNH ĐÃ LƯU ===
+            // Mở và tìm kiếm công trình đã lưu
             const btnOpenProj = document.getElementById("btnOpenProject");
             if (btnOpenProj) {
                 btnOpenProj.addEventListener("click", () => A3_ProjectListManager.openModal());
@@ -1135,7 +1388,6 @@ const TGS = (() => {
                     A3_ProjectListManager.renderProjects(e.target.value.trim());
                 });
             }
-            // =======================================================
 
             document.getElementById("btnCreateProject").addEventListener("click", () => A3_ProjectLifecycle.createNewProject());
             document.getElementById("btnBackHome").addEventListener("click", () => A2_Navigation.show("projectHome"));
@@ -1154,6 +1406,18 @@ const TGS = (() => {
                 A2_Navigation.show("point");
             });
 
+            // Hậu kiểm Media
+            const btnReview = document.getElementById("btnReviewMedia");
+            if (btnReview) {
+                btnReview.addEventListener("click", () => R1_ReviewMediaManager.openReview());
+            }
+
+            const btnBackReview = document.getElementById("btnBackFromReview");
+            if (btnBackReview) {
+                btnBackReview.addEventListener("click", () => A2_Navigation.show("surveyHome"));
+            }
+
+            // Hoàn thành hồ sơ
             document.getElementById("btnFinishProject").addEventListener("click", () => A3_ProjectLifecycle.openCompleteSummary());
             document.getElementById("btnBackFromComplete").addEventListener("click", () => A3_ProjectLifecycle.enterSurveyHome());
             document.getElementById("btnExitLinear").addEventListener("click", () => A3_ProjectLifecycle.enterSurveyHome());
@@ -1188,9 +1452,20 @@ const TGS = (() => {
                 if (snap) P4_MediaManager.addPhoto(snap, timeStr);
             });
 
-            // Nút Đồng bộ kích hoạt Engine
+            // Nút Đồng bộ Google Drive
             const btnSync = document.getElementById("btnSyncDrive");
             if (btnSync) btnSync.addEventListener("click", () => Z2_SyncEngine.executeSync());
+
+            // === BỔ SUNG SỰ KIỆN: XUẤT DỮ LIỆU & MEDIA DỰ PHÒNG ===
+            const btnExpJSON = document.getElementById("btnExportJSON");
+            if (btnExpJSON) btnExpJSON.addEventListener("click", () => Z3_ExportManager.exportJSON());
+
+            const btnExpPhotos = document.getElementById("btnSharePhotos");
+            if (btnExpPhotos) btnExpPhotos.addEventListener("click", () => Z3_ExportManager.exportPhotos());
+
+            const btnExpVideos = document.getElementById("btnShareVideos");
+            if (btnExpVideos) btnExpVideos.addEventListener("click", () => Z3_ExportManager.exportVideos());
+            // =======================================================
         },
 
         async startup() {
