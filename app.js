@@ -1251,6 +1251,68 @@ const TGS = (() => {
     };
 
     /* =====================================================
+   MODULE TGS-AI VISION ASSISTANT (GEMINI 3 FLASH)
+===================================================== */
+const TGS_AIAssistant = {
+    // API Key tạo từ Google AI Studio
+    apiKey: "AIzaSy...", 
+
+    async analyzeDamage(imageBase64, spokenText = "") {
+        const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
+        
+        const systemPrompt = `
+        Bạn là Trợ lý Giám định Hiện trường Trạm Cấp nước Nông thôn.
+        Nhiệm vụ: Phân tích ảnh chụp hư hỏng kết hợp với gợi ý giọng nói của kỹ thuật viên.
+        Bắt buộc đối chiếu và sử dụng chuẩn xác bộ thuật ngữ TGS từ TGS-TG001 đến TGS-TG033.
+        Định dạng trả về duy nhất là chuỗi JSON với các trường:
+        - tgs_code: Mã thuật ngữ phù hợp (ví dụ TGS-TG008)
+        - component: Tên hạng mục chuẩn
+        - damage_assessment: Đánh giá chi tiết hiện trạng hư hỏng, rỉ sét, nứt vỡ từ ảnh
+        - suggestion: Biện pháp xử lý kỹ thuật đề xuất
+        `;
+
+        const requestBody = {
+            contents: [
+                {
+                    parts: [
+                        { text: systemPrompt },
+                        { text: `Lời nói kỹ thuật viên tại hiện trường: "${spokenText}"` },
+                        {
+                            inline_data: {
+                                mime_type: "image/jpeg",
+                                data: cleanBase64
+                            }
+                        }
+                    ]
+                }
+            ],
+            generationConfig: {
+                response_mime_type: "application/json",
+                temperature: 0.2 // Giữ độ chính xác kỹ thuật cao nhất
+            }
+        };
+
+        try {
+            const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(requestBody)
+                }
+            );
+
+            const result = await response.json();
+            const aiContent = JSON.parse(result.candidates[0].content.parts[0].text);
+            return aiContent;
+        } catch (error) {
+            console.error("Lỗi phân tích AI:", error);
+            return null;
+        }
+    }
+};
+
+    /* =====================================================
        6. ĐỒNG BỘ NÂNG CAO 2 PHA (PHÂN LUỒNG MÁY CHỦ / GOOGLE DRIVE)
     ===================================================== */
     const Z2_SyncEngine = {
