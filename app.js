@@ -1830,3 +1830,126 @@ if (document.readyState === "loading") {
 } else {
     TGS.initialize();
 }
+/* =========================================================================
+   MODULE KÍCH HOẠT NÚT BÁNH RĂNG ⚙️ & CAMERA QUÉT MÃ QR SERVER
+   ========================================================================= */
+(function initTGSQRScanner() {
+    const modal = document.getElementById("modalServerConfig");
+    const btnOpen = document.getElementById("btnOpenServerConfig");
+    const btnClose = document.getElementById("btnCloseServerConfig");
+    const btnScan = document.getElementById("btnScanQRFromCam");
+    const inputUrl = document.getElementById("inputServerTunnelUrl");
+    const btnSave = document.getElementById("btnSaveServerConfig");
+    const btnReset = document.getElementById("btnResetServerConfig");
+    const scannerWrapper = document.getElementById("qrScannerWrapper");
+    const video = document.getElementById("qrVideoPreview");
+
+    let stream = null;
+    let animId = null;
+
+    function stopCam() {
+        if (animId) cancelAnimationFrame(animId);
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
+        }
+        if (video) video.srcObject = null;
+        if (scannerWrapper) scannerWrapper.style.display = "none";
+        if (btnScan) {
+            btnScan.innerText = "📷 BẬT CAMERA QUÉT MÃ QR";
+            btnScan.style.background = "#0284C7";
+        }
+    }
+
+    if (btnOpen) {
+        btnOpen.addEventListener("click", () => {
+            if (modal) modal.style.display = "flex";
+            const current = localStorage.getItem("TGS_SERVER_TUNNEL_URL") || (typeof CONFIG !== "undefined" ? CONFIG.DEFAULT_SERVER_URL : "");
+            if (inputUrl) inputUrl.value = current;
+        });
+    }
+
+    if (btnClose) {
+        btnClose.addEventListener("click", () => {
+            stopCam();
+            if (modal) modal.style.display = "none";
+        });
+    }
+
+    if (btnScan) {
+        btnScan.addEventListener("click", async () => {
+            if (stream) {
+                stopCam();
+                return;
+            }
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "environment" } },
+                    audio: false
+                });
+                if (video) video.srcObject = stream;
+                if (scannerWrapper) scannerWrapper.style.display = "block";
+                btnScan.innerText = "⏹ ĐANG QUÉT (HƯỚNG CAMERA VÀO QR)";
+                btnScan.style.background = "#DC2626";
+
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+
+                const scanLoop = () => {
+                    if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                        if (typeof jsQR !== "undefined") {
+                            const code = jsQR(imgData.data, imgData.width, imgData.height, {
+                                inversionAttempts: "dontInvert"
+                            });
+
+                            if (code && code.data) {
+                                const detected = code.data.trim();
+                                if (detected.includes("trycloudflare.com") || detected.startsWith("http")) {
+                                    if (inputUrl) inputUrl.value = detected;
+                                    localStorage.setItem("TGS_SERVER_TUNNEL_URL", detected);
+                                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                                    alert("✓ ĐÃ NHẬN DIỆN MÁY CHỦ THÀNH CÔNG:\n" + detected);
+                                    stopCam();
+                                    if (modal) modal.style.display = "none";
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    animId = requestAnimationFrame(scanLoop);
+                };
+                animId = requestAnimationFrame(scanLoop);
+            } catch (err) {
+                alert("Không thể mở camera: " + err.message);
+                stopCam();
+            }
+        });
+    }
+
+    if (btnSave) {
+        btnSave.addEventListener("click", () => {
+            const val = (inputUrl?.value || "").trim();
+            if (!val) {
+                alert("Vui lòng nhập hoặc quét đường link.");
+                return;
+            }
+            localStorage.setItem("TGS_SERVER_TUNNEL_URL", val);
+            alert("✓ Đã lưu đường link máy chủ!");
+            stopCam();
+            if (modal) modal.style.display = "none";
+        });
+    }
+
+    if (btnReset) {
+        btnReset.addEventListener("click", () => {
+            localStorage.removeItem("TGS_SERVER_TUNNEL_URL");
+            if (inputUrl && typeof CONFIG !== "undefined") inputUrl.value = CONFIG.DEFAULT_SERVER_URL;
+            alert("✓ Đã chuyển về link mặc định!");
+        });
+    }
+})();
