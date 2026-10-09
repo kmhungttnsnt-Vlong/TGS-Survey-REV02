@@ -469,7 +469,34 @@
   </div>
 
 </div>
+<!-- ==================== MODAL: CẤU HÌNH SERVER & QUÉT MÃ QR ==================== -->
+  <div id="modalServerConfig" class="modal-overlay" style="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:99999; padding:16px;">
+    <div style="background:#fff; border-radius:14px; width:100%; max-width:380px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.3); font-family:sans-serif;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0; font-size:17px; color:#0F172A; font-weight:bold;">⚙️ Kết nối Máy chủ TGS</h3>
+        <button id="btnCloseServerConfig" style="border:none; background:none; font-size:20px; cursor:pointer; color:#64748B;">✕</button>
+      </div>
 
+      <!-- Khung camera quét mã trực tiếp -->
+      <div id="qrScannerWrapper" style="display:none; position:relative; width:100%; height:220px; background:#000; border-radius:10px; overflow:hidden; margin-bottom:14px;">
+        <video id="qrVideoPreview" playsinline autoplay muted style="width:100%; height:100%; object-fit:cover;"></video>
+        <div style="position:absolute; inset:25px; border:2px dashed #00E5FF; border-radius:8px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,0.35);"></div>
+        <span style="position:absolute; bottom:8px; left:0; width:100%; text-align:center; font-size:12px; color:#00E5FF; font-weight:bold;">Hướng camera vào mã QR trên máy tính</span>
+      </div>
+
+      <button id="btnScanQRFromCam" style="width:100%; height:44px; background:#0284C7; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:14px; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; cursor:pointer;">
+        📷 BẬT CAMERA QUÉT MÃ QR
+      </button>
+
+      <label style="display:block; font-size:12px; color:#64748B; margin-bottom:5px; font-weight:600;">Link Cloudflare Server hiện hành:</label>
+      <input id="inputServerTunnelUrl" type="text" placeholder="https://...trycloudflare.com" style="width:100%; height:38px; border:1px solid #CBD5E1; border-radius:6px; padding:0 10px; font-size:12px; box-sizing:border-box; margin-bottom:14px;">
+
+      <div style="display:flex; gap:10px;">
+        <button id="btnSaveServerConfig" style="flex:1; height:40px; background:#16A34A; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">Lưu link</button>
+        <button id="btnResetServerConfig" style="flex:1; height:40px; background:#F1F5F9; color:#475569; border:none; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">Mặc định</button>
+      </div>
+    </div>
+  </div>
 <!-- DEPENDENCIES -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="db.js"></script>
