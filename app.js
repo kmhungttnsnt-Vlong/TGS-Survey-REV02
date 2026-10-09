@@ -1833,7 +1833,7 @@ if (document.readyState === "loading") {
 /* =========================================================================
    MODULE KÍCH HOẠT NÚT BÁNH RĂNG ⚙️ & CAMERA QUÉT MÃ QR SERVER
    ========================================================================= */
-(function initTGSQRScanner() {
+document.addEventListener("DOMContentLoaded", function () {
     const modal = document.getElementById("modalServerConfig");
     const btnOpen = document.getElementById("btnOpenServerConfig");
     const btnClose = document.getElementById("btnCloseServerConfig");
@@ -1952,4 +1952,4 @@ if (document.readyState === "loading") {
             alert("✓ Đã chuyển về link mặc định!");
         });
     }
-})();
+});
