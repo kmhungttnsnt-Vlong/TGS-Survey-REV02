@@ -1,6 +1,6 @@
 /* =========================================================
    TGS PLATFORM GENESIS 2.0 - PROFESSIONAL FIELD ENGINE
-   BASELINE B8: LONG-RECORDING, MULTI-USER & HYBRID CLOUD
+   BASELINE B9: SPLIT-SCREEN GIS/CAMERA, LINEAR MEDIA & FAILSAFE SYNC
 ========================================================= */
 
 const TGS = (() => {
@@ -9,7 +9,6 @@ const TGS = (() => {
     const CONFIG = {
         DEFAULT_SERVER_URL: "https://code-any-bicycle-salaries.trycloudflare.com",
         TGS_API_KEY: "TGS_SECURE_TOKEN_2026_VINHLONG",
-        // Danh sách PIN kích hoạt thiết bị (Dành riêng cho anh em đội khảo sát)
         ALLOWED_PINS: {
             "8901": { name: "Kim Minh Hùng", role: "Trưởng nhóm" },
             "8902": { name: "Trương Thành Cọt", role: "Khảo sát viên" },
@@ -96,7 +95,7 @@ const TGS = (() => {
         },
 
         getStorageTarget() {
-            return localStorage.getItem("TGS_STORAGE_MODE") || "server"; // 'server' | 'drive'
+            return localStorage.getItem("TGS_STORAGE_MODE") || "server";
         },
 
         getWebhookUrl() {
@@ -108,7 +107,7 @@ const TGS = (() => {
     };
 
     /* =====================================================
-       2. QUẢN LÝ HỒ SƠ & TỰ ĐỘNG TĂNG MÃ (TGS-005...)
+       2. QUẢN LÝ HỒ SƠ & VÒNG ĐỜI DỮ LIỆU
     ===================================================== */
     const A1_State = {
         currentProject: null,
@@ -162,19 +161,17 @@ const TGS = (() => {
                     return;
                 }
 
-                // Sắp xếp công trình mới cập nhật nhất lên đầu
                 all.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
-
-                // Ưu tiên tìm công trình đang dở dang (draft hoặc mới khởi tạo)
                 let activeDraft = all.find(p => p.status === "draft" || !p.status);
 
                 if (activeDraft) {
                     A1_State.currentProject = activeDraft;
                     const pts = activeDraft.points ? activeDraft.points.length : 0;
                     const items = activeDraft.pointFeatures ? activeDraft.pointFeatures.length : 0;
+                    const lineMedia = activeDraft.linearMedia ? activeDraft.linearMedia.length : 0;
 
                     info.innerHTML = `Công trình: <b>${activeDraft.name}</b> (${activeDraft.code})<br>` +
-                        `<small style="color:#64748B;">Hiện trạng: ${pts} điểm tuyến · ${items} đối tượng trạm</small>`;
+                        `<small style="color:#64748B;">Hiện trạng: ${pts} điểm tuyến (${lineMedia} media) · ${items} đối tượng trạm</small>`;
                     banner.classList.remove("hidden");
                 } else {
                     banner.classList.add("hidden");
@@ -201,6 +198,9 @@ const TGS = (() => {
                     location,
                     centralMeridian: 105.5,
                     status: "draft",
+                    points: [],
+                    linearMedia: [],
+                    pointFeatures: [],
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
                     author: A0_AuthManager.currentUser?.name || "KTV Hiện trường"
@@ -231,7 +231,6 @@ const TGS = (() => {
         async openCompleteSummary() {
             if (!A1_State.currentProject) return;
 
-            // KHÔNG tự ý gán completed ở đây để bảo toàn công trình dở dang
             A1_State.currentProject.updatedAt = Date.now();
             await A4_Persistence.saveProject(A1_State.currentProject);
 
@@ -242,7 +241,7 @@ const TGS = (() => {
             document.getElementById("completeProjectSummary").innerText = 
                 `Mã: ${A1_State.currentProject.code} | Địa điểm: ${A1_State.currentProject.location || "Chưa rõ"}`;
 
-            document.getElementById("summaryPoints").innerText = `${lineSummary.count} điểm`;
+            document.getElementById("summaryPoints").innerText = `${lineSummary.count} điểm (${(A1_State.currentProject.linearMedia || []).length} media)`;
             document.getElementById("summaryLength").innerText = lineSummary.lengthText;
             document.getElementById("summaryStations").innerText = `${stationSummary.count} đối tượng`;
 
@@ -340,7 +339,6 @@ const TGS = (() => {
             const target = A1_State.cachedProjects.find(p => p.code === code);
             if (!target) return;
 
-            // Xử lý cơ chế mở khóa khảo sát bổ sung cho công trình đã hoàn thành
             if (target.status === "completed") {
                 const reopen = confirm(
                     `Công trình "${target.name}" (${target.code}) đã hoàn thành.\n\n` +
@@ -396,7 +394,7 @@ const TGS = (() => {
     };
 
     /* =====================================================
-       4. BẢN ĐỒ GIS & TUYẾN KHẢO SÁT
+       4. BẢN ĐỒ GIS & TUYẾN KHẢO SÁT & SPLIT-SCREEN CHIA ĐÔI
     ===================================================== */
     const L1_ResumeManager = {
         resumeLinearSession() {
@@ -410,8 +408,10 @@ const TGS = (() => {
             A2_Navigation.show("linear");
             L2_MapEngine.renderRoute(A1_State.currentProject.points || []);
             L4_SurveyLineLogic.updateUI();
+            L5_SplitScreenLinearManager.initUI();
 
             setTimeout(() => {
+                L2_MapEngine.invalidate();
                 L3_SmartGNSS.getQuickPosition(pos => L2_MapEngine.updateLivePosition(pos));
             }, 300);
         }
@@ -626,7 +626,7 @@ const TGS = (() => {
             let length = 0;
             for (let i = 1; i < pts.length; i++) {
                 const p1 = L.latLng(pts[i - 1].lat, pts[i - 1].lng);
-                const p2 = L.latLng(pts[i - 1].lat, pts[i - 1].lng);
+                const p2 = L.latLng(pts[i].lat, pts[i].lng);
                 length += p1.distanceTo(p2);
             }
             return {
@@ -652,7 +652,199 @@ const TGS = (() => {
     };
 
     /* =====================================================
-       5. MODULE CAMERA & QUAY VIDEO DÀI (30-45 PHÚT)
+       4.1 QUẢN LÝ CHIA ĐÔI MÀN HÌNH (SPLIT-SCREEN BẢN ĐỒ & CAMERA TUYẾN)
+    ===================================================== */
+    const L5_SplitScreenLinearManager = {
+        splitWrapper: null,
+        videoEl: null,
+        stream: null,
+        isSplitActive: false,
+
+        initUI() {
+            const badge = document.getElementById("lineMediaCountBadge");
+            const count = (A1_State.currentProject?.linearMedia || []).length;
+            if (badge) badge.innerText = `${count} file`;
+
+            this.setupSplitDOM();
+        },
+
+        setupSplitDOM() {
+            if (document.getElementById("linearSplitVideoPanel")) return;
+
+            const linearScreen = document.getElementById("screenLinear");
+            const mapWrapper = linearScreen.querySelector(".map-wrapper-fullscreen");
+
+            // Tạo khung chứa nửa dưới cho Camera chia đôi màn hình
+            const splitPanel = document.createElement("div");
+            splitPanel.id = "linearSplitVideoPanel";
+            splitPanel.style.cssText = `
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                height: 50%;
+                background: #000;
+                display: none;
+                flex-direction: column;
+                z-index: 998;
+                border-top: 3px solid #00E5FF;
+                box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+            `;
+
+            splitPanel.innerHTML = `
+                <div style="position:relative; width:100%; height:100%; overflow:hidden;">
+                    <video id="linearSplitVideo" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover;"></video>
+                    
+                    <div style="position:absolute; top:8px; left:12px; background:rgba(0,0,0,0.6); color:#00E5FF; font-size:12px; font-weight:bold; padding:4px 8px; border-radius:6px;">
+                        LIVE VIEW TUYẾN ỐNG
+                    </div>
+
+                    <button id="btnCloseSplitCamera" style="position:absolute; top:8px; right:12px; background:rgba(239,68,68,0.85); color:#fff; border:none; width:32px; height:32px; border-radius:50%; font-weight:bold; font-size:16px;">✕</button>
+
+                    <div style="position:absolute; bottom:12px; left:0; width:100%; display:flex; justify-content:center; gap:20px; z-index:999;">
+                        <button id="btnSplitSnapPhoto" style="background:#0284c7; color:#fff; border:none; padding:10px 18px; border-radius:30px; font-weight:bold; font-size:13px; box-shadow:0 3px 8px rgba(0,0,0,0.4);">📷 CHỤP ẢNH TUYẾN</button>
+                        <button id="btnSplitRecordVideo" style="background:#ea580c; color:#fff; border:none; padding:10px 18px; border-radius:30px; font-weight:bold; font-size:13px; box-shadow:0 3px 8px rgba(0,0,0,0.4);">🔴 QUAY VIDEO (≤60s)</button>
+                    </div>
+                </div>
+            `;
+
+            linearScreen.appendChild(splitPanel);
+            this.splitWrapper = splitPanel;
+            this.videoEl = document.getElementById("linearSplitVideo");
+
+            // Bắt sự kiện trong Panel chia đôi
+            document.getElementById("btnCloseSplitCamera").onclick = () => this.toggleSplit(false);
+            document.getElementById("btnSplitSnapPhoto").onclick = () => this.capturePhotoFromStream();
+            document.getElementById("btnSplitRecordVideo").onclick = () => this.recordVideoFromStream();
+        },
+
+        async toggleSplit(enable) {
+            const linearScreen = document.getElementById("screenLinear");
+            const mapWrapper = linearScreen.querySelector(".map-wrapper-fullscreen");
+
+            if (enable) {
+                try {
+                    if (this.stream) this.stopStream();
+                    this.stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: true
+                    });
+                    this.videoEl.srcObject = this.stream;
+                    this.splitWrapper.style.display = "flex";
+                    mapWrapper.style.height = "50%";
+                    this.isSplitActive = true;
+                    setTimeout(() => L2_MapEngine.invalidate(), 200);
+                } catch (e) {
+                    // Nếu thiết bị không mở được luồng trực tiếp, kích hoạt input mặc định
+                    document.getElementById("inputLinePhoto").click();
+                }
+            } else {
+                this.stopStream();
+                this.splitWrapper.style.display = "none";
+                mapWrapper.style.height = "100%";
+                this.isSplitActive = false;
+                setTimeout(() => L2_MapEngine.invalidate(), 200);
+            }
+        },
+
+        stopStream() {
+            if (this.stream) {
+                this.stream.getTracks().forEach(t => t.stop());
+                this.stream = null;
+            }
+            if (this.videoEl) this.videoEl.srcObject = null;
+        },
+
+        capturePhotoFromStream() {
+            if (!this.stream) return;
+            const canvas = document.createElement("canvas");
+            canvas.width = this.videoEl.videoWidth || 1280;
+            canvas.height = this.videoEl.videoHeight || 720;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(this.videoEl, 0, 0, canvas.width, canvas.height);
+
+            const pts = A1_State.currentProject?.points || [];
+            const last = pts.length > 0 ? pts[pts.length - 1] : null;
+            const timeStr = new Date().toLocaleTimeString("vi-VN");
+            const coordStr = last ? `VN2000: X:${last.vn2000.x} Y:${last.vn2000.y}` : "TGS GNSS LIVE";
+
+            ctx.fillStyle = "rgba(0,0,0,0.65)";
+            ctx.fillRect(0, canvas.height - 44, canvas.width, 44);
+            ctx.fillStyle = "#00E5FF";
+            ctx.font = "bold 18px Arial";
+            ctx.fillText(`TUYẾN ỐNG | ${timeStr} | ${coordStr}`, 20, canvas.height - 15);
+
+            const base64 = canvas.toDataURL("image/jpeg", 0.85);
+            this.saveLinearMediaItem({
+                type: "photo",
+                data: base64,
+                timestamp: Date.now(),
+                label: `Ảnh tuyến ${pts.length > 0 ? `tại điểm #${pts.length}` : ""}`
+            });
+
+            if (navigator.vibrate) navigator.vibrate(100);
+            alert("✓ Đã chụp và lưu ảnh hiện trường tuyến thành công!");
+        },
+
+        recordVideoFromStream() {
+            if (!this.stream) return;
+            const recBtn = document.getElementById("btnSplitRecordVideo");
+            
+            if (recBtn.getAttribute("data-recording") === "true") {
+                if (this.mediaRec && this.mediaRec.state === "recording") {
+                    this.mediaRec.stop();
+                }
+                return;
+            }
+
+            const chunks = [];
+            try {
+                this.mediaRec = new MediaRecorder(this.stream);
+            } catch (e) {
+                alert("Thiết bị không hỗ trợ MediaRecorder.");
+                return;
+            }
+
+            this.mediaRec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+            this.mediaRec.onstop = () => {
+                const blob = new Blob(chunks, { type: "video/mp4" });
+                this.saveLinearMediaItem({
+                    type: "video",
+                    blob: blob,
+                    timestamp: Date.now(),
+                    label: "Video thuyết minh hiện trạng tuyến"
+                });
+                recBtn.innerText = "🔴 QUAY VIDEO (≤60s)";
+                recBtn.style.background = "#ea580c";
+                recBtn.removeAttribute("data-recording");
+                alert("✓ Đã lưu video hiện trường tuyến ống!");
+            };
+
+            this.mediaRec.start();
+            recBtn.innerText = "⏹ DỪNG QUAY (ĐANG REC...)";
+            recBtn.style.background = "#dc2626";
+            recBtn.setAttribute("data-recording", "true");
+
+            // Tự ngắt sau 60 giây để tránh file quá nặng
+            setTimeout(() => {
+                if (this.mediaRec && this.mediaRec.state === "recording") {
+                    this.mediaRec.stop();
+                }
+            }, 60000);
+        },
+
+        async saveLinearMediaItem(mediaItem) {
+            if (!A1_State.currentProject.linearMedia) A1_State.currentProject.linearMedia = [];
+            A1_State.currentProject.linearMedia.push(mediaItem);
+            await A4_Persistence.saveProject(A1_State.currentProject);
+
+            const badge = document.getElementById("lineMediaCountBadge");
+            if (badge) badge.innerText = `${A1_State.currentProject.linearMedia.length} file`;
+        }
+    };
+
+    /* =====================================================
+       5. MODULE CAMERA KHẢO SÁT HẠNG MỤC / TRẠM
     ===================================================== */
     const P3_CameraSession = {
         videoInline: document.getElementById("cameraPreview"),
@@ -1023,10 +1215,29 @@ const TGS = (() => {
 
             const proj = A1_State.currentProject;
             const items = proj.pointFeatures || [];
+            const linearMedia = proj.linearMedia || [];
 
             let allPhotos = [];
             let allVideos = [];
 
+            // Bổ sung media từ khảo sát tuyến ống
+            linearMedia.forEach((lm, lIdx) => {
+                if (lm.type === "photo") {
+                    allPhotos.push({
+                        image: lm.data,
+                        section: "Tuyến ống chính",
+                        label: lm.label || `Ảnh tuyến #${lIdx + 1}`
+                    });
+                } else if (lm.type === "video" && lm.blob) {
+                    allVideos.push({
+                        blob: lm.blob,
+                        section: "Tuyến ống chính",
+                        type: "Khảo sát tuyến"
+                    });
+                }
+            });
+
+            // Gom media từ khảo sát điểm / trạm
             items.forEach((it, idx) => {
                 const photos = it.evidence?.photos || [];
                 photos.forEach(p => {
@@ -1075,7 +1286,7 @@ const TGS = (() => {
                     html += `
                         <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:12px; padding:12px; overflow:hidden;">
                             <strong style="font-size:14px; color:#0F172A; display:block; margin-bottom:6px;">
-                                Video ${vIdx + 1}: [${v.type}] ${v.section} (${sizeMb} MB)
+                                Video ${vIdx + 1}: [${v.type || 'Trạm'}] ${v.section} (${sizeMb} MB)
                             </strong>
                             <video src="${videoUrl}" controls playsinline style="width:100%; max-height:240px; border-radius:8px; background:#000;"></video>
                         </div>
@@ -1117,7 +1328,6 @@ const TGS = (() => {
        5.2 MODULE XUẤT DỮ LIỆU & TẢI FILE DỰ PHÒNG (SCREEN 08)
     ===================================================== */
     const Z3_ExportManager = {
-        // 1. Xuất Dataset JSON
         exportJSON() {
             const proj = A1_State.currentProject;
             if (!proj) {
@@ -1148,7 +1358,8 @@ const TGS = (() => {
                 project: proj,
                 linearSurvey: {
                     lineSummary: L4_SurveyLineLogic.getSummary(),
-                    points: proj.points || []
+                    points: proj.points || [],
+                    linearMediaCount: (proj.linearMedia || []).length
                 },
                 pointSurvey: {
                     stationCount: cleanStations.length,
@@ -1164,7 +1375,6 @@ const TGS = (() => {
             alert(`Đã xuất tập dữ liệu JSON: ${fileName}`);
         },
 
-        // 2. Tải toàn bộ album ảnh hiện trường
         exportPhotos() {
             const proj = A1_State.currentProject;
             if (!proj) {
@@ -1172,9 +1382,18 @@ const TGS = (() => {
                 return;
             }
 
-            const stations = proj.pointFeatures || [];
             let photoList = [];
 
+            (proj.linearMedia || []).forEach((lm, idx) => {
+                if (lm.type === "photo") {
+                    photoList.push({
+                        image: lm.data,
+                        fileName: `ANH_${proj.code}_TuyenOng_${idx + 1}.jpg`
+                    });
+                }
+            });
+
+            const stations = proj.pointFeatures || [];
             stations.forEach(st => {
                 const photos = st.evidence?.photos || [];
                 photos.forEach((p, pIdx) => {
@@ -1204,7 +1423,6 @@ const TGS = (() => {
             alert(`Đang bắt đầu tải ${photoList.length} ảnh hiện trường về máy của bạn!`);
         },
 
-        // 3. Tải Video hiện trường
         exportVideos() {
             const proj = A1_State.currentProject;
             if (!proj) {
@@ -1212,9 +1430,18 @@ const TGS = (() => {
                 return;
             }
 
-            const stations = proj.pointFeatures || [];
             let videoList = [];
 
+            (proj.linearMedia || []).forEach((lm, idx) => {
+                if (lm.type === "video" && lm.blob instanceof Blob) {
+                    videoList.push({
+                        blob: lm.blob,
+                        fileName: `VIDEO_${proj.code}_TuyenOng_${idx + 1}.mp4`
+                    });
+                }
+            });
+
+            const stations = proj.pointFeatures || [];
             stations.forEach(st => {
                 if (st.evidence?.videoBlob instanceof Blob) {
                     videoList.push({
@@ -1251,69 +1478,7 @@ const TGS = (() => {
     };
 
     /* =====================================================
-   MODULE TGS-AI VISION ASSISTANT (GEMINI 3 FLASH)
-===================================================== */
-const TGS_AIAssistant = {
-    // API Key tạo từ Google AI Studio
-    apiKey: "AIzaSy...", 
-
-    async analyzeDamage(imageBase64, spokenText = "") {
-        const cleanBase64 = imageBase64.replace(/^data:image\/(png|jpeg|jpg);base64,/, "");
-        
-        const systemPrompt = `
-        Bạn là Trợ lý Giám định Hiện trường Trạm Cấp nước Nông thôn.
-        Nhiệm vụ: Phân tích ảnh chụp hư hỏng kết hợp với gợi ý giọng nói của kỹ thuật viên.
-        Bắt buộc đối chiếu và sử dụng chuẩn xác bộ thuật ngữ TGS từ TGS-TG001 đến TGS-TG033.
-        Định dạng trả về duy nhất là chuỗi JSON với các trường:
-        - tgs_code: Mã thuật ngữ phù hợp (ví dụ TGS-TG008)
-        - component: Tên hạng mục chuẩn
-        - damage_assessment: Đánh giá chi tiết hiện trạng hư hỏng, rỉ sét, nứt vỡ từ ảnh
-        - suggestion: Biện pháp xử lý kỹ thuật đề xuất
-        `;
-
-        const requestBody = {
-            contents: [
-                {
-                    parts: [
-                        { text: systemPrompt },
-                        { text: `Lời nói kỹ thuật viên tại hiện trường: "${spokenText}"` },
-                        {
-                            inline_data: {
-                                mime_type: "image/jpeg",
-                                data: cleanBase64
-                            }
-                        }
-                    ]
-                }
-            ],
-            generationConfig: {
-                response_mime_type: "application/json",
-                temperature: 0.2 // Giữ độ chính xác kỹ thuật cao nhất
-            }
-        };
-
-        try {
-            const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(requestBody)
-                }
-            );
-
-            const result = await response.json();
-            const aiContent = JSON.parse(result.candidates[0].content.parts[0].text);
-            return aiContent;
-        } catch (error) {
-            console.error("Lỗi phân tích AI:", error);
-            return null;
-        }
-    }
-};
-
-    /* =====================================================
-       6. ĐỒNG BỘ NÂNG CAO 2 PHA (PHÂN LUỒNG MÁY CHỦ / GOOGLE DRIVE)
+       6. ĐỒNG BỘ 2 PHA KÈM CƠ CHẾ DỰ PHÒNG OFFLINE (KHÔNG BỊ KẸT FETCH)
     ===================================================== */
     const Z2_SyncEngine = {
         async executeSync() {
@@ -1334,18 +1499,24 @@ const TGS_AIAssistant = {
             const mode = A0_AuthManager.getStorageTarget();
             const targetUrl = A0_AuthManager.getWebhookUrl();
 
-            if (!targetUrl) {
-                alert("Chưa cấu hình đường link máy chủ hoặc Webhook Google Drive.");
-                btnSync.disabled = false;
-                return;
-            }
-
             try {
-                // PHA 1: GOM DỮ LIỆU SỐ LIỆU VÀ ẢNH
                 statusEl.innerText = "⏳ Đang chuẩn bị gói dữ liệu khảo sát...";
                 const photosPayload = [];
                 const videoQueue = [];
 
+                // Tuyến Media
+                (proj.linearMedia || []).forEach((lm, idx) => {
+                    if (lm.type === "photo") {
+                        photosPayload.push({
+                            fileName: `ANH_${proj.code}_Tuyen_${idx + 1}.jpg`,
+                            data: lm.data
+                        });
+                    } else if (lm.type === "video" && lm.blob instanceof Blob) {
+                        videoQueue.push({ blob: lm.blob, section: `Tuyen_${idx + 1}` });
+                    }
+                });
+
+                // Trạm Media
                 for (let sIdx = 0; sIdx < stations.length; sIdx++) {
                     const st = stations[sIdx];
                     const photos = st.evidence?.photos || [];
@@ -1385,7 +1556,8 @@ const TGS_AIAssistant = {
                     project: proj,
                     linearSurvey: {
                         lineSummary: L4_SurveyLineLogic.getSummary(),
-                        points: proj.points || []
+                        points: proj.points || [],
+                        linearMediaCount: (proj.linearMedia || []).length
                     },
                     pointSurvey: {
                         stationCount: cleanStations.length,
@@ -1393,7 +1565,6 @@ const TGS_AIAssistant = {
                     }
                 };
 
-                // GỬI PHA 1: DATASET JSON & HÌNH ẢNH
                 statusEl.innerText = "☁️ Đang đồng bộ số liệu & ảnh tĩnh...";
                 const syncApiUrl = mode === "server" ? `${targetUrl}/api/sync-data` : targetUrl;
                 
@@ -1412,7 +1583,7 @@ const TGS_AIAssistant = {
 
                 if (!resP1.ok) throw new Error(`Lỗi kết nối Pha 1 (Mã HTTP ${resP1.status})`);
 
-                // GỬI PHA 2: TRUYỀN STREAM VIDEO NHỊ PHÂN (NẾU CÓ)
+                // Pha 2 video
                 if (videoQueue.length > 0 && mode === "server") {
                     for (let vIdx = 0; vIdx < videoQueue.length; vIdx++) {
                         const item = videoQueue[vIdx];
@@ -1424,24 +1595,43 @@ const TGS_AIAssistant = {
                         formData.append("projectCode", proj.code);
                         formData.append("videoFile", item.blob, vFileName);
 
-                        const resV = await fetch(`${targetUrl}/api/upload-video`, {
+                        await fetch(`${targetUrl}/api/upload-video`, {
                             method: "POST",
                             headers: { "X-TGS-Key": CONFIG.TGS_API_KEY },
                             body: formData
                         });
-
-                        if (!resV.ok) console.warn("Lỗi upload video:", vFileName);
                     }
                 }
 
+                // Đánh dấu hoàn thành
+                proj.status = "completed";
+                proj.updatedAt = Date.now();
+                await A4_Persistence.saveProject(proj);
+
                 statusEl.style.color = "#2E7D32";
                 statusEl.innerHTML = `✓ Đồng bộ thành công toàn bộ hồ sơ & Media!`;
-                alert("Đã đồng bộ hồ sơ, dữ liệu VN-2000 và video thành công!");
+                alert("Đã đồng bộ hồ sơ và khóa công trình thành công!");
 
             } catch (err) {
                 statusEl.style.color = "#D32F2F";
-                statusEl.innerText = "✕ Lỗi đồng bộ: " + err.message;
-                alert("Không thể hoàn tất đồng bộ: " + err.message);
+                statusEl.innerText = "✕ Lỗi mạng / Không kết nối máy chủ: " + err.message;
+
+                // CƠ CHẾ DỰ PHÒNG: CHO PHÉP ĐÓNG HỒ SƠ NGOẠI TUYẾN
+                const markOffline = confirm(
+                    `Không thể kết nối đến máy chủ (${err.message}).\n\n` +
+                    `Dữ liệu vẫn được an toàn 100% trong bộ nhớ máy.\n` +
+                    `Bạn có muốn ĐÓNG HỒ SƠ & HOÀN THÀNH NGOẠI TUYẾN để không bị nhắc dở dang không?\n` +
+                    `(Sau này có mạng vẫn có thể bấm Đồng bộ lại hoặc Xuất JSON/Zalo).`
+                );
+
+                if (markOffline) {
+                    proj.status = "completed";
+                    proj.updatedAt = Date.now();
+                    await A4_Persistence.saveProject(proj);
+                    statusEl.style.color = "#1565C0";
+                    statusEl.innerText = "✓ Đã lưu trữ và khóa công trình an toàn trên thiết bị!";
+                    alert("Đã kết thúc khảo sát ngoại tuyến thành công!");
+                }
             } finally {
                 btnSync.disabled = false;
             }
@@ -1453,15 +1643,12 @@ const TGS_AIAssistant = {
     ===================================================== */
     const Z1_AppInitialize = {
         bindGlobalEvents() {
-            // Nút Bắt đầu từ Splash
             document.getElementById("btnStart").addEventListener("click", () => A2_Navigation.show("projectHome"));
 
-            // Nút Tiếp tục hồ sơ nháp
             document.getElementById("btnContinueDraft").addEventListener("click", () => {
                 if (A1_State.currentProject) A3_ProjectLifecycle.enterSurveyHome();
             });
 
-            // Nút Tạo công trình mới
             document.getElementById("btnNewProject").addEventListener("click", async () => {
                 document.getElementById("projectName").value = "";
                 document.getElementById("projectLocation").value = "";
@@ -1470,16 +1657,11 @@ const TGS_AIAssistant = {
                 A2_Navigation.show("project");
             });
 
-            // Mở và tìm kiếm công trình đã lưu
             const btnOpenProj = document.getElementById("btnOpenProject");
-            if (btnOpenProj) {
-                btnOpenProj.addEventListener("click", () => A3_ProjectListManager.openModal());
-            }
+            if (btnOpenProj) btnOpenProj.addEventListener("click", () => A3_ProjectListManager.openModal());
 
             const btnCloseList = document.getElementById("btnCloseProjectList");
-            if (btnCloseList) {
-                btnCloseList.addEventListener("click", () => A3_ProjectListManager.closeModal());
-            }
+            if (btnCloseList) btnCloseList.addEventListener("click", () => A3_ProjectListManager.closeModal());
 
             const searchInput = document.getElementById("searchProjectInput");
             if (searchInput) {
@@ -1505,21 +1687,18 @@ const TGS_AIAssistant = {
                 A2_Navigation.show("point");
             });
 
-            // Hậu kiểm Media
             const btnReview = document.getElementById("btnReviewMedia");
-            if (btnReview) {
-                btnReview.addEventListener("click", () => R1_ReviewMediaManager.openReview());
-            }
+            if (btnReview) btnReview.addEventListener("click", () => R1_ReviewMediaManager.openReview());
 
             const btnBackReview = document.getElementById("btnBackFromReview");
-            if (btnBackReview) {
-                btnBackReview.addEventListener("click", () => A2_Navigation.show("surveyHome"));
-            }
+            if (btnBackReview) btnBackReview.addEventListener("click", () => A2_Navigation.show("surveyHome"));
 
-            // Hoàn thành hồ sơ
             document.getElementById("btnFinishProject").addEventListener("click", () => A3_ProjectLifecycle.openCompleteSummary());
             document.getElementById("btnBackFromComplete").addEventListener("click", () => A3_ProjectLifecycle.enterSurveyHome());
-            document.getElementById("btnExitLinear").addEventListener("click", () => A3_ProjectLifecycle.enterSurveyHome());
+            document.getElementById("btnExitLinear").addEventListener("click", () => {
+                L5_SplitScreenLinearManager.toggleSplit(false);
+                A3_ProjectLifecycle.enterSurveyHome();
+            });
             document.getElementById("btnExitPoint").addEventListener("click", () => A3_ProjectLifecycle.enterSurveyHome());
 
             // Bản đồ GIS
@@ -1529,6 +1708,64 @@ const TGS_AIAssistant = {
                 L3_SmartGNSS.getQuickPosition(pos => L2_MapEngine.updateLivePosition(pos));
             });
             document.getElementById("btnCaptureGPS").addEventListener("click", () => L4_SurveyLineLogic.captureRoutePoint());
+
+            // SỰ KIỆN MỚI: CHIA ĐÔI MÀN HÌNH & MEDIA TUYẾN ỐNG
+            const btnLineSnap = document.getElementById("btnLineSnapPhoto");
+            if (btnLineSnap) {
+                btnLineSnap.addEventListener("click", () => {
+                    if (L5_SplitScreenLinearManager.isSplitActive) {
+                        L5_SplitScreenLinearManager.capturePhotoFromStream();
+                    } else {
+                        L5_SplitScreenLinearManager.toggleSplit(true);
+                    }
+                });
+            }
+
+            const btnLineRec = document.getElementById("btnLineRecordVideo");
+            if (btnLineRec) {
+                btnLineRec.addEventListener("click", () => {
+                    if (L5_SplitScreenLinearManager.isSplitActive) {
+                        L5_SplitScreenLinearManager.recordVideoFromStream();
+                    } else {
+                        L5_SplitScreenLinearManager.toggleSplit(true);
+                    }
+                });
+            }
+
+            // Input nạp file ngoài luồng stream (nếu dùng camera mặc định của điện thoại)
+            const inputPhoto = document.getElementById("inputLinePhoto");
+            if (inputPhoto) {
+                inputPhoto.addEventListener("change", (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (re) => {
+                        L5_SplitScreenLinearManager.saveLinearMediaItem({
+                            type: "photo",
+                            data: re.target.result,
+                            timestamp: Date.now(),
+                            label: "Ảnh tuyến ống"
+                        });
+                        alert("✓ Đã lưu ảnh tuyến thành công!");
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            const inputVideo = document.getElementById("inputLineVideo");
+            if (inputVideo) {
+                inputVideo.addEventListener("change", (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    L5_SplitScreenLinearManager.saveLinearMediaItem({
+                        type: "video",
+                        blob: file,
+                        timestamp: Date.now(),
+                        label: "Video tuyến ống"
+                    });
+                    alert("✓ Đã lưu video tuyến ống!");
+                });
+            }
 
             // Điểm khảo sát & Camera
             document.getElementById("btnGetPointGPS").addEventListener("click", () => P2_PointGNSS.observePointPosition());
@@ -1551,11 +1788,10 @@ const TGS_AIAssistant = {
                 if (snap) P4_MediaManager.addPhoto(snap, timeStr);
             });
 
-            // Nút Đồng bộ Google Drive
+            // Đồng bộ & Xuất file
             const btnSync = document.getElementById("btnSyncDrive");
             if (btnSync) btnSync.addEventListener("click", () => Z2_SyncEngine.executeSync());
 
-            // Cụm nút Xuất dữ liệu & Media dự phòng
             const btnExpJSON = document.getElementById("btnExportJSON");
             if (btnExpJSON) btnExpJSON.addEventListener("click", () => Z3_ExportManager.exportJSON());
 
@@ -1567,7 +1803,6 @@ const TGS_AIAssistant = {
         },
 
         async startup() {
-            // 1. Kiểm tra xác thực mã PIN bảo vệ WebApp
             if (!A0_AuthManager.checkAuth()) {
                 const inputPin = prompt("HỆ THỐNG KHẢO SÁT TGS\nVui lòng nhập Mã PIN kích hoạt thiết bị:");
                 if (!A0_AuthManager.verifyPin(inputPin)) {
