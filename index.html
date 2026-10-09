@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#1565C0">
 
   <!-- iOS Safari -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TGS Survey">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -188,6 +188,17 @@
         <button id="btnLocate" class="tool-circle" title="Vị trí hiện tại">◎</button>
         <button id="btnZoomIn" class="tool-circle">＋</button>
         <button id="btnZoomOut" class="tool-circle">－</button>
+      </div>
+
+      <!-- CỤM CÔNG CỤ MEDIA HIỆN TRƯỜNG TUYẾN ỐNG (MỚI BỔ SUNG) -->
+      <div class="line-media-floating-bar" style="position:absolute; top:75px; right:12px; z-index:999; display:flex; flex-direction:column; gap:8px;">
+        <button id="btnLineSnapPhoto" class="tool-circle" title="Chụp ảnh điểm tuyến" style="background:#0284c7; color:#fff; border:none; box-shadow:0 3px 6px rgba(0,0,0,0.25);">📷</button>
+        <button id="btnLineRecordVideo" class="tool-circle" title="Quay video thuyết minh tuyến" style="background:#ea580c; color:#fff; border:none; box-shadow:0 3px 6px rgba(0,0,0,0.25);">🎥</button>
+        <span id="lineMediaCountBadge" class="badge-mini" style="background:rgba(15,23,42,0.85); color:#fff; font-size:11px; padding:2px 6px; border-radius:10px; text-align:center;">0 file</span>
+        
+        <!-- Input camera ẩn dành riêng cho tuyến -->
+        <input type="file" id="inputLinePhoto" accept="image/*" capture="environment" style="display:none;">
+        <input type="file" id="inputLineVideo" accept="video/*" capture="environment" style="display:none;">
       </div>
 
       <!-- Dải thông số nổi tinh gọn -->
