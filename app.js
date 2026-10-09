@@ -11,8 +11,8 @@ const TGS = (() => {
         TGS_API_KEY: "TGS_SECURE_TOKEN_2026_VINHLONG",
         ALLOWED_PINS: {
             "8901": { name: "Kim Minh Hùng", role: "Trưởng nhóm" },
-            "8902": { name: "Trương Thành Cọt", role: "Khảo sát viên" },
-            "8903": { name: "Nguyễn Phát Tấn", role: "Khảo sát viên" },
+            "8902": { name: "Phạm Lý Thái Tâm", role: "Khảo sát viên" },
+            "8903": { name: "Nguyễn Tấn Tài", role: "Khảo sát viên" },
             "8900": { name: "Khảo Sát Hiện Trường", role: "Kỹ thuật viên" }
         }
     };
