@@ -7,7 +7,7 @@ const TGS = (() => {
 
     // CẤU HÌNH MẶC ĐỊNH & BẢO MẬT
     const CONFIG = {
-        DEFAULT_SERVER_URL: "https://exports-removed-recorder-skirt.trycloudflare.com",
+        DEFAULT_SERVER_URL: "https://scholarships-amazing-rise-overcome.trycloudflare.com",
         TGS_API_KEY: "TGS_SECURE_TOKEN_2026_VINHLONG",
         ALLOWED_PINS: {
             "8901": { name: "Kim Minh Hùng", role: "Trưởng nhóm" },
