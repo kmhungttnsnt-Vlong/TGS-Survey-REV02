@@ -529,37 +529,65 @@ const TGS = (() => {
             }
 
             this.isSampling = true;
-            const rawSamples = [];
+            const validSamples = [];
             const L0 = A1_State.currentProject?.meta?.centralMeridian || 105.5;
+            let lastLat = null;
+            let lastLng = null;
+            let lastTime = 0;
 
             const interval = setInterval(() => {
                 navigator.geolocation.getCurrentPosition(
                     pos => {
                         const { latitude, longitude, accuracy } = pos.coords;
-                        rawSamples.push({ latitude, longitude, accuracy, timestamp: Date.now() });
+                        const now = Date.now();
 
-                        if (typeof progressCb === "function") {
-                            progressCb(rawSamples.length, L3_SmartGNSS.sampleTarget);
+                        // 1. Lọc trễ thời gian: Phải cách mẫu trước tối thiểu 750ms để chip GPS đổi chu kỳ nạp
+                        if (now - lastTime < 750) return;
+
+                        // 2. Lọc bỏ mẫu vệ tinh yếu (sai số vượt quá 15m)
+                        if (accuracy > 15) return;
+
+                        // 3. Lọc trùng lặp vật lý: Loại bỏ mẫu đứng yên đọc từ RAM/cache
+                        if (lastLat !== null && lastLng !== null) {
+                            if (lastLat === latitude && lastLng === longitude) {
+                                return; // Trùng tọa độ hoàn toàn, bỏ qua
+                            }
                         }
 
-                        if (rawSamples.length >= L3_SmartGNSS.sampleTarget) {
+                        // Ghi nhận mẫu thực sự độc lập
+                        lastLat = latitude;
+                        lastLng = longitude;
+                        lastTime = now;
+
+                        validSamples.push({ latitude, longitude, accuracy, timestamp: now });
+
+                        if (typeof progressCb === "function") {
+                            progressCb(validSamples.length, L3_SmartGNSS.sampleTarget);
+                        }
+
+                        // Thu đủ 20 mẫu độc lập
+                        if (validSamples.length >= L3_SmartGNSS.sampleTarget) {
                             clearInterval(interval);
                             L3_SmartGNSS.isSampling = false;
-                            const evaluated = L3_SmartGNSS.evaluateSamples(rawSamples, L0);
+                            const evaluated = L3_SmartGNSS.evaluateSamples(validSamples, L0);
                             completeCb(evaluated);
                         }
                     },
                     err => console.warn("[GNSS Warning]", err.message),
-                    { enableHighAccuracy: true, timeout: 3000, maximumAge: 0 }
+                    { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
                 );
-            }, 350);
+            }, 800); // Tần số gom 800ms phù hợp với chu kỳ làm tươi của chip GNSS điện thoại
         },
 
         evaluateSamples(samples, L0) {
-            let sumWeight = 0, sumLat = 0, sumLng = 0;
-            const accuracies = samples.map(s => s.accuracy).sort((a, b) => a - b);
+            // 1. Sắp xếp theo sai số tăng dần để loại bỏ 15% mẫu xấu nhất (Outliers)
+            const sortedByAcc = [...samples].sort((a, b) => a.accuracy - b.accuracy);
+            const cleanSamples = sortedByAcc.slice(0, Math.ceil(samples.length * 0.85));
 
-            samples.forEach(s => {
+            // 2. Bình quân gia quyền nghịch đảo bình phương sai số (Weighted Average W = 1 / acc^2)
+            let sumWeight = 0, sumLat = 0, sumLng = 0;
+
+            cleanSamples.forEach(s => {
                 const w = 1 / Math.max(s.accuracy * s.accuracy, 1);
                 sumWeight += w;
                 sumLat += s.latitude * w;
@@ -568,7 +596,9 @@ const TGS = (() => {
 
             const repLat = sumLat / sumWeight;
             const repLng = sumLng / sumWeight;
-            const medianAcc = accuracies[Math.floor(accuracies.length / 2)];
+
+            // Lấy trung vị sai số đại diện
+            const medianAcc = cleanSamples[Math.floor(cleanSamples.length / 2)].accuracy;
             const vn2000 = VN2000Service.forward(repLat, repLng, L0);
 
             return {
@@ -578,8 +608,9 @@ const TGS = (() => {
                 vn2000,
                 provenance: {
                     source: "Smartphone GNSS (Internal)",
-                    acquisitionMethod: "Smart 20-Sample Weighted Median Filter",
+                    acquisitionMethod: "Dynamic 20-Independent-Sample Weighted Filter",
                     sampleCount: samples.length,
+                    filteredCount: cleanSamples.length,
                     timestamp: Date.now()
                 }
             };
