@@ -1965,4 +1965,104 @@ if (document.readyState === "loading") {
     } else {
         setupQRModule();
     }
+   /* =========================================================================
+   MODULE ĐIỀU KHIỂN CAMERA KHẢO SÁT TOÀN MÀN HÌNH (FULLSCREEN CAMERA)
+   ========================================================================= */
+(function initFullscreenCameraModule() {
+    function setupFullscreenCam() {
+        const btnOpen = document.getElementById("btnOpenFullscreenCam");
+        const btnClose = document.getElementById("btnCloseFullscreenCam");
+        const overlay = document.getElementById("fullscreenCameraOverlay");
+        const videoInline = document.getElementById("cameraPreview");
+        const videoFS = document.getElementById("cameraPreviewFS");
+
+        const btnSnapFS = document.getElementById("btnSnapPhotoFS");
+        const btnRecordFS = document.getElementById("btnRecordVideoFS");
+        const btnSnapInline = document.getElementById("btnSnapPhoto");
+        const btnRecordInline = document.getElementById("btnRecordVideo");
+
+        if (!btnOpen || !overlay) return;
+
+        // 1. Bật toàn màn hình
+        btnOpen.addEventListener("click", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Hiển thị khung phóng to
+            overlay.classList.remove("hidden");
+            overlay.style.display = "flex";
+
+            // Chuyển luồng video sang thẻ toàn màn hình
+            if (videoInline && videoInline.srcObject) {
+                videoFS.srcObject = videoInline.srcObject;
+                videoFS.play().catch(() => {});
+            } else {
+                // Nếu camera inline chưa bật, tự động kích hoạt camera
+                navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 } },
+                    audio: true
+                }).then(stream => {
+                    if (videoInline) videoInline.srcObject = stream;
+                    if (videoFS) {
+                        videoFS.srcObject = stream;
+                        videoFS.play().catch(() => {});
+                    }
+                }).catch(err => {
+                    alert("Không thể khởi động camera toàn màn hình: " + err.message);
+                });
+            }
+        });
+
+        // 2. Đóng chế độ toàn màn hình (nút ✕)
+        if (btnClose) {
+            btnClose.addEventListener("click", function (e) {
+                e.preventDefault();
+                overlay.style.display = "none";
+                overlay.classList.add("hidden");
+                // Giữ lại luồng phát cho khung nhỏ inline
+                if (videoInline && videoFS && videoFS.srcObject) {
+                    videoInline.srcObject = videoFS.srcObject;
+                }
+            });
+        }
+
+        // 3. Đồng bộ nút chụp ảnh nhanh khi ở chế độ toàn màn hình
+        if (btnSnapFS && btnSnapInline) {
+            btnSnapFS.addEventListener("click", function () {
+                btnSnapInline.click();
+                if (navigator.vibrate) navigator.vibrate(80);
+            });
+        }
+
+        // 4. Đồng bộ nút quay video khi ở chế độ toàn màn hình
+        if (btnRecordFS && btnRecordInline) {
+            btnRecordFS.addEventListener("click", function () {
+                btnRecordInline.click();
+            });
+        }
+
+        // 5. Điều khiển mức Zoom (1x, 2x, 3x, 5x)
+        const zoomBtns = document.querySelectorAll(".zoom-btn");
+        zoomBtns.forEach(btn => {
+            btn.addEventListener("click", function () {
+                zoomBtns.forEach(b => b.classList.remove("active"));
+                this.classList.add("active");
+                const zoomVal = parseFloat(this.getAttribute("data-zoom") || "1");
+
+                // Thu phóng phần mềm thông qua CSS Transform
+                if (videoFS) {
+                    videoFS.style.transform = `scale(${zoomVal})`;
+                    videoFS.style.transformOrigin = "center center";
+                    videoFS.style.transition = "transform 0.2s ease";
+                }
+            });
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", setupFullscreenCam);
+    } else {
+        setupFullscreenCam();
+    }
+})();
 })();
