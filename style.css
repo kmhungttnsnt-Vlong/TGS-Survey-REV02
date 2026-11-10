@@ -152,10 +152,10 @@ button, input, select, textarea {
 .brand span { margin-left: 4px; color: #334155; font-size: 18px; }
 
 /* ================= PAGES & CARDS ================= */
-.page, .form-page, .survey-home {
-  height: calc(100% - 64px);
+.page, .form-page, .survey-home, #tab-system {
+  height: calc(100% - 62px);
   overflow-y: auto;
-  padding: 20px;
+  -webkit-overflow-scrolling: touch;
 }
 .page-label { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--primary); }
 .page h1 { font-size: 34px; line-height: 1.1; margin: 6px 0; }
@@ -703,6 +703,7 @@ button, input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-bottom: 100px !important; /* Đảm bảo mục 4 và 5 không bị che bởi thanh điều hướng đáy */
 }
 
 .card-section {
