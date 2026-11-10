@@ -213,13 +213,16 @@ const TGS = (() => {
         ],
 
         show(screenId) {
-            // 1. Ẩn toàn bộ tất cả các màn hình
-            document.querySelectorAll(".screen").forEach(el => {
-                el.classList.remove("active");
-                el.style.display = "none";
+            // 1. Ẩn tất cả các màn hình trước
+            this.screens.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove("active");
+                    el.style.display = "none";
+                }
             });
 
-            // 2. Bật màn hình mục tiêu
+            // 2. Bật màn hình được bấm
             const target = document.getElementById(screenId);
             if (target) {
                 target.classList.add("active");
@@ -227,7 +230,7 @@ const TGS = (() => {
                 State.activeScreenId = screenId;
             }
 
-            // 3. Đổi màu active trên thanh Bottom Navigation Bar
+            // 3. Đổi màu icon tương ứng dưới thanh Bottom Bar
             document.querySelectorAll(".nav-item").forEach(item => {
                 const tabTarget = item.getAttribute("data-tab");
                 if (tabTarget === screenId || (screenId === "screenSurveyHome" && tabTarget === "screenSurveyHome")) {
@@ -237,15 +240,29 @@ const TGS = (() => {
                 }
             });
 
-            // 4. Kích hoạt logic tương ứng
-            if (screenId === "tab-dashboard") Lifecycle.updateDashboard();
-            if (screenId === "tab-data") DataHub.renderDataScreen();
-            if (screenId === "tab-system") TGS_System.init();
-            if (screenId === "screenPoint") PointModule.init();
-            if (screenId === "screenLinear") LinearModule.startTracking();
-            else LinearModule.stopTracking();
+            // 4. Gọi các hàm dữ liệu bên trong khối try...catch an toàn
+            try {
+                if (screenId === "tab-dashboard") Lifecycle.updateDashboard();
+            } catch (e) { console.warn("Lỗi Dashboard:", e); }
 
-            // Cuộn lên đầu trang màn hình mới
+            try {
+                if (screenId === "tab-data") DataHub.renderDataScreen();
+            } catch (e) { console.warn("Lỗi DataHub:", e); }
+
+            try {
+                if (screenId === "tab-system") TGS_System.init();
+            } catch (e) { console.warn("Lỗi System:", e); }
+
+            try {
+                if (screenId === "screenPoint") PointModule.init();
+            } catch (e) { console.warn("Lỗi Point:", e); }
+
+            try {
+                if (screenId === "screenLinear") LinearModule.startTracking();
+                else LinearModule.stopTracking();
+            } catch (e) { console.warn("Lỗi Linear:", e); }
+
+            // 5. Cuộn lên đầu trang
             window.scrollTo(0, 0);
         }
     };
