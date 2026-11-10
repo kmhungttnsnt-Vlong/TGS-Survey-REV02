@@ -266,9 +266,9 @@ button, input, select, textarea {
 
 .floating-metric-pill {
   position: absolute;
-  bottom: 84px;
-  left: 12px;
-  right: 12px;
+  bottom: 80px;
+  left: 10px;
+  right: 10px;
   background: rgba(15, 23, 42, 0.92);
   backdrop-filter: blur(6px);
   border-radius: 14px;
@@ -277,25 +277,25 @@ button, input, select, textarea {
   justify-content: space-between;
   color: #fff;
   font-size: 12px;
-  z-index: 500;
+  z-index: 1000;
 }
 .floating-metric-pill span { opacity: 0.7; }
 .floating-metric-pill strong { color: #4ADE80; margin-left: 2px; }
 
 .btn-giant-gps {
   position: absolute;
-  bottom: 14px;
-  left: 12px;
-  right: 12px;
-  height: 58px;
+  bottom: 12px;
+  left: 10px;
+  right: 10px;
+  height: 56px;
   background: #2563EB;
   border: none;
-  border-radius: 18px;
+  border-radius: 16px;
   color: #fff;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-  z-index: 500;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+  z-index: 1000;
   cursor: pointer;
   letter-spacing: 0.5px;
 }
