@@ -1,6 +1,6 @@
 /* =========================================================================
    TGS PLATFORM GENESIS 2.0 - PROFESSIONAL FIELD ENGINE
-   BASELINE B11: COMPREHENSIVE 4-PILLAR UPGRADE ENGINE
+   BASELINE B11: COMPREHENSIVE 4-PILLAR UPGRADE ENGINE (OPTIMIZED)
    ========================================================================= */
 
 /* =========================================================================
@@ -56,7 +56,7 @@ const TGS_Auth = {
         }
     },
 
-handleLogin: function() {
+    handleLogin: function() {
         const email = document.getElementById("loginEmail").value.trim().toLowerCase();
         const pass = document.getElementById("loginPass").value.trim();
         const notice = document.getElementById("authNotice");
@@ -76,8 +76,6 @@ handleLogin: function() {
             localStorage.setItem("tgs_active_user", JSON.stringify(user));
             notice.style.color = "#16a34a";
             notice.innerText = `✓ Xin chào ${user.name}! Đang mở hệ thống...`;
-            
-            // Tải lại trang sau 300ms để kích hoạt trọn vẹn toàn bộ sự kiện click
             setTimeout(() => {
                 window.location.reload();
             }, 300);
@@ -197,7 +195,10 @@ const TGS = (() => {
             }
             throw new Error("Chưa nạp db.js");
         },
-        async getAllProjects() { return DB.getAllProjects(); },
+        async getAllProjects() { 
+            if (typeof DB !== "undefined") return DB.getAllProjects();
+            return [];
+        },
         async createProject(data) { return DB.createProject(data); },
         async saveProject(proj) { return DB.saveProject(proj); }
     };
@@ -213,7 +214,7 @@ const TGS = (() => {
         ],
 
         show(screenId) {
-            // 1. Ẩn tất cả các màn hình trước
+            // 1. Ẩn tất cả các màn hình
             this.screens.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
@@ -222,7 +223,7 @@ const TGS = (() => {
                 }
             });
 
-            // 2. Bật màn hình được bấm
+            // 2. Bật màn hình mục tiêu
             const target = document.getElementById(screenId);
             if (target) {
                 target.classList.add("active");
@@ -230,7 +231,7 @@ const TGS = (() => {
                 State.activeScreenId = screenId;
             }
 
-            // 3. Đổi màu icon tương ứng dưới thanh Bottom Bar
+            // 3. Đổi màu icon thanh Bottom Bar
             document.querySelectorAll(".nav-item").forEach(item => {
                 const tabTarget = item.getAttribute("data-tab");
                 if (tabTarget === screenId || (screenId === "screenSurveyHome" && tabTarget === "screenSurveyHome")) {
@@ -240,7 +241,7 @@ const TGS = (() => {
                 }
             });
 
-            // 4. Gọi các hàm dữ liệu bên trong khối try...catch an toàn
+            // 4. Kích hoạt logic tương ứng bằng try...catch an toàn
             try {
                 if (screenId === "tab-dashboard") Lifecycle.updateDashboard();
             } catch (e) { console.warn("Lỗi Dashboard:", e); }
@@ -262,7 +263,7 @@ const TGS = (() => {
                 else LinearModule.stopTracking();
             } catch (e) { console.warn("Lỗi Linear:", e); }
 
-            // 5. Cuộn lên đầu trang
+            // 5. Cuộn trang lên đỉnh
             window.scrollTo(0, 0);
         }
     };
@@ -412,7 +413,6 @@ const TGS = (() => {
                             clearInterval(timer);
                             SmartGNSS.isSampling = false;
 
-                            // Sắp xếp loại bỏ 15% mẫu sai số lớn nhất
                             samples.sort((a, b) => a.accuracy - b.accuracy);
                             const clean = samples.slice(0, Math.ceil(samples.length * 0.85));
 
@@ -445,7 +445,7 @@ const TGS = (() => {
     };
 
     /* =========================================================================
-       TRỤ CỘT 3A: KHẢO SÁT TUYẾN ỐNG BREADCRUMB & ỐNG TRÁI/PHẢI (LinearModule)
+       TRỤ CỘT 3A: KHẢO SÁT TUYẾN ỐNG BREADCRUMB & PHỤ KIỆN (LinearModule)
        ========================================================================= */
     const LinearModule = {
         map: null,
@@ -475,7 +475,6 @@ const TGS = (() => {
 
             if (!navigator.geolocation || State.breadcrumbWatchId) return;
 
-            // Bật thuật toán Breadcrumb bám đường cong thực tế
             State.breadcrumbWatchId = navigator.geolocation.watchPosition(
                 pos => {
                     const { latitude, longitude, accuracy } = pos.coords;
@@ -486,7 +485,7 @@ const TGS = (() => {
 
                     if (State.lastBreadcrumbPos) {
                         const dist = curLatLng.distanceTo(State.lastBreadcrumbPos);
-                        if (dist >= 3.5) { // Cứ mỗi 3.5 mét tự động nối đoạn cong
+                        if (dist >= 3.5) {
                             this.totalLength += dist;
                             State.lastBreadcrumbPos = curLatLng;
                             this.polyline.addLatLng(curLatLng);
@@ -523,7 +522,6 @@ const TGS = (() => {
             if (vnEl) vnEl.innerText = `${vn.x.toFixed(0)}, ${vn.y.toFixed(0)}`;
         },
 
-        // Chốt mốc kỹ thuật 20 mẫu vi sai (ngã rẽ, van phân phối, mốc đầu/cuối)
         captureTechnicalMilestone() {
             if (!State.currentProject) return;
             const btnText = document.getElementById("captureBtnText");
@@ -533,7 +531,6 @@ const TGS = (() => {
                 async (evaluated) => {
                     if (btnText) btnText.innerText = "◎ CHỐT MỐC KỸ THUẬT (20 MẪU)";
 
-                    // Lấy quy cách ống Trái / Phải (có nhận diện mục tự nhập)
                     let leftPipe = document.getElementById("lineLeftDiameter").value;
                     if (leftPipe === "KHAC") {
                         leftPipe = document.getElementById("customLeftPipeInput").value.trim() || "Ống khác";
@@ -543,7 +540,6 @@ const TGS = (() => {
                         rightPipe = document.getElementById("customRightPipeInput").value.trim() || "Ống khác";
                     }
 
-                    // Lấy phụ kiện đấu nối
                     const fittingType = document.getElementById("lineFittingSelect").value;
                     const fittingNote = document.getElementById("lineFittingNote").value.trim();
 
@@ -567,7 +563,6 @@ const TGS = (() => {
                     State.currentProject.points.push(milestone);
                     await Persistence.saveProject(State.currentProject);
 
-                    // Vẽ marker mốc trên bản đồ GIS
                     if (LinearModule.map) {
                         const markerColor = fittingType !== "KHONG" ? "#f59e0b" : "#00E676";
                         L.circleMarker([evaluated.latitude, evaluated.longitude], {
@@ -580,7 +575,6 @@ const TGS = (() => {
                         `).addTo(LinearModule.markerLayer);
                     }
 
-                    // Tự động làm sạch ô ghi chú phụ kiện sau khi chốt để sẵn sàng mốc tiếp theo
                     document.getElementById("lineFittingSelect").value = "KHONG";
                     document.getElementById("lineFittingNote").value = "";
 
@@ -600,11 +594,11 @@ const TGS = (() => {
             alert(`✓ Đã chốt đổi quy cách tại mét thứ ${Math.round(this.totalLength)}m!\n` +
                   `${fittingNote ? `Phụ kiện: ${fittingNote}\n` : ''}` +
                   `Quy cách đoạn tiếp theo: Trái [${left}] - Phải [${right}]`);
-        },
+        }
     };
 
     /* =========================================================================
-       TRỤ CỘT 3B: KHẢO SÁT ĐIỂM HẠNG MỤC CÓ NGỮ CẢNH & CAMERA (PointModule)
+       TRỤ CỘT 3B: KHẢO SÁT ĐIỂM HẠNG MỤC (PointModule)
        ========================================================================= */
     const PointModule = {
         observedGNSS: null,
@@ -704,7 +698,6 @@ const TGS = (() => {
             const ctx = canvas.getContext("2d");
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Watermark thời gian & Tọa độ VN-2000
             const timeStr = new Date().toLocaleTimeString("vi-VN");
             const secName = document.getElementById("pointSectionSelect").value;
             const vnStr = this.observedGNSS ? `VN2000: X:${this.observedGNSS.vn2000.x} Y:${this.observedGNSS.vn2000.y}` : "TGS GNSS LIVE";
@@ -935,8 +928,7 @@ const TGS = (() => {
 
                 if (statusEl) statusEl.innerText = isGDrive ? "☁️ Đang đồng bộ lên Google Drive..." : `💻 Đang đẩy về máy trạm: ${targetUrl}...`;
 
-                // Giả lập đồng bộ an toàn không nghẽn mạng
-                await new Promise(r => setTimeout(r, 1500));
+                await new Promise(r => setTimeout(r, 1200));
 
                 State.currentProject.status = "completed";
                 State.currentProject.updatedAt = Date.now();
@@ -980,104 +972,252 @@ const TGS = (() => {
     };
 
     /* =========================================================================
-       TRỤ CỘT 4: MÀN HÌNH HỆ THỐNG, 1-CLICK SETUP & PWA UPDATE (TGS_System)
+       KHỞI TẠO SỰ KIỆN GIAO DIỆN (Binding Events)
        ========================================================================= */
-    const System = {
-        version: "v2.1.0-rev2026",
+    function bindEvents() {
+        const btnNew = document.getElementById("btnNewProject");
+        if (btnNew) btnNew.onclick = async () => {
+            document.getElementById("projectName").value = "";
+            document.getElementById("projectLocation").value = "";
+            document.getElementById("projectCode").value = await Lifecycle.generateNextCode();
+            Navigation.show("screenProject");
+        };
 
-        init() {
-            const vLabel = document.getElementById("app-version-label");
-            if (vLabel) vLabel.innerText = this.version;
-            this.loadUserProfile();
-            this.checkSyncStatus();
-        },
+        const btnCreate = document.getElementById("btnCreateProject");
+        if (btnCreate) btnCreate.onclick = () => Lifecycle.createNewProject();
 
-        loadUserProfile() {
-            const user = TGS_Auth.getCurrentUser();
-            if (!user) return;
+        const btnBackH = document.getElementById("btnBackHome");
+        if (btnBackH) btnBackH.onclick = () => Navigation.show("tab-dashboard");
 
-            const nameEl = document.getElementById("sys-user-name");
-            const emailEl = document.getElementById("sys-user-email");
-            const deptEl = document.getElementById("sys-user-dept");
-            const avatarEl = document.getElementById("sys-user-avatar");
-            const roleBadge = document.getElementById("user-role-badge");
-            const adminCard = document.getElementById("admin-whitelist-card");
+        const btnBackP = document.getElementById("btnBackProject");
+        if (btnBackP) btnBackP.onclick = () => Navigation.show("tab-dashboard");
 
-            if (nameEl) nameEl.innerText = user.name;
-            if (emailEl) emailEl.innerText = user.email;
-            if (deptEl) deptEl.innerText = user.dept;
-            if (avatarEl) avatarEl.innerText = user.name.charAt(0).toUpperCase();
-            if (roleBadge) roleBadge.innerText = user.role === "admin" ? "Quản trị viên (Admin)" : "Kỹ sư Khảo sát";
+        const btnCont = document.getElementById("btnContinueDraft");
+        if (btnCont) btnCont.onclick = () => Lifecycle.enterSurveyHome();
 
-            if (adminCard) {
-                if (user.role === "admin") {
-                    adminCard.style.display = "block";
-                    this.loadWhitelist();
+        const btnLin = document.getElementById("btnLinearSurvey");
+        if (btnLin) btnLin.onclick = () => Navigation.show("screenLinear");
+
+        const btnPt = document.getElementById("btnPointSurvey");
+        if (btnPt) btnPt.onclick = () => Navigation.show("screenPoint");
+
+        const btnFin = document.getElementById("btnFinishProject");
+        if (btnFin) btnFin.onclick = () => Navigation.show("tab-data");
+
+        const btnExitLin = document.getElementById("btnExitLinear");
+        if (btnExitLin) btnExitLin.onclick = () => Navigation.show("screenSurveyHome");
+
+        const btnExitPt = document.getElementById("btnExitPoint");
+        if (btnExitPt) btnExitPt.onclick = () => Navigation.show("screenSurveyHome");
+
+        const btnCapLin = document.getElementById("btnCaptureGPS");
+        if (btnCapLin) btnCapLin.onclick = () => LinearModule.captureTechnicalMilestone();
+
+        const btnSwitchSec = document.getElementById("btnSwitchSection");
+        if (btnSwitchSec) btnSwitchSec.onclick = () => LinearModule.switchPipeSection();
+
+        const leftSelect = document.getElementById("lineLeftDiameter");
+        const leftCustom = document.getElementById("customLeftPipeInput");
+        if (leftSelect && leftCustom) {
+            leftSelect.onchange = () => {
+                if (leftSelect.value === "KHAC") {
+                    leftCustom.classList.remove("hidden");
+                    leftCustom.focus();
                 } else {
-                    adminCard.style.display = "none";
+                    leftCustom.classList.add("hidden");
                 }
-            }
-        },
+            };
+        }
 
-        loadWhitelist() {
-            const listEl = document.getElementById("whitelist-list");
-            const countBadge = document.getElementById("pending-count");
-            const pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
-            if (countBadge) countBadge.innerText = pending.length;
-            if (!listEl) return;
+        const rightSelect = document.getElementById("lineRightDiameter");
+        const rightCustom = document.getElementById("customRightPipeInput");
+        if (rightSelect && rightCustom) {
+            rightSelect.onchange = () => {
+                if (rightSelect.value === "KHAC") {
+                    rightCustom.classList.remove("hidden");
+                    rightCustom.focus();
+                } else {
+                    rightCustom.classList.add("hidden");
+                }
+            };
+        }
 
-            if (pending.length === 0) {
-                listEl.innerHTML = '<div class="empty-hint" style="color:#64748b; font-size:12px;">Không có yêu cầu chờ duyệt.</div>';
+        const btnGetPtGPS = document.getElementById("btnGetPointGPS");
+        if (btnGetPtGPS) btnGetPtGPS.onclick = () => PointModule.capturePointGNSS();
+
+        const btnTogCam = document.getElementById("btnToggleCamera");
+        if (btnTogCam) btnTogCam.onclick = () => {
+            if (PointModule.stream) PointModule.stopCamera();
+            else PointModule.startCamera();
+        };
+
+        const btnSnap = document.getElementById("btnSnapPhoto");
+        if (btnSnap) btnSnap.onclick = () => PointModule.takeSnapshot();
+
+        const btnRec = document.getElementById("btnRecordVideo");
+        if (btnRec) btnRec.onclick = () => PointModule.toggleRecordVideo();
+
+        const btnSavePt = document.getElementById("btnSavePointItem");
+        if (btnSavePt) btnSavePt.onclick = () => PointModule.savePointFeature();
+
+        const btnOpenFS = document.getElementById("btnOpenFullscreenCam");
+        const btnCloseFS = document.getElementById("btnCloseFullscreenCam");
+        const overlayFS = document.getElementById("fullscreenCameraOverlay");
+        const btnSnapFS = document.getElementById("btnSnapPhotoFS");
+        const btnRecFS = document.getElementById("btnRecordVideoFS");
+
+        if (btnOpenFS && overlayFS) {
+            btnOpenFS.onclick = () => {
+                overlayFS.style.display = "flex";
+                if (!PointModule.stream) PointModule.startCamera();
+            };
+        }
+
+        if (btnCloseFS && overlayFS) {
+            btnCloseFS.onclick = () => {
+                overlayFS.style.display = "none";
+            };
+        }
+
+        if (btnSnapFS) btnSnapFS.onclick = () => PointModule.takeSnapshot();
+        if (btnRecFS) btnRecFS.onclick = () => PointModule.toggleRecordVideo();
+
+        const secSelect = document.getElementById("pointSectionSelect");
+        const customInput = document.getElementById("pointCustomSectionInput");
+        if (secSelect && customInput) {
+            secSelect.onchange = () => {
+                if (secSelect.value === "KHAC") customInput.classList.remove("hidden");
+                else customInput.classList.add("hidden");
+            };
+        }
+
+        const btnSyncM = document.getElementById("btnSyncMaster");
+        if (btnSyncM) btnSyncM.onclick = () => DataHub.executeMasterSync();
+
+        const btnExpJ = document.getElementById("btnExportJSON");
+        if (btnExpJ) btnExpJ.onclick = () => DataHub.exportJSON();
+    }
+
+    return {
+        initialize: async function() {
+            TGS_Auth.init();
+            const activeUser = TGS_Auth.getCurrentUser();
+
+            if (!activeUser) {
+                Navigation.show("screenAuth");
+                const bNav = document.getElementById("bottomNavBar");
+                if (bNav) bNav.style.display = "none";
                 return;
             }
 
-            let html = "";
-            pending.forEach((req, idx) => {
-                html += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9;">
-                        <div>
-                            <div style="font-size:13px; font-weight:600; color:#0f172a;">${req.name}</div>
-                            <div style="font-size:11.5px; color:#64748b;">${req.email} · ${req.dept}</div>
-                        </div>
-                        <div style="display:flex; gap:4px;">
-                            <button class="btn btn-primary btn-sm" onclick="TGS_System.approveUser(${idx})">Duyệt</button>
-                            <button class="btn btn-outline btn-sm" onclick="TGS_System.rejectUser(${idx})">Xóa</button>
-                        </div>
+            const bNav = document.getElementById("bottomNavBar");
+            if (bNav) bNav.style.display = "flex";
+
+            bindEvents();
+            try {
+                await Persistence.init();
+            } catch (err) {
+                console.warn("Chưa khởi tạo DB:", err);
+            }
+            Navigation.show("tab-dashboard");
+        },
+        Navigation: Navigation
+    };
+})();
+
+/* =========================================================================
+   TRỤ CỘT 4: MÀN HÌNH HỆ THỐNG & ĐỒNG BỘ MÁY TRẠM (TGS_System TOÀN CỤC)
+   ========================================================================= */
+const TGS_System = {
+    version: "v2.1.0-rev2026",
+
+    init: function() {
+        const vLabel = document.getElementById("app-version-label");
+        if (vLabel) vLabel.innerText = this.version;
+        this.loadUserProfile();
+        this.checkSyncStatus();
+    },
+
+    loadUserProfile: function() {
+        const user = TGS_Auth.getCurrentUser();
+        if (!user) return;
+        const nameEl = document.getElementById("sys-user-name");
+        const emailEl = document.getElementById("sys-user-email");
+        const deptEl = document.getElementById("sys-user-dept");
+        const avatarEl = document.getElementById("sys-user-avatar");
+        const roleBadge = document.getElementById("user-role-badge");
+        const adminCard = document.getElementById("admin-whitelist-card");
+
+        if (nameEl) nameEl.innerText = user.name;
+        if (emailEl) emailEl.innerText = user.email;
+        if (deptEl) deptEl.innerText = user.dept;
+        if (avatarEl) avatarEl.innerText = user.name.charAt(0).toUpperCase();
+        if (roleBadge) roleBadge.innerText = user.role === "admin" ? "Quản trị viên (Admin)" : "Kỹ sư Khảo sát";
+
+        if (adminCard) {
+            adminCard.style.display = user.role === "admin" ? "block" : "none";
+            if (user.role === "admin") this.loadWhitelist();
+        }
+    },
+
+    loadWhitelist: function() {
+        const listEl = document.getElementById("whitelist-list");
+        const countBadge = document.getElementById("pending-count");
+        const pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
+        if (countBadge) countBadge.innerText = pending.length;
+        if (!listEl) return;
+
+        if (pending.length === 0) {
+            listEl.innerHTML = '<div class="empty-hint" style="color:#64748b; font-size:12px;">Không có yêu cầu chờ duyệt.</div>';
+            return;
+        }
+
+        let html = "";
+        pending.forEach((req, idx) => {
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+                    <div>
+                        <div style="font-size:13px; font-weight:600; color:#0f172a;">${req.name}</div>
+                        <div style="font-size:11.5px; color:#64748b;">${req.email} · ${req.dept}</div>
                     </div>
-                `;
-            });
-            listEl.innerHTML = html;
-        },
+                    <div style="display:flex; gap:4px;">
+                        <button class="btn btn-primary btn-sm" onclick="TGS_System.approveUser(${idx})">Duyệt</button>
+                        <button class="btn btn-outline btn-sm" onclick="TGS_System.rejectUser(${idx})">Xóa</button>
+                    </div>
+                </div>
+            `;
+        });
+        listEl.innerHTML = html;
+    },
 
-        approveUser(idx) {
-            let pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
-            let active = JSON.parse(localStorage.getItem("tgs_active_users_list") || "[]");
-            const item = pending.splice(idx, 1)[0];
-            item.status = "active";
-            active.push(item);
+    approveUser: function(idx) {
+        let pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
+        let active = JSON.parse(localStorage.getItem("tgs_active_users_list") || "[]");
+        const item = pending.splice(idx, 1)[0];
+        item.status = "active";
+        active.push(item);
+        localStorage.setItem("tgs_whitelist_pending", JSON.stringify(pending));
+        localStorage.setItem("tgs_active_users_list", JSON.stringify(active));
+        this.loadWhitelist();
+        alert(`✓ Đã kích hoạt quyền khảo sát cho: ${item.name}`);
+    },
 
-            localStorage.setItem("tgs_whitelist_pending", JSON.stringify(pending));
-            localStorage.setItem("tgs_active_users_list", JSON.stringify(active));
-            this.loadWhitelist();
-            alert(`✓ Đã kích hoạt quyền khảo sát cho đồng nghiệp: ${item.name}`);
-        },
+    rejectUser: function(idx) {
+        let pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
+        const item = pending.splice(idx, 1)[0];
+        localStorage.setItem("tgs_whitelist_pending", JSON.stringify(pending));
+        this.loadWhitelist();
+        alert(`Đã xóa yêu cầu của: ${item.name}`);
+    },
 
-        rejectUser(idx) {
-            let pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
-            const item = pending.splice(idx, 1)[0];
-            localStorage.setItem("tgs_whitelist_pending", JSON.stringify(pending));
-            this.loadWhitelist();
-            alert(`Đã xóa yêu cầu của: ${item.name}`);
-        },
+    linkGoogleDrive: function() {
+        alert("Đang liên kết Google Drive cá nhân...\nDữ liệu sau này sẽ tự động lưu vào thư mục 'TGS_Survey_Data' trên Drive của bạn.");
+        localStorage.setItem("tgs_gdrive_linked", "true");
+        this.checkSyncStatus();
+    },
 
-        linkGoogleDrive() {
-            alert("Đang liên kết Google Drive cá nhân...\nDữ liệu sau này sẽ tự động lưu vào thư mục 'TGS_Survey_Data' trên Drive của bạn.");
-            localStorage.setItem("tgs_gdrive_linked", "true");
-            this.checkSyncStatus();
-        },
-
-        downloadSetupPackage() {
-            const batContent = `@echo off
+    downloadSetupPackage: function() {
+        const batContent = `@echo off
 chcp 65001 >nul
 title TRẠM ĐỒNG BỘ KHẢO SÁT TGS
 color 0b
@@ -1085,33 +1225,20 @@ echo =====================================================================
 echo    MÁY TRẠM TỰ ĐỘNG NHẬN DỮ LIỆU KHẢO SÁT TGS (ONE-CLICK)
 echo =====================================================================
 echo.
-echo [1/3] Đang tạo thư mục lưu trữ dữ liệu...
-if exist D:\\ (
-    set TARGET_DIR=D:\\TGS_Server\\survey_data
-) else (
-    set TARGET_DIR=C:\\TGS_Server\\survey_data
-)
+if exist D:\\ (set TARGET_DIR=D:\\TGS_Server\\survey_data) else (set TARGET_DIR=C:\\TGS_Server\\survey_data)
 if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
-echo     Vi tri: %TARGET_DIR%
-
-echo.
-echo [2/3] Mo cong tuong lua Port 8000...
 netsh advfirewall firewall add rule name="TGS_Survey_Server" dir=in action=allow protocol=TCP localport=8000 >nul 2>&1
-
-echo.
-echo [3/3] Khoi dong may tram nhan du lieu...
 python -m http.server 8000 --directory "%TARGET_DIR%"
-pause
-`;
-            const blob = new Blob([batContent], { type: "text/plain;charset=utf-8" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "TGS_Workstation_Setup.bat";
-            link.click();
-            alert("✓ Đã tải về file 'TGS_Workstation_Setup.bat'.\nĐồng nghiệp chỉ cần mở file này trên laptop để tự động mở trạm nhận dữ liệu.");
-        },
+pause`;
+        const blob = new Blob([batContent], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "TGS_Workstation_Setup.bat";
+        link.click();
+        alert("✓ Đã tải file 'TGS_Workstation_Setup.bat'.");
+    },
 
-        startQRScanner: function() {
+    startQRScanner: function() {
         const modal = document.getElementById("modal-qr-scan");
         const video = document.getElementById("qr-video-preview");
         if (!modal || !video) {
@@ -1127,18 +1254,13 @@ pause
             return;
         }
 
-        // Đảm bảo dừng luồng cũ trước khi tạo luồng mới
         if (video.srcObject) {
             video.srcObject.getTracks().forEach(t => t.stop());
             video.srcObject = null;
         }
 
         navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: { ideal: "environment" },
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            },
+            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } },
             audio: false
         })
         .then(stream => {
@@ -1146,11 +1268,8 @@ pause
             video.setAttribute("playsinline", "true");
             video.setAttribute("autoplay", "true");
             video.muted = true;
-            
-            // Kích hoạt phát hình trực tiếp cho ứng dụng PWA
             video.play().catch(e => console.warn("Lỗi phát video:", e));
 
-            // Quét mã QR qua Canvas nền
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
 
@@ -1188,392 +1307,6 @@ pause
         });
     },
 
-        closeQRScanner() {
-            const modal = document.getElementById("modal-qr-scan");
-            const video = document.getElementById("qr-video-preview");
-            if (video && video.srcObject) {
-                video.srcObject.getTracks().forEach(t => t.stop());
-                video.srcObject = null;
-            }
-            if (modal) modal.style.display = "none";
-        },
-
-        openGuideModal(type) {
-            const modal = document.getElementById("modal-guide");
-            const title = document.getElementById("modal-guide-title");
-            const body = document.getElementById("modal-guide-body");
-            if (!modal) return;
-
-            if (type === "setup") {
-                title.innerText = "📖 Hướng dẫn Cài đặt Máy trạm";
-                body.innerHTML = `
-                    <div style="line-height:1.6; font-size:13.5px; color:#334155;">
-                        <p><strong>Bước 1:</strong> Bấm nút <em>'Tải Setup (.bat)'</em> trên màn hình này rồi chép sang laptop cá nhân.</p>
-                        <p><strong>Bước 2:</strong> Click đúp vào file <code>TGS_Workstation_Setup.bat</code>. Máy tính sẽ tự tạo thư mục và mở cổng nhận file.</p>
-                        <p><strong>Bước 3:</strong> Kết nối chung mạng Wi-Fi và bấm <em>'Quét QR Máy Tính'</em> để nhận diện.</p>
-                    </div>
-                `;
-            } else {
-                title.innerText = "📘 Cẩm nang Quy trình Khảo sát";
-                body.innerHTML = `
-                    <div style="line-height:1.6; font-size:13.5px; color:#334155;">
-                        <p><strong>1. Khảo sát Điểm:</strong> Đứng cố định tại cấu kiện, đợi bộ lọc W-Median lấy đủ 20 mẫu tọa độ VN-2000. Chọn đúng Tên cấu kiện trước khi chụp ảnh Watermark.</p>
-                        <p><strong>2. Khảo sát Tuyến:</strong> Chạy xe máy với tốc độ vừa phải, hệ thống tự động bám vệt bánh xe (Breadcrumb). Nhập riêng thông số ống lề Trái và lề Phải.</p>
-                    </div>
-                `;
-            }
-            modal.style.display = "flex";
-        },
-
-        closeGuideModal() {
-            const modal = document.getElementById("modal-guide");
-            if (modal) modal.style.display = "none";
-        },
-
-        forceUpdateApp() {
-            if ("serviceWorker" in navigator) {
-                navigator.serviceWorker.getRegistrations().then(registrations => {
-                    for (let r of registrations) r.unregister();
-                    caches.keys().then(names => {
-                        for (let n of names) caches.delete(n);
-                        alert("Đã làm sạch bộ nhớ cache!\nỨng dụng sẽ tự động tải lại phiên bản mới nhất từ GitHub.");
-                        window.location.reload(true);
-                    });
-                });
-            } else {
-                window.location.reload(true);
-            }
-        },
-
-        checkSyncStatus() {
-            if (localStorage.getItem("tgs_gdrive_linked")) {
-                const statusEl = document.getElementById("gdrive-status");
-                const btn = document.getElementById("btn-link-gdrive");
-                if (statusEl) statusEl.innerHTML = "<span style='color:#16a34a;'>✓ Đã liên kết Drive</span>";
-                if (btn) btn.innerText = "Hủy liên kết";
-            }
-            const localTarget = localStorage.getItem("TGS_SERVER_TUNNEL_URL");
-            const localEl = document.getElementById("local-server-status");
-            if (localTarget && localEl) {
-                localEl.innerHTML = `<span style='color:#16a34a;'>✓ Máy trạm: ${localTarget.substring(0, 25)}...</span>`;
-            }
-        },
-
-        openChangePassModal() {
-            const user = TGS_Auth.getCurrentUser();
-            if (!user) return;
-            const newPass = prompt("Nhập mật khẩu mới cho tài khoản:");
-            if (newPass && newPass.trim().length > 0) {
-                let active = JSON.parse(localStorage.getItem("tgs_active_users_list") || "[]");
-                const idx = active.findIndex(u => u.email === user.email);
-                if (idx !== -1) {
-                    active[idx].pass = newPass.trim();
-                    localStorage.setItem("tgs_active_users_list", JSON.stringify(active));
-                    user.pass = newPass.trim();
-                    localStorage.setItem("tgs_active_user", JSON.stringify(user));
-                    alert("✓ Đã cập nhật mật khẩu mới thành công!");
-                }
-            }
-        }
-    };
-
-    /* =========================================================================
-       KHỞI TẠO SỰ KIỆN GIAO DIỆN (Binding Events)
-       ========================================================================= */
-    function bindEvents() {
-        // Sự kiện chuyển tab trên thanh Bottom Navigation Bar
-        document.querySelectorAll(".nav-item").forEach(item => {
-            item.onclick = function() {
-                const targetTab = this.getAttribute("data-tab");
-                Navigation.show(targetTab);
-            };
-        });
-
-        // Dashboard & Tạo công trình
-        const btnNew = document.getElementById("btnNewProject");
-        if (btnNew) btnNew.onclick = async () => {
-            document.getElementById("projectName").value = "";
-            document.getElementById("projectLocation").value = "";
-            document.getElementById("projectCode").value = await Lifecycle.generateNextCode();
-            Navigation.show("screenProject");
-        };
-
-        const btnCreate = document.getElementById("btnCreateProject");
-        if (btnCreate) btnCreate.onclick = () => Lifecycle.createNewProject();
-
-        const btnBackH = document.getElementById("btnBackHome");
-        if (btnBackH) btnBackH.onclick = () => Navigation.show("tab-dashboard");
-
-        const btnBackP = document.getElementById("btnBackProject");
-        if (btnBackP) btnBackP.onclick = () => Navigation.show("tab-dashboard");
-
-        const btnCont = document.getElementById("btnContinueDraft");
-        if (btnCont) btnCont.onclick = () => Lifecycle.enterSurveyHome();
-
-        // Mở khảo sát Tuyến / Điểm từ Survey Home
-        const btnLin = document.getElementById("btnLinearSurvey");
-        if (btnLin) btnLin.onclick = () => Navigation.show("screenLinear");
-
-        const btnPt = document.getElementById("btnPointSurvey");
-        if (btnPt) btnPt.onclick = () => {
-            Navigation.show("screenPoint");
-            PointModule.init();
-        };
-
-        const btnFin = document.getElementById("btnFinishProject");
-        if (btnFin) btnFin.onclick = () => Navigation.show("tab-data");
-
-        const btnExitLin = document.getElementById("btnExitLinear");
-        if (btnExitLin) btnExitLin.onclick = () => Navigation.show("screenSurveyHome");
-
-        const btnExitPt = document.getElementById("btnExitPoint");
-        if (btnExitPt) btnExitPt.onclick = () => Navigation.show("screenSurveyHome");
-
-        // Khảo sát Tuyến
-        const btnCapLin = document.getElementById("btnCaptureGPS");
-        if (btnCapLin) btnCapLin.onclick = () => LinearModule.captureTechnicalMilestone();
-
-        const btnSwitchSec = document.getElementById("btnSwitchSection");
-        if (btnSwitchSec) btnSwitchSec.onclick = () => LinearModule.switchPipeSection();
-        // Bật/tắt ô tự nhập loại ống Trái
-        const leftSelect = document.getElementById("lineLeftDiameter");
-        const leftCustom = document.getElementById("customLeftPipeInput");
-        if (leftSelect && leftCustom) {
-            leftSelect.onchange = () => {
-                if (leftSelect.value === "KHAC") {
-                    leftCustom.classList.remove("hidden");
-                    leftCustom.focus();
-                } else {
-                    leftCustom.classList.add("hidden");
-                }
-            };
-        }
-
-        // Bật/tắt ô tự nhập loại ống Phải
-        const rightSelect = document.getElementById("lineRightDiameter");
-        const rightCustom = document.getElementById("customRightPipeInput");
-        if (rightSelect && rightCustom) {
-            rightSelect.onchange = () => {
-                if (rightSelect.value === "KHAC") {
-                    rightCustom.classList.remove("hidden");
-                    rightCustom.focus();
-                } else {
-                    rightCustom.classList.add("hidden");
-                }
-            };
-        }
-       
-        // Khảo sát Điểm & Camera
-        const btnGetPtGPS = document.getElementById("btnGetPointGPS");
-        if (btnGetPtGPS) btnGetPtGPS.onclick = () => PointModule.capturePointGNSS();
-
-        const btnTogCam = document.getElementById("btnToggleCamera");
-        if (btnTogCam) btnTogCam.onclick = () => {
-            if (PointModule.stream) PointModule.stopCamera();
-            else PointModule.startCamera();
-        };
-
-        const btnSnap = document.getElementById("btnSnapPhoto");
-        if (btnSnap) btnSnap.onclick = () => PointModule.takeSnapshot();
-
-        const btnRec = document.getElementById("btnRecordVideo");
-        if (btnRec) btnRec.onclick = () => PointModule.toggleRecordVideo();
-
-        const btnSavePt = document.getElementById("btnSavePointItem");
-        if (btnSavePt) btnSavePt.onclick = () => PointModule.savePointFeature();
-
-        // Phóng to & Thu nhỏ camera
-        const btnOpenFS = document.getElementById("btnOpenFullscreenCam");
-        const btnCloseFS = document.getElementById("btnCloseFullscreenCam");
-        const overlayFS = document.getElementById("fullscreenCameraOverlay");
-        const btnSnapFS = document.getElementById("btnSnapPhotoFS");
-        const btnRecFS = document.getElementById("btnRecordVideoFS");
-
-        if (btnOpenFS && overlayFS) {
-            btnOpenFS.onclick = () => {
-                overlayFS.style.display = "flex";
-                if (!PointModule.stream) PointModule.startCamera();
-            };
-        }
-
-        if (btnCloseFS && overlayFS) {
-            btnCloseFS.onclick = () => {
-                overlayFS.style.display = "none";
-            };
-        }
-
-        if (btnSnapFS) btnSnapFS.onclick = () => PointModule.takeSnapshot();
-        if (btnRecFS) btnRecFS.onclick = () => PointModule.toggleRecordVideo();
-
-        // Dropdown cấu kiện Khác
-        const secSelect = document.getElementById("pointSectionSelect");
-        const customInput = document.getElementById("pointCustomSectionInput");
-        if (secSelect && customInput) {
-            secSelect.onchange = () => {
-                if (secSelect.value === "KHAC") customInput.classList.remove("hidden");
-                else customInput.classList.add("hidden");
-            };
-        }
-
-        // Đồng bộ & Dữ liệu
-        const btnSyncM = document.getElementById("btnSyncMaster");
-        if (btnSyncM) btnSyncM.onclick = () => DataHub.executeMasterSync();
-
-        const btnExpJ = document.getElementById("btnExportJSON");
-        if (btnExpJ) btnExpJ.onclick = () => DataHub.exportJSON();
-    }
-
-    return {
-        initialize: async function() {
-            TGS_Auth.init();
-            const activeUser = TGS_Auth.getCurrentUser();
-
-            if (!activeUser) {
-                Navigation.show("screenAuth");
-                const bNav = document.getElementById("bottomNavBar");
-                if (bNav) bNav.style.display = "none";
-                return;
-            }
-
-            const bNav = document.getElementById("bottomNavBar");
-            if (bNav) bNav.style.display = "flex";
-
-            bindEvents();
-            try {
-                await Persistence.init();
-                Navigation.show("tab-dashboard");
-            } catch (err) {
-                console.error("Lỗi cơ sở dữ liệu:", err);
-            }
-        },
-        Navigation: Navigation
-    };
-})();
-
-// Gán TGS_System toàn cục để HTML gọi onclick
-const TGS_System = {
-    init: () => TGS_Auth.getCurrentUser() && TGS_System_Internal.init(),
-    openChangePassModal: () => TGS_System_Internal.openChangePassModal(),
-    linkGoogleDrive: () => TGS_System_Internal.linkGoogleDrive(),
-    downloadSetupPackage: () => TGS_System_Internal.downloadSetupPackage(),
-    startQRScanner: () => TGS_System_Internal.startQRScanner(),
-    closeQRScanner: () => TGS_System_Internal.closeQRScanner(),
-    openGuideModal: (t) => TGS_System_Internal.openGuideModal(t),
-    closeGuideModal: () => TGS_System_Internal.closeGuideModal(),
-    forceUpdateApp: () => TGS_System_Internal.forceUpdateApp(),
-    approveUser: (i) => TGS_System_Internal.approveUser(i),
-    rejectUser: (i) => TGS_System_Internal.rejectUser(i)
-};
-const TGS_System_Internal = {
-    init: function() {
-        const vLabel = document.getElementById("app-version-label");
-        if (vLabel) vLabel.innerText = "v2.1.0-rev2026";
-        this.loadUserProfile();
-        this.checkSyncStatus();
-    },
-    loadUserProfile: function() {
-        const user = TGS_Auth.getCurrentUser();
-        if (!user) return;
-        const nameEl = document.getElementById("sys-user-name");
-        const emailEl = document.getElementById("sys-user-email");
-        const deptEl = document.getElementById("sys-user-dept");
-        const avatarEl = document.getElementById("sys-user-avatar");
-        const roleBadge = document.getElementById("user-role-badge");
-        const adminCard = document.getElementById("admin-whitelist-card");
-
-        if (nameEl) nameEl.innerText = user.name;
-        if (emailEl) emailEl.innerText = user.email;
-        if (deptEl) deptEl.innerText = user.dept;
-        if (avatarEl) avatarEl.innerText = user.name.charAt(0).toUpperCase();
-        if (roleBadge) roleBadge.innerText = user.role === "admin" ? "Quản trị viên (Admin)" : "Kỹ sư Khảo sát";
-
-        if (adminCard) {
-            adminCard.style.display = user.role === "admin" ? "block" : "none";
-            if (user.role === "admin") this.loadWhitelist();
-        }
-    },
-    loadWhitelist: function() {
-        const listEl = document.getElementById("whitelist-list");
-        const countBadge = document.getElementById("pending-count");
-        const pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
-        if (countBadge) countBadge.innerText = pending.length;
-        if (!listEl) return;
-
-        if (pending.length === 0) {
-            listEl.innerHTML = '<div class="empty-hint" style="color:#64748b; font-size:12px;">Không có yêu cầu chờ duyệt.</div>';
-            return;
-        }
-
-        let html = "";
-        pending.forEach((req, idx) => {
-            html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9;">
-                    <div>
-                        <div style="font-size:13px; font-weight:600; color:#0f172a;">${req.name}</div>
-                        <div style="font-size:11.5px; color:#64748b;">${req.email} · ${req.dept}</div>
-                    </div>
-                    <div style="display:flex; gap:4px;">
-                        <button class="btn btn-primary btn-sm" onclick="TGS_System.approveUser(${idx})">Duyệt</button>
-                        <button class="btn btn-outline btn-sm" onclick="TGS_System.rejectUser(${idx})">Xóa</button>
-                    </div>
-                </div>
-            `;
-        });
-        listEl.innerHTML = html;
-    },
-    approveUser: function(idx) {
-        let pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
-        let active = JSON.parse(localStorage.getItem("tgs_active_users_list") || "[]");
-        const item = pending.splice(idx, 1)[0];
-        item.status = "active";
-        active.push(item);
-        localStorage.setItem("tgs_whitelist_pending", JSON.stringify(pending));
-        localStorage.setItem("tgs_active_users_list", JSON.stringify(active));
-        this.loadWhitelist();
-        alert(`✓ Đã kích hoạt quyền khảo sát cho: ${item.name}`);
-    },
-    rejectUser: function(idx) {
-        let pending = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
-        const item = pending.splice(idx, 1)[0];
-        localStorage.setItem("tgs_whitelist_pending", JSON.stringify(pending));
-        this.loadWhitelist();
-        alert(`Đã xóa yêu cầu của: ${item.name}`);
-    },
-    linkGoogleDrive: function() {
-        alert("Đang liên kết Google Drive cá nhân...\nDữ liệu sau này sẽ tự động lưu vào thư mục 'TGS_Survey_Data' trên Drive của bạn.");
-        localStorage.setItem("tgs_gdrive_linked", "true");
-        this.checkSyncStatus();
-    },
-    downloadSetupPackage: function() {
-        const batContent = `@echo off
-chcp 65001 >nul
-title TRẠM ĐỒNG BỘ KHẢO SÁT TGS
-color 0b
-echo =====================================================================
-echo    MÁY TRẠM TỰ ĐỘNG NHẬN DỮ LIỆU KHẢO SÁT TGS (ONE-CLICK)
-echo =====================================================================
-echo.
-if exist D:\\ (set TARGET_DIR=D:\\TGS_Server\\survey_data) else (set TARGET_DIR=C:\\TGS_Server\\survey_data)
-if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
-netsh advfirewall firewall add rule name="TGS_Survey_Server" dir=in action=allow protocol=TCP localport=8000 >nul 2>&1
-python -m http.server 8000 --directory "%TARGET_DIR%"
-pause`;
-        const blob = new Blob([batContent], { type: "text/plain;charset=utf-8" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "TGS_Workstation_Setup.bat";
-        link.click();
-        alert("✓ Đã tải file 'TGS_Workstation_Setup.bat'.");
-    },
-    startQRScanner: function() {
-        const modal = document.getElementById("modal-qr-scan");
-        if (!modal) return;
-        modal.style.display = "flex";
-        const video = document.getElementById("qr-video-preview");
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => { video.srcObject = s; video.play(); })
-            .catch(err => { alert("Lỗi camera: " + err.message); modal.style.display = "none"; });
-    },
     closeQRScanner: function() {
         const modal = document.getElementById("modal-qr-scan");
         const video = document.getElementById("qr-video-preview");
@@ -1583,6 +1316,7 @@ pause`;
         }
         if (modal) modal.style.display = "none";
     },
+
     openGuideModal: function(type) {
         const modal = document.getElementById("modal-guide");
         const title = document.getElementById("modal-guide-title");
@@ -1597,10 +1331,12 @@ pause`;
         }
         modal.style.display = "flex";
     },
+
     closeGuideModal: function() {
         const modal = document.getElementById("modal-guide");
         if (modal) modal.style.display = "none";
     },
+
     forceUpdateApp: function() {
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.getRegistrations().then(regs => {
@@ -1615,6 +1351,7 @@ pause`;
             window.location.reload(true);
         }
     },
+
     checkSyncStatus: function() {
         if (localStorage.getItem("tgs_gdrive_linked")) {
             const statusEl = document.getElementById("gdrive-status");
@@ -1622,7 +1359,13 @@ pause`;
             if (statusEl) statusEl.innerHTML = "<span style='color:#16a34a;'>✓ Đã liên kết Drive</span>";
             if (btn) btn.innerText = "Hủy liên kết";
         }
+        const localTarget = localStorage.getItem("TGS_SERVER_TUNNEL_URL");
+        const localEl = document.getElementById("local-server-status");
+        if (localTarget && localEl) {
+            localEl.innerHTML = `<span style='color:#16a34a;'>✓ Máy trạm: ${localTarget.substring(0, 25)}...</span>`;
+        }
     },
+
     openChangePassModal: function() {
         const user = TGS_Auth.getCurrentUser();
         if (!user) return;
