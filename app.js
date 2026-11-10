@@ -56,7 +56,7 @@ const TGS_Auth = {
         }
     },
 
-    handleLogin: function() {
+handleLogin: function() {
         const email = document.getElementById("loginEmail").value.trim().toLowerCase();
         const pass = document.getElementById("loginPass").value.trim();
         const notice = document.getElementById("authNotice");
@@ -76,14 +76,11 @@ const TGS_Auth = {
             localStorage.setItem("tgs_active_user", JSON.stringify(user));
             notice.style.color = "#16a34a";
             notice.innerText = `✓ Xin chào ${user.name}! Đang mở hệ thống...`;
+            
+            // Tải lại trang sau 300ms để kích hoạt trọn vẹn toàn bộ sự kiện click
             setTimeout(() => {
-                const screenAuth = document.getElementById("screenAuth");
-                if (screenAuth) screenAuth.style.display = "none";
-                const bNav = document.getElementById("bottomNavBar");
-                if (bNav) bNav.style.display = "flex";
-                TGS.Navigation.show("tab-dashboard");
-                TGS_System.init();
-            }, 500);
+                window.location.reload();
+            }, 300);
         } else {
             notice.style.color = "#e11d48";
             notice.innerText = "✕ Gmail hoặc mật khẩu không chính xác!";
@@ -216,36 +213,40 @@ const TGS = (() => {
         ],
 
         show(screenId) {
-            this.screens.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) {
-                    el.classList.remove("active");
-                    el.style.display = "none";
-                }
+            // 1. Ẩn toàn bộ tất cả các màn hình
+            document.querySelectorAll(".screen").forEach(el => {
+                el.classList.remove("active");
+                el.style.display = "none";
             });
 
+            // 2. Bật màn hình mục tiêu
             const target = document.getElementById(screenId);
             if (target) {
                 target.classList.add("active");
-                target.style.display = "block";
+                target.style.display = (screenId === "screenAuth") ? "flex" : "block";
                 State.activeScreenId = screenId;
             }
 
-            // Đồng bộ trạng thái active của Bottom Navigation Bar
+            // 3. Đổi màu active trên thanh Bottom Navigation Bar
             document.querySelectorAll(".nav-item").forEach(item => {
-                if (item.getAttribute("data-tab") === screenId) {
+                const tabTarget = item.getAttribute("data-tab");
+                if (tabTarget === screenId || (screenId === "screenSurveyHome" && tabTarget === "screenSurveyHome")) {
                     item.classList.add("active");
                 } else {
                     item.classList.remove("active");
                 }
             });
 
-            // Kích hoạt logic khi chuyển màn hình
+            // 4. Kích hoạt logic tương ứng
             if (screenId === "tab-dashboard") Lifecycle.updateDashboard();
             if (screenId === "tab-data") DataHub.renderDataScreen();
             if (screenId === "tab-system") TGS_System.init();
+            if (screenId === "screenPoint") PointModule.init();
             if (screenId === "screenLinear") LinearModule.startTracking();
             else LinearModule.stopTracking();
+
+            // Cuộn lên đầu trang màn hình mới
+            window.scrollTo(0, 0);
         }
     };
 
