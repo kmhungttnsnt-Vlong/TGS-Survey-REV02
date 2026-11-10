@@ -230,7 +230,8 @@ const TGS = (() => {
                 target.style.display = (screenId === "screenAuth") ? "flex" : "block";
                 State.activeScreenId = screenId;
                 }
-           // Ẩn thanh Bottom Bar khi vào khảo sát tuyến/điểm để bản đồ tràn viền 100%
+           
+            // Ẩn thanh Bottom Bar khi vào khảo sát tuyến/điểm để bản đồ tràn viền 100%
             const bNav = document.getElementById("bottomNavBar");
             if (bNav) {
                 if (screenId === "screenLinear" || screenId === "screenPoint") {
