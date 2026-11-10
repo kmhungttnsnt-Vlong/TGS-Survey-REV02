@@ -671,7 +671,7 @@ button, input, select, textarea {
 
 /* Bù khoảng trống chân trang để không bị che bởi Bottom Bar */
 .page, .form-page, .survey-home, .screen-body {
-  padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 /* --- 2. GIAO DIỆN MÀN HÌNH 4: HỆ THỐNG & CÀI ĐẶT --- */
