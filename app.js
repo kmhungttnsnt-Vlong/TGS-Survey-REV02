@@ -2095,5 +2095,12 @@ if (document.readyState === "loading") {
     } else {
         setupFullscreenCam();
     }
+   <!-- DEPENDENCIES -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="db.js"></script>
+<script src="app.js"></script>
+<script src="js/system.js"></script>  <!-- Đặt thêm dòng này vào đây -->
+</body>
+</html>
 })();
 })();
