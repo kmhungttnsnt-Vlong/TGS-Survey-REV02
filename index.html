@@ -497,8 +497,13 @@
       </button>
       <div id="dataSyncStatus" style="font-size: 12.5px; text-align: center; margin-bottom: 14px; font-weight: 600;" class="hidden"></div>
 
-      <div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 16px;">
-        <button id="btnExportJSON" class="btn-secondary" style="height: 44px; font-size: 13px;">📤 Xuất File Tập Dữ Liệu (.JSON)</button>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+        <button id="btnExportGeoJSON" class="btn-primary" onclick="TGS.DataHub.exportGeoJSON()" style="height: 44px; font-size: 12.5px; background: #0284c7;">
+          🗺️ Xuất File GIS (.geojson)
+        </button>
+        <button id="btnExportJSON" class="btn-secondary" onclick="TGS.DataHub.exportJSON()" style="height: 44px; font-size: 12.5px;">
+          📤 Sao Lưu Gói (.json)
+        </button>
       </div>
 
       <h3 style="font-size: 15px; margin-bottom: 8px;">Danh sách công trình trên máy:</h3>
