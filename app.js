@@ -1324,7 +1324,34 @@ pause
 
         const btnSwitchSec = document.getElementById("btnSwitchSection");
         if (btnSwitchSec) btnSwitchSec.onclick = () => LinearModule.switchPipeSection();
+        // Bật/tắt ô tự nhập loại ống Trái
+        const leftSelect = document.getElementById("lineLeftDiameter");
+        const leftCustom = document.getElementById("customLeftPipeInput");
+        if (leftSelect && leftCustom) {
+            leftSelect.onchange = () => {
+                if (leftSelect.value === "KHAC") {
+                    leftCustom.classList.remove("hidden");
+                    leftCustom.focus();
+                } else {
+                    leftCustom.classList.add("hidden");
+                }
+            };
+        }
 
+        // Bật/tắt ô tự nhập loại ống Phải
+        const rightSelect = document.getElementById("lineRightDiameter");
+        const rightCustom = document.getElementById("customRightPipeInput");
+        if (rightSelect && rightCustom) {
+            rightSelect.onchange = () => {
+                if (rightSelect.value === "KHAC") {
+                    rightCustom.classList.remove("hidden");
+                    rightCustom.focus();
+                } else {
+                    rightCustom.classList.add("hidden");
+                }
+            };
+        }
+       
         // Khảo sát Điểm & Camera
         const btnGetPtGPS = document.getElementById("btnGetPointGPS");
         if (btnGetPtGPS) btnGetPtGPS.onclick = () => PointModule.capturePointGNSS();
