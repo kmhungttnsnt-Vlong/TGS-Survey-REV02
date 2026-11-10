@@ -969,23 +969,81 @@ const TGS = (() => {
             }
         },
 
-        exportJSON() {
+        exportGeoJSON() {
             if (!State.currentProject) {
-                alert("Chưa chọn công trình.");
+                alert("Vui lòng chọn công trình cần xuất dữ liệu GIS.");
                 return;
             }
+
+            const proj = State.currentProject;
             const user = TGS_Auth.getCurrentUser();
-            const dataset = {
-                platform: "TGS Platform Genesis 2.0",
-                surveyor: user ? `${user.name} (${user.email})` : "Kỹ sư",
-                project: State.currentProject
+
+            // 1. Tạo Feature đại diện cho Trạm cấp nước (Point Feature)
+            // Lấy tọa độ mốc đầu tiên của tuyến hoặc tọa độ mốc trạm
+            const stationCoords = (proj.points && proj.points.length > 0)
+                ? [proj.points[0].lng, proj.points[0].lat]
+                : [105.92345, 9.95214];
+
+            const stationFeature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": stationCoords
+                },
+                "properties": {
+                    "Ma_Tram": proj.code || "TGS-000",
+                    "Ten_Tram": proj.name || "Chưa đặt tên",
+                    "Tinh_Thanh": proj.province || "Tỉnh Vĩnh Long",
+                    "Xa_Phuong": proj.commune || "Chưa xác định",
+                    "Ap_Khom": proj.hamlet || "Chưa xác định",
+                    "Dia_Chi_Chi_Tiet": proj.location || "",
+                    "Cong_Suat_Thiet_Ke_m3_ngd": proj.capacity_m3_day || 0,
+                    "Nam_Van_Hanh": proj.operationYear || new Date().getFullYear(),
+                    "Nhan_Vien_Quan_Ly": proj.manager || "Chưa phân công",
+                    "Nguoi_Khao_Sat": user ? `${user.name} (${user.dept})` : "Kỹ sư TGS",
+                    "Ngay_Khao_Sat": new Date(proj.createdAt || Date.now()).toLocaleDateString("vi-VN")
+                }
             };
-            const blob = new Blob([JSON.stringify(dataset, null, 2)], { type: "application/json" });
+
+            // 2. Tạo Feature đại diện cho Tuyến ống (LineString Feature) nếu có đo vệt tuyến
+            const lineCoordinates = (proj.points || []).map(pt => [pt.lng, pt.lat]);
+            const features = [stationFeature];
+
+            if (lineCoordinates.length >= 2) {
+                const lineFeature = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": lineCoordinates
+                    },
+                    "properties": {
+                        "Ma_Tuyen": `${proj.code}-LINE`,
+                        "Ten_Tram": proj.name,
+                        "Tong_Chieu_Dai_m": Math.round(LinearModule.totalLength || 0),
+                        "So_Moc_Ky_Thuat": proj.points.length
+                    }
+                };
+                features.push(lineFeature);
+            }
+
+            // 3. Đóng gói thành tập hợp FeatureCollection chuẩn GIS
+            const geojsonDataset = {
+                "type": "FeatureCollection",
+                "name": `TGS_GIS_${proj.code}`,
+                "crs": {
+                    "type": "name",
+                    "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" }
+                },
+                "features": features
+            };
+
+            // 4. Tự động tải file .geojson về máy
+            const blob = new Blob([JSON.stringify(geojsonDataset, null, 2)], { type: "application/geo+json" });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = `DATASET_${State.currentProject.code}_${new Date().toISOString().slice(0, 10)}.json`;
+            link.download = `GIS_${proj.code}_${proj.commune || 'VinhLong'}.geojson`;
             link.click();
-            alert("✓ Đã xuất tập dữ liệu JSON về máy!");
+            alert(`✓ Đã trích xuất file GIS [${link.download}] thành công! File sẵn sàng nạp trực tiếp vào CSDL tỉnh hoặc mở bằng QGIS/ArcGIS.`);
         }
     };
 
