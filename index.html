@@ -129,27 +129,54 @@
     </div>
   </section>
 
-  <!-- FORM TẠO CÔNG TRÌNH (screenProject) -->
+<!-- FORM TẠO CÔNG TRÌNH (screenProject) -->
   <section id="screenProject" class="screen" style="display:none;">
     <header class="nav-header">
       <button id="btnBackHome" class="back-btn">←</button>
       <div>
-        <h2>Tạo công trình</h2>
-        <p>Thông tin cơ bản hồ sơ</p>
+        <h2>Tạo hồ sơ trạm / công trình</h2>
+        <p>Cơ sở dữ liệu số & Quản lý tài sản</p>
       </div>
     </header>
 
     <div class="form-page">
-      <label>Tên công trình / trạm cấp nước</label>
-      <input id="projectName" type="text" placeholder="VD: Trạm cấp nước Trà Điêu">
+      <label>1. Tên công trình / Trạm cấp nước:</label>
+      <input id="projectName" type="text" placeholder="VD: Trạm cấp nước Thới Hòa">
 
-      <label>Mã số công trình</label>
-      <input id="projectCode" type="text" placeholder="VD: TGS-001">
+      <label>2. Mã số trạm (Mã GIS tỉnh):</label>
+      <input id="projectCode" type="text" placeholder="VD: TGS-TH-001">
 
-      <label>Địa điểm khảo sát</label>
-      <input id="projectLocation" type="text" placeholder="Nhập địa bàn (Xã, Huyện, Tỉnh)">
+      <!-- ĐỊA BÀN HÀNH CHÍNH (XÃ/PHƯỜNG & ẤP/KHÓM) -->
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <div style="flex:1;">
+          <label style="margin-top:8px;">Xã / Phường:</label>
+          <input id="projectCommune" type="text" placeholder="VD: Xã Thới Hòa">
+        </div>
+        <div style="flex:1;">
+          <label style="margin-top:8px;">Ấp / Khóm:</label>
+          <input id="projectHamlet" type="text" placeholder="VD: Ấp Tích Phước">
+        </div>
+      </div>
 
-      <button id="btnCreateProject" class="btn-primary" style="margin-top: 16px;">Vào khảo sát</button>
+      <label style="margin-top:10px;">Địa chỉ chi tiết / Vị trí mốc:</label>
+      <input id="projectLocation" type="text" placeholder="VD: Đường đan Kênh Ranh, Ấp Tích Phước">
+
+      <!-- QUẢN LÝ TÀI SẢN THEO CHUẨN CSDL SỞ / TỈNH -->
+      <div style="display:flex; gap:8px; margin-top:4px;">
+        <div style="flex:1;">
+          <label style="margin-top:8px;">Công suất (m³/ngđ):</label>
+          <input id="projectCapacity" type="number" placeholder="VD: 480">
+        </div>
+        <div style="flex:1;">
+          <label style="margin-top:8px;">Năm vận hành:</label>
+          <input id="projectYear" type="number" placeholder="VD: 2007">
+        </div>
+      </div>
+
+      <label style="margin-top:10px;">Cán bộ quản lý vận hành trạm:</label>
+      <input id="projectManager" type="text" placeholder="Họ tên cán bộ quản lý trạm (SĐT)">
+
+      <button id="btnCreateProject" class="btn-primary" style="margin-top: 18px;">Vào khảo sát</button>
     </div>
   </section>
 
