@@ -584,12 +584,6 @@ const TGS = (() => {
                   `${fittingNote ? `Phụ kiện: ${fittingNote}\n` : ''}` +
                   `Quy cách đoạn tiếp theo: Trái [${left}] - Phải [${right}]`);
         },
-
-        switchPipeSection() {
-            const left = document.getElementById("lineLeftDiameter").value;
-            const right = document.getElementById("lineRightDiameter").value;
-            alert(`✓ Đã ghi nhận điểm đổi tiết diện ống tại lý trình ${Math.round(this.totalLength)}m!\nĐoạn tiếp theo: Trái [${left}] - Phải [${right}]`);
-        }
     };
 
     /* =========================================================================
