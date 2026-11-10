@@ -345,16 +345,24 @@ const TGS = (() => {
             }
 
             const newProj = {
-                name,
-                code,
-                location,
+                name: name,
+                code: code,
+                
+                // Định danh địa lý 3 cấp phẳng: Tỉnh -> Xã/Phường -> Ấp/Khóm
+                province: "Tỉnh Vĩnh Long",
+                commune: commune || "Chưa xác định", // Xã hoặc Phường
+                hamlet: hamlet || "Chưa xác định",   // Ấp hoặc Khóm
+                location: location || `${hamlet}, ${commune}`,
+                
+                // Thuộc tính kỹ thuật & Quản trị tài sản
+                capacity_m3_day: capacity ? Number(capacity) : 0,
+                operationYear: opYear ? Number(opYear) : new Date().getFullYear(),
+                manager: manager || "Chưa phân công",
+                
                 centralMeridian: 105.5,
                 status: "draft",
                 points: [],
                 pointFeatures: [],
-                linearMedia: [],
-                leftPipeSpecs: [],
-                rightPipeSpecs: [],
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
                 author: user ? `${user.name} (${user.email})` : "Kỹ sư khảo sát"
