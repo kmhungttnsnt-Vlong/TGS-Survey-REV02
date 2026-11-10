@@ -419,7 +419,163 @@
       </div>
     </div>
   </section>
+<!-- ======================================================================= -->
+<!-- MÀN HÌNH 4: HỆ THỐNG & CÀI ĐẶT (SYSTEM & SETTINGS) -->
+<!-- ======================================================================= -->
+<section id="tab-system" class="app-screen" style="display: none;">
+  <div class="screen-header">
+    <h2>Hệ Thống & Cài Đặt</h2>
+    <span class="badge-role" id="user-role-badge">Kỹ sư</span>
+  </div>
 
+  <div class="screen-body">
+    <!-- 1. ĐỊNH DANH CÁ NHÂN -->
+    <div class="card-section">
+      <div class="card-title">👤 Thông tin Cán bộ Khảo sát</div>
+      <div class="user-profile-box">
+        <div class="profile-avatar" id="sys-user-avatar">H</div>
+        <div class="profile-details">
+          <div class="profile-name" id="sys-user-name">Đang tải...</div>
+          <div class="profile-email" id="sys-user-email">email@domain.com</div>
+          <div class="profile-dept" id="sys-user-dept">Phòng Quản lý Khai thác</div>
+        </div>
+      </div>
+      <div class="action-row mt-10">
+        <button class="btn btn-outline btn-sm" onclick="TGS_System.openChangePassModal()">Đổi mật khẩu</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="TGS_Auth.logout()">Đăng xuất</button>
+      </div>
+    </div>
+
+    <!-- 2. PHÊ DUYỆT ĐỒNG NGHIỆP (CHỈ ADMIN MỚI THẤY) -->
+    <div class="card-section admin-only" id="admin-whitelist-card" style="display: none;">
+      <div class="card-title-flex">
+        <span>🛡️ Duyệt Tài khoản Đồng nghiệp</span>
+        <span class="badge-count" id="pending-count">0</span>
+      </div>
+      <p class="card-desc">Danh sách đồng nghiệp đăng ký bằng Gmail chờ kích hoạt quyền khảo sát.</p>
+      <div class="whitelist-container" id="whitelist-list">
+        <div class="empty-hint">Không có yêu cầu chờ duyệt.</div>
+      </div>
+    </div>
+
+    <!-- 3. CẤU HÌNH ĐỒNG BỘ LƯU TRỮ -->
+    <div class="card-section">
+      <div class="card-title">🔄 Cấu hình Đồng bộ Dữ liệu</div>
+      
+      <!-- Tùy chọn A: Google Drive -->
+      <div class="sync-option-box">
+        <div class="sync-info">
+          <div class="sync-name">Google Drive Cá nhân</div>
+          <div class="sync-status" id="gdrive-status">Chưa liên kết</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-link-gdrive" onclick="TGS_System.linkGoogleDrive()">
+          🔗 Liên kết 1-Chạm
+        </button>
+      </div>
+
+      <!-- Tùy chọn B: Máy tính cá nhân (Local Server) -->
+      <div class="sync-option-box mt-10">
+        <div class="sync-info">
+          <div class="sync-name">Máy tính cá nhân (Local Server)</div>
+          <div class="sync-status" id="local-server-status">Chưa thiết lập đích</div>
+        </div>
+        <div class="sync-actions-group">
+          <button class="btn btn-outline btn-sm" onclick="TGS_System.downloadSetupPackage()">
+            📥 Tải Setup (.bat)
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="TGS_System.startQRScanner()">
+            📷 Quét mã QR
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. TÀI LIỆU & CẨM NANG HƯỚNG DẪN -->
+    <div class="card-section">
+      <div class="card-title">📚 Cẩm nang & Hướng dẫn Thực địa</div>
+      <div class="guide-buttons-grid">
+        <button class="guide-btn" onclick="TGS_System.openGuideModal('setup')">
+          <span class="guide-icon">📖</span>
+          <span class="guide-text">
+            <strong>Hướng dẫn Cài Máy trạm</strong>
+            <small>Cài file .bat nhận dữ liệu qua Wi-Fi</small>
+          </span>
+        </button>
+        <button class="guide-btn" onclick="TGS_System.openGuideModal('survey')">
+          <span class="guide-icon">📘</span>
+          <span class="guide-text">
+            <strong>Quy trình Đo đạc Thực địa</strong>
+            <small>Chuẩn hóa Điểm, Tuyến & TGS-TG</small>
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 5. PHIÊN BẢN & CẬP NHẬT PWA -->
+    <div class="card-section">
+      <div class="card-title">⚙️ Phiên bản Hệ thống</div>
+      <div class="version-row">
+        <span>Bản phát hành hiện tại:</span>
+        <strong id="app-version-label">v2.1.0-rev2026</strong>
+      </div>
+      <button class="btn btn-primary btn-block mt-10" id="btn-update-sw" onclick="TGS_System.forceUpdateApp()">
+        🔄 Cập nhật Phiên bản Ứng dụng
+      </button>
+      <div class="version-subtext">Xóa bộ nhớ đệm tạm thời và nạp phiên bản mới nhất từ GitHub.</div>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL QUÉT QR BẰNG CAMERA -->
+<div id="modal-qr-scan" class="modal-backdrop" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Quét mã QR trên màn hình máy tính</h3>
+      <button class="modal-close" onclick="TGS_System.closeQRScanner()">✕</button>
+    </div>
+    <div class="modal-body text-center">
+      <video id="qr-video-preview" playsinline style="width: 100%; max-height: 280px; border-radius: 8px;"></video>
+      <p class="modal-hint mt-10">Hướng camera về mã QR hiển thị từ file Setup trên máy tính cá nhân để nhận diện IP.</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL XEM HƯỚNG DẪN CHI TIẾT -->
+<div id="modal-guide" class="modal-backdrop" style="display: none;">
+  <div class="modal-content modal-lg">
+    <div class="modal-header">
+      <h3 id="modal-guide-title">Tài liệu Hướng dẫn</h3>
+      <button class="modal-close" onclick="TGS_System.closeGuideModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-guide-body">
+      <!-- Nội dung tài liệu sẽ nạp tự động qua JavaScript -->
+    </div>
+  </div>
+  <!-- MODAL QUÉT QR BẰNG CAMERA -->
+  <div id="modal-qr-scan" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Quét mã QR trên màn hình máy tính</h3>
+        <button class="modal-close" onclick="TGS_System.closeQRScanner()">✕</button>
+      </div>
+      <div class="modal-body text-center">
+        <video id="qr-video-preview" playsinline style="width: 100%; max-height: 280px; border-radius: 8px;"></video>
+        <p class="modal-hint mt-10">Hướng camera về mã QR hiển thị từ file Setup trên máy tính cá nhân để nhận diện IP.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL XEM HƯỚNG DẪN CHI TIẾT -->
+  <div id="modal-guide" class="modal-backdrop" style="display: none;">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="modal-guide-title">Tài liệu Hướng dẫn</h3>
+        <button class="modal-close" onclick="TGS_System.closeGuideModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modal-guide-body"></div>
+    </div>
+  </div>
+</div>
   <!-- ==================== MODAL: MỞ CÔNG TRÌNH ĐÃ LƯU ==================== -->
   <div id="modalProjectList" class="modal-overlay hidden">
     <div class="modal-content">
