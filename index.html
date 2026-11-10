@@ -207,34 +207,120 @@
       <div id="map"></div>
 
       <!-- BẢNG BÓC TÁCH ỐNG TRÁI / PHẢI VÀ ĐỔI TIẾT DIỆN -->
-      <div class="linear-spec-card" style="position:absolute; top:70px; left:10px; right:10px; z-index:999; background:rgba(255,255,255,0.95); backdrop-filter:blur(6px); border-radius:10px; padding:8px 12px; box-shadow:0 3px 10px rgba(0,0,0,0.2);">
-        <div style="display:flex; gap:10px;">
+     <!-- BẢNG BÓC TÁCH ỐNG TRÁI / PHẢI & PHỤ KIỆN ĐẤU NỐI KỸ THUẬT -->
+      <div class="linear-spec-card" style="position:absolute; top:70px; left:8px; right:8px; z-index:999; background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); border-radius:12px; padding:10px 12px; box-shadow:0 4px 15px rgba(0,0,0,0.22); border:1px solid #cbd5e1;">
+        
+        <!-- Hàng 1: Chọn quy cách ống Trái / Phải -->
+        <div style="display:flex; gap:8px;">
           <!-- Ống lề Trái -->
           <div style="flex:1;">
-            <label style="font-size:11px; font-weight:700; color:#0f172a; display:block;">Ống Lề TRÁI:</label>
-            <select id="lineLeftDiameter" class="form-select" style="font-size:12px; height:32px; padding:2px 6px;">
-              <option value="D168">D168 uPVC</option>
-              <option value="D114">D114 uPVC</option>
-              <option value="D90">D90 uPVC</option>
-              <option value="D60" selected>D60 uPVC</option>
-              <option value="D49">D49 uPVC</option>
-              <option value="HDPE90">D90 HDPE</option>
-              <option value="NONE">Không có ống</option>
+            <label style="font-size:11px; font-weight:700; color:#0f172a; display:block; margin-bottom:2px;">Ống Lề TRÁI:</label>
+            <select id="lineLeftDiameter" class="form-select" style="font-size:12px; height:34px; padding:2px 6px; width:100%; border:1px solid #94a3b8; border-radius:6px; background:#fff;">
+              <optgroup label="--- uPVC (D49 - D280) ---">
+                <option value="NONE">Không có ống</option>
+                <option value="uPVC_D49">D49 uPVC</option>
+                <option value="uPVC_D60" selected>D60 uPVC</option>
+                <option value="uPVC_D90">D90 uPVC</option>
+                <option value="uPVC_D114">D114 uPVC</option>
+                <option value="uPVC_D140">D140 uPVC</option>
+                <option value="uPVC_D168">D168 uPVC</option>
+                <option value="uPVC_D200">D200 uPVC</option>
+                <option value="uPVC_D225">D225 uPVC</option>
+                <option value="uPVC_D250">D250 uPVC</option>
+                <option value="uPVC_D280">D280 uPVC</option>
+              </optgroup>
+              <optgroup label="--- HDPE (D49 - D350) ---">
+                <option value="HDPE_D49">D49 HDPE</option>
+                <option value="HDPE_D63">D63 HDPE</option>
+                <option value="HDPE_D75">D75 HDPE</option>
+                <option value="HDPE_D90">D90 HDPE</option>
+                <option value="HDPE_D110">D110 HDPE</option>
+                <option value="HDPE_D125">D125 HDPE</option>
+                <option value="HDPE_D140">D140 HDPE</option>
+                <option value="HDPE_D160">D160 HDPE</option>
+                <option value="HDPE_D180">D180 HDPE</option>
+                <option value="HDPE_D200">D200 HDPE</option>
+                <option value="HDPE_D225">D225 HDPE</option>
+                <option value="HDPE_D250">D250 HDPE</option>
+                <option value="HDPE_D280">D280 HDPE</option>
+                <option value="HDPE_D315">D315 HDPE</option>
+                <option value="HDPE_D350">D350 HDPE</option>
+              </optgroup>
+              <optgroup label="--- Khác ---">
+                <option value="KHAC">Tự nhập loại khác...</option>
+              </optgroup>
             </select>
+            <input id="customLeftPipeInput" type="text" placeholder="Nhập quy cách ống..." class="hidden" style="width:100%; height:30px; border:1px solid #0284c7; border-radius:4px; font-size:11.5px; padding:0 6px; margin-top:4px; box-sizing:border-box;">
           </div>
+
           <!-- Ống lề Phải -->
           <div style="flex:1;">
-            <label style="font-size:11px; font-weight:700; color:#0f172a; display:block;">Ống Lề PHẢI:</label>
-            <select id="lineRightDiameter" class="form-select" style="font-size:12px; height:32px; padding:2px 6px;">
-              <option value="D168">D168 uPVC</option>
-              <option value="D114">D114 uPVC</option>
-              <option value="D90">D90 uPVC</option>
-              <option value="D60">D60 uPVC</option>
-              <option value="D49">D49 uPVC</option>
-              <option value="NONE" selected>Không có ống</option>
+            <label style="font-size:11px; font-weight:700; color:#0f172a; display:block; margin-bottom:2px;">Ống Lề PHẢI:</label>
+            <select id="lineRightDiameter" class="form-select" style="font-size:12px; height:34px; padding:2px 6px; width:100%; border:1px solid #94a3b8; border-radius:6px; background:#fff;">
+              <optgroup label="--- uPVC (D49 - D280) ---">
+                <option value="NONE" selected>Không có ống</option>
+                <option value="uPVC_D49">D49 uPVC</option>
+                <option value="uPVC_D60">D60 uPVC</option>
+                <option value="uPVC_D90">D90 uPVC</option>
+                <option value="uPVC_D114">D114 uPVC</option>
+                <option value="uPVC_D140">D140 uPVC</option>
+                <option value="uPVC_D168">D168 uPVC</option>
+                <option value="uPVC_D200">D200 uPVC</option>
+                <option value="uPVC_D225">D225 uPVC</option>
+                <option value="uPVC_D250">D250 uPVC</option>
+                <option value="uPVC_D280">D280 uPVC</option>
+              </optgroup>
+              <optgroup label="--- HDPE (D49 - D350) ---">
+                <option value="HDPE_D49">D49 HDPE</option>
+                <option value="HDPE_D63">D63 HDPE</option>
+                <option value="HDPE_D75">D75 HDPE</option>
+                <option value="HDPE_D90">D90 HDPE</option>
+                <option value="HDPE_D110">D110 HDPE</option>
+                <option value="HDPE_D125">D125 HDPE</option>
+                <option value="HDPE_D140">D140 HDPE</option>
+                <option value="HDPE_D160">D160 HDPE</option>
+                <option value="HDPE_D180">D180 HDPE</option>
+                <option value="HDPE_D200">D200 HDPE</option>
+                <option value="HDPE_D225">D225 HDPE</option>
+                <option value="HDPE_D250">D250 HDPE</option>
+                <option value="HDPE_D280">D280 HDPE</option>
+                <option value="HDPE_D315">D315 HDPE</option>
+                <option value="HDPE_D350">D350 HDPE</option>
+              </optgroup>
+              <optgroup label="--- Khác ---">
+                <option value="KHAC">Tự nhập loại khác...</option>
+              </optgroup>
             </select>
+            <input id="customRightPipeInput" type="text" placeholder="Nhập quy cách ống..." class="hidden" style="width:100%; height:30px; border:1px solid #0284c7; border-radius:4px; font-size:11.5px; padding:0 6px; margin-top:4px; box-sizing:border-box;">
           </div>
         </div>
+
+        <!-- Hàng 2: Phụ kiện đấu nối & Điểm nút kỹ thuật -->
+        <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+          <div style="flex:1;">
+            <select id="lineFittingSelect" class="form-select" style="font-size:12px; height:32px; padding:2px 6px; width:100%; border:1px solid #0284c7; border-radius:6px; background:#f0f9ff; font-weight:600; color:#0369a1;">
+              <option value="KHONG">-- Không có phụ kiện (Đoạn thẳng) --</option>
+              <option value="TE_GIAM">Tê giảm (Rẽ nhánh cấp nhỏ hơn)</option>
+              <option value="TE_DEU">Tê đều (Rẽ nhánh cùng cỡ ống)</option>
+              <option value="NOI_GIAM">Nối giảm / Côn thu (Đổi cỡ ống)</option>
+              <option value="CO_90">Co 90° (Cút vuông góc)</option>
+              <option value="LOI_45">Lơi 45° (Chuyển góc tim đường)</option>
+              <option value="VAN_CHAN">Van chặn phân phối (Van cổng/bướm)</option>
+              <option value="BIT_ONG">Bít cuối tuyến ống</option>
+              <option value="KHAC">Phụ kiện khác...</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <input id="lineFittingNote" type="text" placeholder="Chi tiết: Tê D90/60, Giảm D114/90..." style="width:100%; height:32px; border:1px solid #cbd5e1; border-radius:6px; font-size:11.5px; padding:0 8px; box-sizing:border-box;">
+          </div>
+        </div>
+
+        <!-- Hàng 3: Trạng thái & Nút chốt đổi lý trình -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:4px; border-top:1px dashed #e2e8f0;">
+          <button id="btnSwitchSection" class="btn btn-sm btn-outline" style="font-size:11px; padding:3px 8px;">🔄 Chốt đổi quy cách ống</button>
+          <span id="lineBreadcrumbStatus" style="font-size:11px; color:#16a34a; font-weight:600;">● Vết bánh xe đang bám đường</span>
+        </div>
+      </div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
           <button id="btnSwitchSection" class="btn btn-sm btn-outline" style="font-size:11px; padding:4px 8px;">🔄 Chốt đổi tiết diện ống</button>
           <span id="lineBreadcrumbStatus" style="font-size:11px; color:#16a34a; font-weight:600;">● Vết bánh xe đang bám đường</span>
