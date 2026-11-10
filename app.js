@@ -1065,60 +1065,79 @@ pause
 
         startQRScanner: function() {
         const modal = document.getElementById("modal-qr-scan");
-        if (!modal) {
-            alert("Không tìm thấy khung quét QR trong giao diện.");
+        const video = document.getElementById("qr-video-preview");
+        if (!modal || !video) {
+            alert("Lỗi cấu trúc: Không tìm thấy khung video.");
             return;
         }
+
         modal.style.display = "flex";
-        const video = document.getElementById("qr-video-preview");
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            alert("Trình duyệt không hỗ trợ camera hoặc đang chạy ở link không bảo mật (HTTP).");
+            alert("Thiết bị không hỗ trợ camera trên giao thức này.");
             modal.style.display = "none";
             return;
         }
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-            .then(s => {
-                video.srcObject = s;
-                video.setAttribute("playsinline", true);
-                video.play();
+        // Đảm bảo dừng luồng cũ trước khi tạo luồng mới
+        if (video.srcObject) {
+            video.srcObject.getTracks().forEach(t => t.stop());
+            video.srcObject = null;
+        }
 
-                const canvas = document.createElement("canvas");
-                const ctx = canvas.getContext("2d");
+        navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: false
+        })
+        .then(stream => {
+            video.srcObject = stream;
+            video.setAttribute("playsinline", "true");
+            video.setAttribute("autoplay", "true");
+            video.muted = true;
+            
+            // Kích hoạt phát hình trực tiếp cho ứng dụng PWA
+            video.play().catch(e => console.warn("Lỗi phát video:", e));
 
-                const checkQRCode = () => {
-                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            // Quét mã QR qua Canvas nền
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
 
-                        if (typeof jsQR !== "undefined") {
-                            const code = jsQR(imgData.data, imgData.width, imgData.height, {
-                                inversionAttempts: "dontInvert"
-                            });
-                            if (code && code.data) {
-                                const detected = code.data.trim();
-                                localStorage.setItem("TGS_SERVER_TUNNEL_URL", detected);
-                                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                                alert("✓ Đã nhận diện máy trạm thành công:\n" + detected);
-                                TGS_System.closeQRScanner();
-                                TGS_System.init();
-                                return;
-                            }
+            const scanLoop = () => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                    if (typeof jsQR !== "undefined") {
+                        const code = jsQR(imgData.data, imgData.width, imgData.height, {
+                            inversionAttempts: "dontInvert"
+                        });
+                        if (code && code.data) {
+                            const detected = code.data.trim();
+                            localStorage.setItem("TGS_SERVER_TUNNEL_URL", detected);
+                            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                            alert("✓ Đã nhận diện máy tính:\n" + detected);
+                            TGS_System.closeQRScanner();
+                            TGS_System.init();
+                            return;
                         }
                     }
-                    if (modal.style.display === "flex") {
-                        requestAnimationFrame(checkQRCode);
-                    }
-                };
-                requestAnimationFrame(checkQRCode);
-            })
-            .catch(err => {
-                alert("Lỗi camera: " + err.message);
-                modal.style.display = "none";
-            });
+                }
+                if (modal.style.display === "flex") {
+                    requestAnimationFrame(scanLoop);
+                }
+            };
+            requestAnimationFrame(scanLoop);
+        })
+        .catch(err => {
+            alert("Không thể hiển thị camera: " + err.message);
+            modal.style.display = "none";
+        });
     },
 
         closeQRScanner() {
