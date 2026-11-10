@@ -30,7 +30,9 @@
 
 <div id="app">
 
-  <!-- PHÂN HỆ 0: XÁC THỰC GMAIL NỘI BỘ -->
+  <!-- ======================================================================= -->
+  <!-- PHÂN HỆ 0: XÁC THỰC GMAIL NỘI BỘ (screenAuth) -->
+  <!-- ======================================================================= -->
   <section id="screenAuth" class="screen active" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; padding: 20px;">
     <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 380px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
       <div style="text-align: center; margin-bottom: 20px;">
@@ -74,7 +76,9 @@
     </div>
   </section>
 
-  <!-- MÀN HÌNH 1: DASHBOARD TRUNG TÂM -->
+  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 1: DASHBOARD TRUNG TÂM (tab-dashboard) -->
+  <!-- ======================================================================= -->
   <section id="tab-dashboard" class="screen" style="display:none;">
     <header class="topbar">
       <div class="brand"><strong>TGS</strong><span>Survey</span></div>
@@ -125,7 +129,7 @@
     </div>
   </section>
 
-  <!-- FORM TẠO CÔNG TRÌNH -->
+  <!-- FORM TẠO CÔNG TRÌNH (screenProject) -->
   <section id="screenProject" class="screen" style="display:none;">
     <header class="nav-header">
       <button id="btnBackHome" class="back-btn">←</button>
@@ -149,7 +153,7 @@
     </div>
   </section>
 
-  <!-- TRUNG TÂM ĐIỀU HÀNH KHẢO SÁT -->
+  <!-- TRUNG TÂM ĐIỀU HÀNH KHẢO SÁT (screenSurveyHome) -->
   <section id="screenSurveyHome" class="screen" style="display:none;">
     <header class="nav-header">
       <button id="btnBackProject" class="back-btn">←</button>
@@ -183,7 +187,9 @@
     </div>
   </section>
 
-  <!-- MÀN HÌNH 2A: KHẢO SÁT TUYẾN ỐNG -->
+  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 2A: KHẢO SÁT TUYẾN ỐNG (screenLinear) -->
+  <!-- ======================================================================= -->
   <section id="screenLinear" class="screen" style="display:none;">
     <header class="survey-header-floating">
       <button id="btnExitLinear" class="back-btn-floating">←</button>
@@ -197,14 +203,12 @@
       <div id="map"></div>
 
       <!-- BẢNG BÓC TÁCH ỐNG TRÁI / PHẢI & PHỤ KIỆN ĐẤU NỐI KỸ THUẬT -->
-      <div class="linear-spec-card" style="position:absolute; top:70px; left:8px; right:8px; z-index:999; background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); border-radius:12px; padding:10px 12px; box-shadow:0 4px 15px rgba(0,0,0,0.22); border:1px solid #cbd5e1;">
-        
-        <!-- Hàng 1: Chọn quy cách ống Trái / Phải -->
+      <div class="linear-spec-card">
+        <!-- Hàng 1: Quy cách ống Trái / Phải -->
         <div style="display:flex; gap:8px;">
-          <!-- Ống lề Trái -->
           <div style="flex:1;">
             <label style="font-size:11px; font-weight:700; color:#0f172a; display:block; margin-bottom:2px;">Ống Lề TRÁI:</label>
-            <select id="lineLeftDiameter" class="form-select" style="font-size:12px; height:34px; padding:2px 6px; width:100%; border:1px solid #94a3b8; border-radius:6px; background:#fff;">
+            <select id="lineLeftDiameter" class="form-select">
               <optgroup label="--- uPVC (D49 - D280) ---">
                 <option value="NONE">Không có ống</option>
                 <option value="uPVC_D49">D49 uPVC</option>
@@ -242,10 +246,9 @@
             <input id="customLeftPipeInput" type="text" placeholder="Nhập quy cách ống..." class="hidden" style="width:100%; height:30px; border:1px solid #0284c7; border-radius:4px; font-size:11.5px; padding:0 6px; margin-top:4px; box-sizing:border-box;">
           </div>
 
-          <!-- Ống lề Phải -->
           <div style="flex:1;">
             <label style="font-size:11px; font-weight:700; color:#0f172a; display:block; margin-bottom:2px;">Ống Lề PHẢI:</label>
-            <select id="lineRightDiameter" class="form-select" style="font-size:12px; height:34px; padding:2px 6px; width:100%; border:1px solid #94a3b8; border-radius:6px; background:#fff;">
+            <select id="lineRightDiameter" class="form-select">
               <optgroup label="--- uPVC (D49 - D280) ---">
                 <option value="NONE" selected>Không có ống</option>
                 <option value="uPVC_D49">D49 uPVC</option>
@@ -284,11 +287,11 @@
           </div>
         </div>
 
-        <!-- Hàng 2: Phụ kiện đấu nối & Điểm nút kỹ thuật -->
-        <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+        <!-- Hàng 2: Phụ kiện đấu nối -->
+        <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
           <div style="flex:1;">
-            <select id="lineFittingSelect" class="form-select" style="font-size:12px; height:32px; padding:2px 6px; width:100%; border:1px solid #0284c7; border-radius:6px; background:#f0f9ff; font-weight:600; color:#0369a1;">
-              <option value="KHONG">-- Không có phụ kiện (Đoạn thẳng) --</option>
+            <select id="lineFittingSelect" class="form-select" style="background:#f0f9ff; font-weight:600; color:#0369a1; border-color:#0284c7;">
+              <option value="KHONG">-- Không phụ kiện (Đoạn thẳng) --</option>
               <option value="TE_GIAM">Tê giảm (Rẽ nhánh cấp nhỏ hơn)</option>
               <option value="TE_DEU">Tê đều (Rẽ nhánh cùng cỡ ống)</option>
               <option value="NOI_GIAM">Nối giảm / Côn thu (Đổi cỡ ống)</option>
@@ -304,7 +307,7 @@
           </div>
         </div>
 
-        <!-- Hàng 3: Trạng thái & Nút chốt đổi lý trình -->
+        <!-- Hàng 3: Đổi tiết diện & Trạng thái -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding-top:4px; border-top:1px dashed #e2e8f0;">
           <button id="btnSwitchSection" class="btn btn-sm btn-outline" style="font-size:11px; padding:3px 8px;">🔄 Chốt đổi quy cách ống</button>
           <span id="lineBreadcrumbStatus" style="font-size:11px; color:#16a34a; font-weight:600;">● Vết bánh xe đang bám đường</span>
@@ -312,9 +315,9 @@
       </div>
 
       <!-- Cụm công cụ thực địa bên phải: Camera, Video, GPS, Zoom -->
-      <div class="map-tools-bottom" style="position:absolute; right:12px; bottom:140px; z-index:999; display:flex; flex-direction:column; gap:8px;">
-        <button id="btnLineSnapPhoto" class="tool-circle" title="Chụp ảnh điểm tuyến" style="background:#0284c7; color:#fff; border:none; box-shadow:0 3px 6px rgba(0,0,0,0.3);">📷</button>
-        <button id="btnLineRecordVideo" class="tool-circle" title="Quay video thuyết minh tuyến" style="background:#ea580c; color:#fff; border:none; box-shadow:0 3px 6px rgba(0,0,0,0.3);">🎥</button>
+      <div class="map-tools-bottom">
+        <button id="btnLineSnapPhoto" class="tool-circle" title="Chụp ảnh điểm tuyến" style="background:#0284c7; color:#fff; border:none;">📷</button>
+        <button id="btnLineRecordVideo" class="tool-circle" title="Quay video thuyết minh tuyến" style="background:#ea580c; color:#fff; border:none;">🎥</button>
         <button id="btnLocate" class="tool-circle" title="Vị trí hiện tại">◎</button>
         <button id="btnZoomIn" class="tool-circle">＋</button>
         <button id="btnZoomOut" class="tool-circle">－</button>
@@ -338,7 +341,9 @@
     </div>
   </section>
 
-  <!-- MÀN HÌNH 2B: KHẢO SÁT ĐIỂM HẠNG MỤC -->
+  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 2B: KHẢO SÁT ĐIỂM HẠNG MỤC (screenPoint) -->
+  <!-- ======================================================================= -->
   <section id="screenPoint" class="screen" style="display:none;">
     <header class="nav-header">
       <button id="btnExitPoint" class="back-btn">←</button>
@@ -446,7 +451,9 @@
     </div>
   </section>
 
-  <!-- MÀN HÌNH 3: DỮ LIỆU KHẢO SÁT & ĐỒNG BỘ -->
+  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 3: DỮ LIỆU KHẢO SÁT & ĐỒNG BỘ (tab-data) -->
+  <!-- ======================================================================= -->
   <section id="tab-data" class="screen" style="display:none;">
     <header class="topbar">
       <div class="brand"><strong>TGS</strong><span>Dữ Liệu Khảo Sát</span></div>
@@ -472,7 +479,9 @@
     </div>
   </section>
 
-  <!-- MÀN HÌNH 4: HỆ THỐNG & CÀI ĐẶT -->
+  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 4: HỆ THỐNG & CÀI ĐẶT (tab-system) -->
+  <!-- ======================================================================= -->
   <section id="tab-system" class="screen" style="display:none;">
     <div class="screen-header">
       <h2>Hệ Thống & Cài Đặt</h2>
@@ -575,7 +584,9 @@
     </div>
   </section>
 
-  <!-- BOTTOM NAVIGATION BAR CỐ ĐỊNH (GẮN THẲNG ONCLICK) -->
+  <!-- ======================================================================= -->
+  <!-- BOTTOM NAVIGATION BAR CỐ ĐỊNH -->
+  <!-- ======================================================================= -->
   <nav id="bottomNavBar" class="bottom-nav-bar" style="display:none;">
     <button class="nav-item active" data-tab="tab-dashboard" onclick="TGS.Navigation.show('tab-dashboard')">
       <span class="nav-icon">🏠</span>
@@ -595,8 +606,10 @@
     </button>
   </nav>
 
-  <!-- MODAL QUÉT QR MÁY TÍNH -->
-  <div id="modal-qr-scan" class="modal-backdrop" style="display: none; z-index: 99999;">
+  <!-- ======================================================================= -->
+  <!-- CÁC MODAL HỆ THỐNG -->
+  <!-- ======================================================================= -->
+  <div id="modal-qr-scan" class="modal-backdrop" style="display: none; z-index: 10005;">
     <div class="modal-content" style="background:#0f172a; color:#fff; border-radius:16px; padding:16px; width:92%; max-width:400px; text-align:center;">
       <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:8px; margin-bottom:12px;">
         <h3 style="margin:0; font-size:16px; color:#fff;">Quét mã QR Máy tính</h3>
@@ -612,8 +625,7 @@
     </div>
   </div>
 
-  <!-- MODAL HƯỚNG DẪN -->
-  <div id="modal-guide" class="modal-backdrop" style="display: none;">
+  <div id="modal-guide" class="modal-backdrop" style="display: none; z-index: 10005;">
     <div class="modal-content modal-lg">
       <div class="modal-header">
         <h3 id="modal-guide-title">Tài liệu Hướng dẫn</h3>
