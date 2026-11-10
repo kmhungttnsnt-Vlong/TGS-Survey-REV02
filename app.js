@@ -1063,22 +1063,63 @@ pause
             alert("✓ Đã tải về file 'TGS_Workstation_Setup.bat'.\nĐồng nghiệp chỉ cần mở file này trên laptop để tự động mở trạm nhận dữ liệu.");
         },
 
-        startQRScanner() {
-            const modal = document.getElementById("modal-qr-scan");
-            if (!modal) return;
-            modal.style.display = "flex";
-            const video = document.getElementById("qr-video-preview");
+        startQRScanner: function() {
+        const modal = document.getElementById("modal-qr-scan");
+        if (!modal) {
+            alert("Không tìm thấy khung quét QR trong giao diện.");
+            return;
+        }
+        modal.style.display = "flex";
+        const video = document.getElementById("qr-video-preview");
 
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-                .then(stream => {
-                    video.srcObject = stream;
-                    video.play();
-                })
-                .catch(err => {
-                    alert("Không thể mở camera: " + err.message);
-                    modal.style.display = "none";
-                });
-        },
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("Trình duyệt không hỗ trợ camera hoặc đang chạy ở link không bảo mật (HTTP).");
+            modal.style.display = "none";
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(s => {
+                video.srcObject = s;
+                video.setAttribute("playsinline", true);
+                video.play();
+
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+
+                const checkQRCode = () => {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                        if (typeof jsQR !== "undefined") {
+                            const code = jsQR(imgData.data, imgData.width, imgData.height, {
+                                inversionAttempts: "dontInvert"
+                            });
+                            if (code && code.data) {
+                                const detected = code.data.trim();
+                                localStorage.setItem("TGS_SERVER_TUNNEL_URL", detected);
+                                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                                alert("✓ Đã nhận diện máy trạm thành công:\n" + detected);
+                                TGS_System.closeQRScanner();
+                                TGS_System.init();
+                                return;
+                            }
+                        }
+                    }
+                    if (modal.style.display === "flex") {
+                        requestAnimationFrame(checkQRCode);
+                    }
+                };
+                requestAnimationFrame(checkQRCode);
+            })
+            .catch(err => {
+                alert("Lỗi camera: " + err.message);
+                modal.style.display = "none";
+            });
+    },
 
         closeQRScanner() {
             const modal = document.getElementById("modal-qr-scan");
