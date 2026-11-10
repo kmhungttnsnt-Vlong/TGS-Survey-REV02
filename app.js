@@ -229,6 +229,15 @@ const TGS = (() => {
                 target.classList.add("active");
                 target.style.display = (screenId === "screenAuth") ? "flex" : "block";
                 State.activeScreenId = screenId;
+                }
+           // Ẩn thanh Bottom Bar khi vào khảo sát tuyến/điểm để bản đồ tràn viền 100%
+            const bNav = document.getElementById("bottomNavBar");
+            if (bNav) {
+                if (screenId === "screenLinear" || screenId === "screenPoint") {
+                    bNav.style.display = "none";
+                } else {
+                    bNav.style.display = "flex";
+                }
             }
 
             // 3. Đổi màu icon thanh Bottom Bar
