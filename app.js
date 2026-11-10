@@ -229,8 +229,8 @@ const TGS = (() => {
                 target.classList.add("active");
                 target.style.display = (screenId === "screenAuth") ? "flex" : "block";
                 State.activeScreenId = screenId;
-                }
-           
+            }
+
             // Ẩn thanh Bottom Bar khi vào khảo sát tuyến/điểm để bản đồ tràn viền 100%
             const bNav = document.getElementById("bottomNavBar");
             if (bNav) {
@@ -1025,6 +1025,29 @@ const TGS = (() => {
 
         const btnSwitchSec = document.getElementById("btnSwitchSection");
         if (btnSwitchSec) btnSwitchSec.onclick = () => LinearModule.switchPipeSection();
+
+        // Kích hoạt camera chụp ảnh & quay video trên tuyến
+        const btnLineSnap = document.getElementById("btnLineSnapPhoto");
+        const inLinePhoto = document.getElementById("inputLinePhoto");
+        if (btnLineSnap && inLinePhoto) {
+            btnLineSnap.onclick = () => inLinePhoto.click();
+            inLinePhoto.onchange = (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    alert("✓ Đã ghi nhận ảnh hiện trường tuyến ống!");
+                }
+            };
+        }
+
+        const btnLineRec = document.getElementById("btnLineRecordVideo");
+        const inLineVideo = document.getElementById("inputLineVideo");
+        if (btnLineRec && inLineVideo) {
+            btnLineRec.onclick = () => inLineVideo.click();
+            inLineVideo.onchange = (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    alert("✓ Đã ghi nhận video hiện trường tuyến ống!");
+                }
+            };
+        }
 
         const leftSelect = document.getElementById("lineLeftDiameter");
         const leftCustom = document.getElementById("customLeftPipeInput");
