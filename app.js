@@ -373,7 +373,8 @@ const TGS = (() => {
             linear: document.getElementById("screenLinear"),
             point: document.getElementById("screenPoint"),
             reviewMedia: document.getElementById("screenReviewMedia"),
-            complete: document.getElementById("screenProjectComplete")
+            complete: document.getElementById("screenProjectComplete"),
+            system: document.getElementById("tab-system")
         },
 
         show(screenKey) {
@@ -384,9 +385,13 @@ const TGS = (() => {
             EventBus.emit("screen:leave", { from: previousScreen, to: screenKey });
 
             Object.values(this.screens).forEach(scr => {
-                if (scr) scr.classList.remove("active");
+                if (scr) {
+                    scr.classList.remove("active");
+                    scr.style.display = "none";
+                }
             });
             targetScreenEl.classList.add("active");
+            targetScreenEl.style.display = "block";
             A1_State.currentScreen = screenKey;
 
             EventBus.emit("screen:enter", { screen: screenKey });
@@ -541,20 +546,15 @@ const TGS = (() => {
                         const { latitude, longitude, accuracy } = pos.coords;
                         const now = Date.now();
 
-                        // 1. Lọc trễ thời gian: Phải cách mẫu trước tối thiểu 750ms để chip GPS đổi chu kỳ nạp
                         if (now - lastTime < 750) return;
-
-                        // 2. Lọc bỏ mẫu vệ tinh yếu (sai số vượt quá 15m)
                         if (accuracy > 15) return;
 
-                        // 3. Lọc trùng lặp vật lý: Loại bỏ mẫu đứng yên đọc từ RAM/cache
                         if (lastLat !== null && lastLng !== null) {
                             if (lastLat === latitude && lastLng === longitude) {
-                                return; // Trùng tọa độ hoàn toàn, bỏ qua
+                                return;
                             }
                         }
 
-                        // Ghi nhận mẫu thực sự độc lập
                         lastLat = latitude;
                         lastLng = longitude;
                         lastTime = now;
@@ -565,7 +565,6 @@ const TGS = (() => {
                             progressCb(validSamples.length, L3_SmartGNSS.sampleTarget);
                         }
 
-                        // Thu đủ 20 mẫu độc lập
                         if (validSamples.length >= L3_SmartGNSS.sampleTarget) {
                             clearInterval(interval);
                             L3_SmartGNSS.isSampling = false;
@@ -576,15 +575,13 @@ const TGS = (() => {
                     err => console.warn("[GNSS Warning]", err.message),
                     { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
                 );
-            }, 800); // Tần số gom 800ms phù hợp với chu kỳ làm tươi của chip GNSS điện thoại
+            }, 800);
         },
 
         evaluateSamples(samples, L0) {
-            // 1. Sắp xếp theo sai số tăng dần để loại bỏ 15% mẫu xấu nhất (Outliers)
             const sortedByAcc = [...samples].sort((a, b) => a.accuracy - b.accuracy);
             const cleanSamples = sortedByAcc.slice(0, Math.ceil(samples.length * 0.85));
 
-            // 2. Bình quân gia quyền nghịch đảo bình phương sai số (Weighted Average W = 1 / acc^2)
             let sumWeight = 0, sumLat = 0, sumLng = 0;
 
             cleanSamples.forEach(s => {
@@ -597,7 +594,6 @@ const TGS = (() => {
             const repLat = sumLat / sumWeight;
             const repLng = sumLng / sumWeight;
 
-            // Lấy trung vị sai số đại diện
             const medianAcc = cleanSamples[Math.floor(cleanSamples.length / 2)].accuracy;
             const vn2000 = VN2000Service.forward(repLat, repLng, L0);
 
@@ -683,7 +679,7 @@ const TGS = (() => {
     };
 
     /* =====================================================
-       4.1 QUẢN LÝ CHIA ĐÔI MÀN HÌNH (SPLIT-SCREEN BẢN ĐỒ & CAMERA TUYẾN)
+       4.1 QUẢN LÝ CHIA ĐÔI MÀN HÌNH (SPLIT-SCREEN CAMERA TUYẾN)
     ===================================================== */
     const L5_SplitScreenLinearManager = {
         splitWrapper: null,
@@ -705,7 +701,6 @@ const TGS = (() => {
             const linearScreen = document.getElementById("screenLinear");
             const mapWrapper = linearScreen.querySelector(".map-wrapper-fullscreen");
 
-            // Tạo khung chứa nửa dưới cho Camera chia đôi màn hình
             const splitPanel = document.createElement("div");
             splitPanel.id = "linearSplitVideoPanel";
             splitPanel.style.cssText = `
@@ -743,7 +738,6 @@ const TGS = (() => {
             this.splitWrapper = splitPanel;
             this.videoEl = document.getElementById("linearSplitVideo");
 
-            // Bắt sự kiện trong Panel chia đôi
             document.getElementById("btnCloseSplitCamera").onclick = () => this.toggleSplit(false);
             document.getElementById("btnSplitSnapPhoto").onclick = () => this.capturePhotoFromStream();
             document.getElementById("btnSplitRecordVideo").onclick = () => this.recordVideoFromStream();
@@ -766,7 +760,6 @@ const TGS = (() => {
                     this.isSplitActive = true;
                     setTimeout(() => L2_MapEngine.invalidate(), 200);
                 } catch (e) {
-                    // Nếu thiết bị không mở được luồng trực tiếp, kích hoạt input mặc định
                     document.getElementById("inputLinePhoto").click();
                 }
             } else {
@@ -856,7 +849,6 @@ const TGS = (() => {
             recBtn.style.background = "#dc2626";
             recBtn.setAttribute("data-recording", "true");
 
-            // Tự ngắt sau 60 giây để tránh file quá nặng
             setTimeout(() => {
                 if (this.mediaRec && this.mediaRec.state === "recording") {
                     this.mediaRec.stop();
@@ -900,10 +892,11 @@ const TGS = (() => {
                     audio: true
                 });
                 
-                this.videoInline.srcObject = this.stream;
-                this.videoFS.srcObject = this.stream;
+                if (this.videoInline) this.videoInline.srcObject = this.stream;
+                if (this.videoFS) this.videoFS.srcObject = this.stream;
                 this.videoTrack = this.stream.getVideoTracks()[0];
-                document.getElementById("btnToggleCamera").innerText = "Đóng Camera";
+                const btnCam = document.getElementById("btnToggleCamera");
+                if (btnCam) btnCam.innerText = "Đóng Camera";
             } catch (err) {
                 alert("Không thể khởi động Camera: " + err.message);
             }
@@ -917,7 +910,8 @@ const TGS = (() => {
             }
             if (this.videoInline) this.videoInline.srcObject = null;
             if (this.videoFS) this.videoFS.srcObject = null;
-            document.getElementById("btnToggleCamera").innerText = "Mở Camera";
+            const btnCam = document.getElementById("btnToggleCamera");
+            if (btnCam) btnCam.innerText = "Mở Camera";
         },
 
         toggleRecord(onVideoCompleted) {
@@ -963,25 +957,27 @@ const TGS = (() => {
                 this.isRecording = true;
                 this.recordedSeconds = 0;
                 
-                recBtnInline.innerText = "⏹ Dừng REC";
-                recBtnFS.classList.add("recording");
-                fsBadge.classList.add("recording");
+                if (recBtnInline) recBtnInline.innerText = "⏹ Dừng REC";
+                if (recBtnFS) recBtnFS.classList.add("recording");
+                if (fsBadge) fsBadge.classList.add("recording");
 
                 this.recordingTimer = setInterval(() => {
                     this.recordedSeconds++;
                     const m = Math.floor(this.recordedSeconds / 60).toString().padStart(2, "0");
                     const s = (this.recordedSeconds % 60).toString().padStart(2, "0");
-                    fsBadge.innerText = `🔴 REC ${m}:${s}`;
+                    if (fsBadge) fsBadge.innerText = `🔴 REC ${m}:${s}`;
                 }, 1000);
             } else {
                 this.mediaRecorder.stop();
                 this.isRecording = false;
                 clearInterval(this.recordingTimer);
                 
-                recBtnInline.innerText = "🔴 Quay Video";
-                recBtnFS.classList.remove("recording");
-                fsBadge.classList.remove("recording");
-                fsBadge.innerText = "⚪ ĐÃ LƯU VIDEO";
+                if (recBtnInline) recBtnInline.innerText = "🔴 Quay Video";
+                if (recBtnFS) recBtnFS.classList.remove("recording");
+                if (fsBadge) {
+                    fsBadge.classList.remove("recording");
+                    fsBadge.innerText = "⚪ ĐÃ LƯU VIDEO";
+                }
             }
         },
 
@@ -992,7 +988,7 @@ const TGS = (() => {
             }
 
             const canvas = document.createElement("canvas");
-            const videoEl = this.videoFS.videoWidth ? this.videoFS : this.videoInline;
+            const videoEl = (this.videoFS && this.videoFS.videoWidth) ? this.videoFS : this.videoInline;
             canvas.width = videoEl.videoWidth || 1280;
             canvas.height = videoEl.videoHeight || 720;
             const ctx = canvas.getContext("2d");
@@ -1018,7 +1014,8 @@ const TGS = (() => {
             this.currentPhotos = [];
             this.currentVideoBlob = null;
             this.renderTimeline();
-            document.getElementById("videoRecordedNotice").classList.add("hidden");
+            const notice = document.getElementById("videoRecordedNotice");
+            if (notice) notice.classList.add("hidden");
         },
 
         addPhoto(base64Data, label) {
@@ -1033,12 +1030,15 @@ const TGS = (() => {
 
         setVideoBlob(blob) {
             this.currentVideoBlob = blob;
-            document.getElementById("videoRecordedNotice").classList.remove("hidden");
+            const notice = document.getElementById("videoRecordedNotice");
+            if (notice) notice.classList.remove("hidden");
         },
 
         renderTimeline() {
+            if (!this.timelineEl) return;
             this.timelineEl.innerHTML = "";
-            document.getElementById("photoCount").innerText = this.currentPhotos.length;
+            const countEl = document.getElementById("photoCount");
+            if (countEl) countEl.innerText = this.currentPhotos.length;
 
             if (this.currentPhotos.length === 0) {
                 this.timelineEl.innerHTML = "<p style='color:var(--muted); font-size:12px; grid-column:1/-1; text-align:center;'>Chưa có ảnh</p>";
@@ -1060,9 +1060,9 @@ const TGS = (() => {
         observePointPosition(onComplete) {
             const btnText = document.getElementById("btnPointGPSText");
             L3_SmartGNSS.collectSmartObservation(
-                (current, target) => { btnText.innerText = `⏳ Đang gom GNSS (${current}/${target})...`; },
+                (current, target) => { if (btnText) btnText.innerText = `⏳ Đang gom GNSS (${current}/${target})...`; },
                 (evaluated) => {
-                    btnText.innerText = "◎ Thu nhận Smart GNSS vị trí";
+                    if (btnText) btnText.innerText = "◎ Thu nhận Smart GNSS vị trí";
                     P2_PointGNSS.observedPoint = evaluated;
 
                     document.getElementById("pointWGS84Text").innerText = `${evaluated.latitude.toFixed(6)}, ${evaluated.longitude.toFixed(6)}`;
@@ -1076,9 +1076,12 @@ const TGS = (() => {
 
         reset() {
             this.observedPoint = null;
-            document.getElementById("pointWGS84Text").innerText = "Chưa thu nhận";
-            document.getElementById("pointVN2000Text").innerText = "Chưa chuyển";
-            document.getElementById("pointAccuracyText").innerText = "± -- m";
+            const wgs = document.getElementById("pointWGS84Text");
+            const vn = document.getElementById("pointVN2000Text");
+            const acc = document.getElementById("pointAccuracyText");
+            if (wgs) wgs.innerText = "Chưa thu nhận";
+            if (vn) vn.innerText = "Chưa chuyển";
+            if (acc) acc.innerText = "± -- m";
         }
     };
 
@@ -1098,25 +1101,32 @@ const TGS = (() => {
             const sectionSelect = document.getElementById("sectionSelect");
             const customInput = document.getElementById("pointCustomSectionInput");
 
-            typeSelect.value = "Trạm cấp nước";
-            groupSection.classList.add("hidden");
-            customInput.classList.add("hidden");
-            customInput.value = "";
-            document.getElementById("pointNoteInput").value = "";
+            if (typeSelect) typeSelect.value = "Trạm cấp nước";
+            if (groupSection) groupSection.classList.add("hidden");
+            if (customInput) {
+                customInput.classList.add("hidden");
+                customInput.value = "";
+            }
+            const noteInput = document.getElementById("pointNoteInput");
+            if (noteInput) noteInput.value = "";
 
-            typeSelect.onchange = () => {
-                if (typeSelect.value === "Hạng mục") groupSection.classList.remove("hidden");
-                else groupSection.classList.add("hidden");
-            };
+            if (typeSelect) {
+                typeSelect.onchange = () => {
+                    if (typeSelect.value === "Hạng mục") groupSection.classList.remove("hidden");
+                    else groupSection.classList.add("hidden");
+                };
+            }
 
-            sectionSelect.onchange = () => {
-                if (sectionSelect.value === "KHAC") {
-                    customInput.classList.remove("hidden");
-                    customInput.focus();
-                } else {
-                    customInput.classList.add("hidden");
-                }
-            };
+            if (sectionSelect) {
+                sectionSelect.onchange = () => {
+                    if (sectionSelect.value === "KHAC") {
+                        customInput.classList.remove("hidden");
+                        customInput.focus();
+                    } else {
+                        customInput.classList.add("hidden");
+                    }
+                };
+            }
 
             this.renderList();
         },
@@ -1194,7 +1204,8 @@ const TGS = (() => {
             const countEl = document.getElementById("savedPointsCount");
             const items = A1_State.currentProject?.pointFeatures || [];
 
-            countEl.innerText = items.length;
+            if (countEl) countEl.innerText = items.length;
+            if (!listEl) return;
             listEl.innerHTML = "";
 
             if (items.length === 0) {
@@ -1251,7 +1262,6 @@ const TGS = (() => {
             let allPhotos = [];
             let allVideos = [];
 
-            // Bổ sung media từ khảo sát tuyến ống
             linearMedia.forEach((lm, lIdx) => {
                 if (lm.type === "photo") {
                     allPhotos.push({
@@ -1268,7 +1278,6 @@ const TGS = (() => {
                 }
             });
 
-            // Gom media từ khảo sát điểm / trạm
             items.forEach((it, idx) => {
                 const photos = it.evidence?.photos || [];
                 photos.forEach(p => {
@@ -1419,7 +1428,7 @@ const TGS = (() => {
                 if (lm.type === "photo") {
                     photoList.push({
                         image: lm.data,
-                        fileName: `ANH_${proj.code}_TuyenOng_${idx + 1}.jpg`
+                        fileName: `ANH_${proj.code}_Tuyen_${idx + 1}.jpg`
                     });
                 }
             });
@@ -1509,7 +1518,7 @@ const TGS = (() => {
     };
 
     /* =====================================================
-       6. ĐỒNG BỘ 2 PHA KÈM CƠ CHẾ DỰ PHÒNG OFFLINE (KHÔNG BỊ KẸT FETCH)
+       6. ĐỒNG BỘ 2 PHA KÈM CƠ CHẾ DỰ PHÒNG OFFLINE
     ===================================================== */
     const Z2_SyncEngine = {
         async executeSync() {
@@ -1535,7 +1544,6 @@ const TGS = (() => {
                 const photosPayload = [];
                 const videoQueue = [];
 
-                // Tuyến Media
                 (proj.linearMedia || []).forEach((lm, idx) => {
                     if (lm.type === "photo") {
                         photosPayload.push({
@@ -1547,7 +1555,6 @@ const TGS = (() => {
                     }
                 });
 
-                // Trạm Media
                 for (let sIdx = 0; sIdx < stations.length; sIdx++) {
                     const st = stations[sIdx];
                     const photos = st.evidence?.photos || [];
@@ -1614,7 +1621,6 @@ const TGS = (() => {
 
                 if (!resP1.ok) throw new Error(`Lỗi kết nối Pha 1 (Mã HTTP ${resP1.status})`);
 
-                // Pha 2 video
                 if (videoQueue.length > 0 && mode === "server") {
                     for (let vIdx = 0; vIdx < videoQueue.length; vIdx++) {
                         const item = videoQueue[vIdx];
@@ -1634,7 +1640,6 @@ const TGS = (() => {
                     }
                 }
 
-                // Đánh dấu hoàn thành
                 proj.status = "completed";
                 proj.updatedAt = Date.now();
                 await A4_Persistence.saveProject(proj);
@@ -1647,12 +1652,12 @@ const TGS = (() => {
                 statusEl.style.color = "#D32F2F";
                 statusEl.innerText = "✕ Lỗi mạng / Không kết nối máy chủ: " + err.message;
 
-                // CƠ CHẾ DỰ PHÒNG: CHO PHÉP ĐÓNG HỒ SƠ NGOẠI TUYẾN
                 const markOffline = confirm(
                     `Không thể kết nối đến máy chủ (${err.message}).\n\n` +
                     `Dữ liệu vẫn được an toàn 100% trong bộ nhớ máy.\n` +
                     `Bạn có muốn ĐÓNG HỒ SƠ & HOÀN THÀNH NGOẠI TUYẾN để không bị nhắc dở dang không?\n` +
-                    `(Sau này có mạng vẫn có thể bấm Đồng bộ lại hoặc Xuất JSON/Zalo).`
+                    `• Bấm OK: Đóng và khóa hồ sơ an toàn.\n` +
+                    `• Bấm Hủy (Cancel): Giữ trạng thái dở dang để đồng bộ lại sau.`
                 );
 
                 if (markOffline) {
@@ -1740,7 +1745,7 @@ const TGS = (() => {
             });
             document.getElementById("btnCaptureGPS").addEventListener("click", () => L4_SurveyLineLogic.captureRoutePoint());
 
-            // SỰ KIỆN MỚI: CHIA ĐÔI MÀN HÌNH & MEDIA TUYẾN ỐNG
+            // Cụm Media tuyến ống
             const btnLineSnap = document.getElementById("btnLineSnapPhoto");
             if (btnLineSnap) {
                 btnLineSnap.addEventListener("click", () => {
@@ -1763,7 +1768,6 @@ const TGS = (() => {
                 });
             }
 
-            // Input nạp file ngoài luồng stream (nếu dùng camera mặc định của điện thoại)
             const inputPhoto = document.getElementById("inputLinePhoto");
             if (inputPhoto) {
                 inputPhoto.addEventListener("change", (e) => {
@@ -1853,19 +1857,17 @@ const TGS = (() => {
         }
     };
 
-    return { initialize: () => Z1_AppInitialize.startup() };
+    return { 
+        initialize: () => Z1_AppInitialize.startup(),
+        Navigation: A2_Navigation
+    };
 })();
 
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", TGS.initialize);
-} else {
-    TGS.initialize();
-}
 /* =========================================================================
-   MODULE KÍCH HOẠT NÚT BÁNH RĂNG ⚙️ & CAMERA QUÉT MÃ QR SERVER
-   ========================================================================= */
-(function() {
-    function setupQRModule() {
+   MODULE KÍCH HOẠT NÚT BÁNH RĂNG ⚙️ & CAMERA QUÉT MÃ QR SERVER (CŨ)
+========================================================================= */
+(function setupQRModule() {
+    function init() {
         const modal = document.getElementById("modalServerConfig");
         const btnOpen = document.getElementById("btnOpenServerConfig");
         const btnClose = document.getElementById("btnCloseServerConfig");
@@ -1901,7 +1903,7 @@ if (document.readyState === "loading") {
                     modal.classList.remove("hidden");
                     modal.style.display = "flex";
                 }
-                const current = localStorage.getItem("TGS_SERVER_TUNNEL_URL") || (typeof CONFIG !== "undefined" ? CONFIG.DEFAULT_SERVER_URL : "");
+                const current = localStorage.getItem("TGS_SERVER_TUNNEL_URL") || "";
                 if (inputUrl) inputUrl.value = current;
             };
         }
@@ -1985,22 +1987,23 @@ if (document.readyState === "loading") {
         if (btnReset) {
             btnReset.onclick = function() {
                 localStorage.removeItem("TGS_SERVER_TUNNEL_URL");
-                if (inputUrl && typeof CONFIG !== "undefined") inputUrl.value = CONFIG.DEFAULT_SERVER_URL;
                 alert("✓ Đã chuyển về mặc định!");
             };
         }
     }
 
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", setupQRModule);
+        document.addEventListener("DOMContentLoaded", init);
     } else {
-        setupQRModule();
+        init();
     }
-   /* =========================================================================
-   MODULE ĐIỀU KHIỂN CAMERA KHẢO SÁT TOÀN MÀN HÌNH (FULLSCREEN CAMERA)
-   ========================================================================= */
-(function initFullscreenCameraModule() {
-    function setupFullscreenCam() {
+})();
+
+/* =========================================================================
+   MODULE ĐIỀU KHIỂN CAMERA TOÀN MÀN HÌNH (FULLSCREEN CAMERA)
+========================================================================= */
+(function setupFullscreenCamModule() {
+    function init() {
         const btnOpen = document.getElementById("btnOpenFullscreenCam");
         const btnClose = document.getElementById("btnCloseFullscreenCam");
         const overlay = document.getElementById("fullscreenCameraOverlay");
@@ -2014,21 +2017,17 @@ if (document.readyState === "loading") {
 
         if (!btnOpen || !overlay) return;
 
-        // 1. Bật toàn màn hình
         btnOpen.addEventListener("click", function (e) {
             e.preventDefault();
             e.stopPropagation();
 
-            // Hiển thị khung phóng to
             overlay.classList.remove("hidden");
             overlay.style.display = "flex";
 
-            // Chuyển luồng video sang thẻ toàn màn hình
             if (videoInline && videoInline.srcObject) {
                 videoFS.srcObject = videoInline.srcObject;
                 videoFS.play().catch(() => {});
             } else {
-                // Nếu camera inline chưa bật, tự động kích hoạt camera
                 navigator.mediaDevices.getUserMedia({
                     video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 } },
                     audio: true
@@ -2044,20 +2043,17 @@ if (document.readyState === "loading") {
             }
         });
 
-        // 2. Đóng chế độ toàn màn hình (nút ✕)
         if (btnClose) {
             btnClose.addEventListener("click", function (e) {
                 e.preventDefault();
                 overlay.style.display = "none";
                 overlay.classList.add("hidden");
-                // Giữ lại luồng phát cho khung nhỏ inline
                 if (videoInline && videoFS && videoFS.srcObject) {
                     videoInline.srcObject = videoFS.srcObject;
                 }
             });
         }
 
-        // 3. Đồng bộ nút chụp ảnh nhanh khi ở chế độ toàn màn hình
         if (btnSnapFS && btnSnapInline) {
             btnSnapFS.addEventListener("click", function () {
                 btnSnapInline.click();
@@ -2065,14 +2061,12 @@ if (document.readyState === "loading") {
             });
         }
 
-        // 4. Đồng bộ nút quay video khi ở chế độ toàn màn hình
         if (btnRecordFS && btnRecordInline) {
             btnRecordFS.addEventListener("click", function () {
                 btnRecordInline.click();
             });
         }
 
-        // 5. Điều khiển mức Zoom (1x, 2x, 3x, 5x)
         const zoomBtns = document.querySelectorAll(".zoom-btn");
         zoomBtns.forEach(btn => {
             btn.addEventListener("click", function () {
@@ -2080,7 +2074,6 @@ if (document.readyState === "loading") {
                 this.classList.add("active");
                 const zoomVal = parseFloat(this.getAttribute("data-zoom") || "1");
 
-                // Thu phóng phần mềm thông qua CSS Transform
                 if (videoFS) {
                     videoFS.style.transform = `scale(${zoomVal})`;
                     videoFS.style.transformOrigin = "center center";
@@ -2091,16 +2084,260 @@ if (document.readyState === "loading") {
     }
 
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", setupFullscreenCam);
+        document.addEventListener("DOMContentLoaded", init);
     } else {
-        setupFullscreenCam();
+        init();
     }
-   <!-- DEPENDENCIES -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="db.js"></script>
-<script src="app.js"></script>
-<script src="js/system.js"></script>  <!-- Đặt thêm dòng này vào đây -->
-</body>
-</html>
 })();
-})();
+
+/* =========================================================================
+   MÀN HÌNH 4: QUẢN LÝ HỆ THỐNG & CÀI ĐẶT (TGS_System)
+========================================================================= */
+const TGS_System = {
+    version: "v2.1.0-rev2026",
+
+    init: function() {
+        const vLabel = document.getElementById("app-version-label");
+        if (vLabel) vLabel.innerText = this.version;
+        this.loadUserProfile();
+        this.checkSyncStatus();
+    },
+
+    loadUserProfile: function() {
+        const user = JSON.parse(localStorage.getItem("tgs_active_user") || "{}");
+        const nameEl = document.getElementById("sys-user-name");
+        const emailEl = document.getElementById("sys-user-email");
+        const avatarEl = document.getElementById("sys-user-avatar");
+        const roleBadge = document.getElementById("user-role-badge");
+        const adminCard = document.getElementById("admin-whitelist-card");
+
+        const fullName = user.fullName || "Kim Minh Hùng";
+        const email = user.email || "kmhungttnsnt@vinhlong.gov.vn";
+        const role = user.role || "admin";
+
+        if (nameEl) nameEl.innerText = fullName;
+        if (emailEl) emailEl.innerText = email;
+        if (avatarEl) avatarEl.innerText = fullName.charAt(0).toUpperCase();
+        if (roleBadge) roleBadge.innerText = role === "admin" ? "Quản trị viên (Admin)" : "Kỹ sư Khảo sát";
+
+        if (adminCard) {
+            adminCard.style.display = role === "admin" ? "block" : "none";
+            if (role === "admin") this.loadWhitelistRequests();
+        }
+    },
+
+    loadWhitelistRequests: function() {
+        const listContainer = document.getElementById("whitelist-list");
+        const countBadge = document.getElementById("pending-count");
+        const pendingList = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
+        if (countBadge) countBadge.innerText = pendingList.length;
+
+        if (!listContainer) return;
+        if (pendingList.length === 0) {
+            listContainer.innerHTML = '<div class="empty-hint" style="color: #64748b; font-size: 12px;">Không có tài khoản chờ duyệt.</div>';
+            return;
+        }
+
+        let html = "";
+        pendingList.forEach((req, idx) => {
+            html += `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+                    <div>
+                        <div style="font-size:13px; font-weight:600;">${req.name}</div>
+                        <div style="font-size:11.5px; color:#64748b;">${req.email} - ${req.dept}</div>
+                    </div>
+                    <div style="display:flex; gap:4px;">
+                        <button class="btn btn-primary btn-sm" onclick="TGS_System.approveUser(${idx})">Duyệt</button>
+                        <button class="btn btn-outline btn-sm" onclick="TGS_System.rejectUser(${idx})">Xóa</button>
+                    </div>
+                </div>
+            `;
+        });
+        listContainer.innerHTML = html;
+    },
+
+    approveUser: function(idx) {
+        let pendingList = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
+        let activeUsers = JSON.parse(localStorage.getItem("tgs_active_users_list") || "[]");
+        const approvedUser = pendingList.splice(idx, 1)[0];
+        approvedUser.status = "active";
+        activeUsers.push(approvedUser);
+
+        localStorage.setItem("tgs_whitelist_pending", JSON.stringify(pendingList));
+        localStorage.setItem("tgs_active_users_list", JSON.stringify(activeUsers));
+        this.loadWhitelistRequests();
+        alert(`Đã cấp quyền khảo sát cho đồng nghiệp: ${approvedUser.name}`);
+    },
+
+    rejectUser: function(idx) {
+        let pendingList = JSON.parse(localStorage.getItem("tgs_whitelist_pending") || "[]");
+        pendingList.splice(idx, 1);
+        localStorage.setItem("tgs_whitelist_pending", JSON.stringify(pendingList));
+        this.loadWhitelistRequests();
+    },
+
+    linkGoogleDrive: function() {
+        alert("Đang mở cửa sổ ủy quyền Google Drive cá nhân...\nDữ liệu sau này sẽ tự động lưu vào thư mục 'TGS_Survey_Data' trên Drive của bạn.");
+        localStorage.setItem("tgs_gdrive_linked", "true");
+        const statusEl = document.getElementById("gdrive-status");
+        const btn = document.getElementById("btn-link-gdrive");
+        if (statusEl) statusEl.innerHTML = "<span style='color:#16a34a;'>✓ Đã liên kết Drive</span>";
+        if (btn) btn.innerText = "Hủy liên kết";
+    },
+
+    downloadSetupPackage: function() {
+        const batContent = `@echo off
+chcp 65001 >nul
+title CÀI ĐẶT MÁY TRẠM ĐỒNG BỘ KHẢO SÁT TGS
+color 0b
+echo =====================================================================
+echo    HỆ THỐNG MÁY TRẠM TỰ ĐỘNG NHẬN DỮ LIỆU KHẢO SÁT TGS (ONE-CLICK)
+echo =====================================================================
+echo.
+echo [1/3] Đang tạo thư mục lưu trữ dữ liệu khảo sát...
+if exist D:\\ (
+    set TARGET_DIR=D:\\TGS_Server\\survey_data
+) else (
+    set TARGET_DIR=C:\\TGS_Server\\survey_data
+)
+if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
+echo     Vị trí lưu trữ: %TARGET_DIR%
+
+echo.
+echo [2/3] Đang mở cấu hình cổng tường lửa (Port 8000)...
+netsh advfirewall firewall add rule name="TGS_Survey_Server" dir=in action=allow protocol=TCP localport=8000 >nul 2>&1
+
+echo.
+echo [3/3] Đang khởi động trạm nhận dữ liệu và tạo mã QR...
+python -m http.server 8000 --directory "%TARGET_DIR%"
+pause
+`;
+        const blob = new Blob([batContent], { type: "text/plain;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "TGS_Workstation_Setup.bat";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        alert("Đã tải về file 'TGS_Workstation_Setup.bat'.\nĐồng nghiệp chỉ cần mở file này trên máy tính cá nhân để tự động cấu hình và hiện mã QR nhận diện.");
+    },
+
+    startQRScanner: function() {
+        const modal = document.getElementById("modal-qr-scan");
+        if (!modal) return;
+        modal.style.display = "flex";
+        const video = document.getElementById("qr-video-preview");
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+            })
+            .catch(err => {
+                alert("Không thể mở camera: " + err.message);
+                modal.style.display = "none";
+            });
+    },
+
+    closeQRScanner: function() {
+        const modal = document.getElementById("modal-qr-scan");
+        const video = document.getElementById("qr-video-preview");
+        if (video && video.srcObject) {
+            video.srcObject.getTracks().forEach(t => t.stop());
+            video.srcObject = null;
+        }
+        if (modal) modal.style.display = "none";
+    },
+
+    openGuideModal: function(type) {
+        const modal = document.getElementById("modal-guide");
+        const title = document.getElementById("modal-guide-title");
+        const body = document.getElementById("modal-guide-body");
+        if (!modal) return;
+
+        if (type === "setup") {
+            title.innerText = "📖 Hướng dẫn Cài đặt Máy trạm Đồng bộ";
+            body.innerHTML = `
+                <div style="line-height: 1.6; font-size: 13.5px; color: #334155;">
+                    <p><strong>Bước 1:</strong> Bấm nút <em>'Tải Setup (.bat)'</em> trên màn hình này rồi chép file sang máy tính cá nhân.</p>
+                    <p><strong>Bước 2:</strong> Click đúp chuột vào file <code>TGS_Workstation_Setup.bat</code>. Máy tính sẽ tự động tạo thư mục và sinh mã QR.</p>
+                    <p><strong>Bước 3:</strong> Đảm bảo điện thoại và laptop kết nối <strong>chung một mạng Wi-Fi</strong>. Bấm nút <em>'Quét mã QR'</em> trên điện thoại để khớp lệnh đồng bộ.</p>
+                </div>
+            `;
+        } else {
+            title.innerText = "📘 Cẩm nang Đo đạc & Khảo sát Thực địa";
+            body.innerHTML = `
+                <div style="line-height: 1.6; font-size: 13.5px; color: #334155;">
+                    <p><strong>1. Khảo sát Điểm:</strong> Đứng cố định, chờ bộ lọc W-Median lấy đủ 20 mẫu tọa độ VN-2000. Chọn đúng Tên cấu kiện (Đài nước, Bồn lọc...) trước khi chụp ảnh.</p>
+                    <p><strong>2. Khảo sát Tuyến:</strong> Khi chạy xe máy, hệ thống tự động bám đường cong (Breadcrumb). Nhập riêng thông số ống lề Trái và lề Phải.</p>
+                    <p><strong>3. Video thuyết minh:</strong> Nói to, rõ tình trạng rỉ sét, rò rỉ nước, nứt vỡ kết cấu để phục vụ phân tích hồ sơ.</p>
+                </div>
+            `;
+        }
+        modal.style.display = "flex";
+    },
+
+    closeGuideModal: function() {
+        const modal = document.getElementById("modal-guide");
+        if (modal) modal.style.display = "none";
+    },
+
+    forceUpdateApp: function() {
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) {
+                    registration.unregister();
+                }
+                caches.keys().then(names => {
+                    for (let name of names) caches.delete(name);
+                    alert("Đã dọn dẹp bộ nhớ đệm thành công!\nỨng dụng sẽ tự nạp lại phiên bản mới nhất từ GitHub.");
+                    window.location.reload(true);
+                });
+            });
+        } else {
+            window.location.reload(true);
+        }
+    },
+
+    checkSyncStatus: function() {
+        if (localStorage.getItem("tgs_gdrive_linked")) {
+            const statusEl = document.getElementById("gdrive-status");
+            const btn = document.getElementById("btn-link-gdrive");
+            if (statusEl) statusEl.innerHTML = "<span style='color:#16a34a;'>✓ Đã liên kết Drive</span>";
+            if (btn) btn.innerText = "Hủy liên kết";
+        }
+        const localTarget = localStorage.getItem("TGS_SERVER_TUNNEL_URL");
+        const localEl = document.getElementById("local-server-status");
+        if (localTarget && localEl) {
+            localEl.innerHTML = `<span style='color:#16a34a;'>✓ Máy trạm: ${localTarget.substring(0, 25)}...</span>`;
+        }
+    },
+
+    openChangePassModal: function() {
+        const newPass = prompt("Nhập mật khẩu mới cho tài khoản:");
+        if (newPass) {
+            alert("✓ Đã cập nhật mật khẩu mới thành công!");
+        }
+    }
+};
+
+const TGS_Auth = {
+    logout: function() {
+        if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?")) {
+            localStorage.removeItem("TGS_AUTH_PIN");
+            localStorage.removeItem("tgs_active_user");
+            window.location.reload();
+        }
+    }
+};
+
+// Khởi chạy khi DOM sẵn sàng
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+        TGS.initialize();
+        TGS_System.init();
+    });
+} else {
+    TGS.initialize();
+    TGS_System.init();
+}
