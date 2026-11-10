@@ -30,9 +30,7 @@
 
 <div id="app">
 
-  <!-- ======================================================================= -->
-  <!-- PHÂN HỆ 0: XÁC THỰC GMAIL NỘI BỘ (GÓI 1: DIEU CHINH DANG NHAP) -->
-  <!-- ======================================================================= -->
+  <!-- PHÂN HỆ 0: XÁC THỰC GMAIL NỘI BỘ -->
   <section id="screenAuth" class="screen active" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; padding: 20px;">
     <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 380px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
       <div style="text-align: center; margin-bottom: 20px;">
@@ -76,26 +74,20 @@
     </div>
   </section>
 
-  <!-- ======================================================================= -->
-  <!-- MÀN HÌNH 1: DASHBOARD TRUNG TÂM (GÓI 2: DIEU CHINH GIAO DIEN) -->
-  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 1: DASHBOARD TRUNG TÂM -->
   <section id="tab-dashboard" class="screen" style="display:none;">
     <header class="topbar">
-      <div class="brand">
-        <strong>TGS</strong><span>Survey</span>
-      </div>
+      <div class="brand"><strong>TGS</strong><span>Survey</span></div>
       <div class="version">Genesis 2.0</div>
     </header>
 
-    <div class="page" style="padding-bottom: 80px;">
-      <!-- Thẻ chào & định danh -->
+    <div class="page">
       <div class="status-card" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #fff; margin-bottom: 14px;">
         <div style="font-size: 13px; opacity: 0.9;">Xin chào kỹ sư,</div>
         <h2 id="dashUserName" style="margin: 2px 0 6px; font-size: 18px;">Kim Minh Hùng</h2>
         <div id="dashUserDept" style="font-size: 12px; opacity: 0.85;">Phòng Quản lý Khai thác</div>
       </div>
 
-      <!-- Thống kê nhanh -->
       <div class="status-card" style="margin-bottom: 14px;">
         <div class="status-row">
           <span>Công trình lưu trữ Offline</span>
@@ -123,7 +115,7 @@
         </div>
       </div>
 
-      <div class="card-action" id="btnOpenProject">
+      <div class="card-action" id="btnOpenProject" onclick="TGS.Navigation.show('tab-data');">
         <div class="icon">▣</div>
         <div>
           <h3>Mở công trình đã lưu</h3>
@@ -143,7 +135,7 @@
       </div>
     </header>
 
-    <div class="form-page" style="padding-bottom: 80px;">
+    <div class="form-page">
       <label>Tên công trình / trạm cấp nước</label>
       <input id="projectName" type="text" placeholder="VD: Trạm cấp nước Trà Điêu">
 
@@ -157,7 +149,7 @@
     </div>
   </section>
 
-  <!-- TRUNG TÂM ĐIỀU HÀNH KHẢO SÁT CỦA CÔNG TRÌNH -->
+  <!-- TRUNG TÂM ĐIỀU HÀNH KHẢO SÁT -->
   <section id="screenSurveyHome" class="screen" style="display:none;">
     <header class="nav-header">
       <button id="btnBackProject" class="back-btn">←</button>
@@ -167,7 +159,7 @@
       </div>
     </header>
 
-    <div class="survey-home" style="padding-bottom: 80px;">
+    <div class="survey-home">
       <div id="btnLinearSurvey" class="survey-card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h3>Khảo sát tuyến ống</h3>
@@ -191,9 +183,7 @@
     </div>
   </section>
 
-  <!-- ======================================================================= -->
-  <!-- MÀN HÌNH 2A: KHẢO SÁT TUYẾN ỐNG (GÓI 3: CAI TIEN KHAO SAT) -->
-  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 2A: KHẢO SÁT TUYẾN ỐNG -->
   <section id="screenLinear" class="screen" style="display:none;">
     <header class="survey-header-floating">
       <button id="btnExitLinear" class="back-btn-floating">←</button>
@@ -206,8 +196,7 @@
     <div class="map-wrapper-fullscreen">
       <div id="map"></div>
 
-      <!-- BẢNG BÓC TÁCH ỐNG TRÁI / PHẢI VÀ ĐỔI TIẾT DIỆN -->
-     <!-- BẢNG BÓC TÁCH ỐNG TRÁI / PHẢI & PHỤ KIỆN ĐẤU NỐI KỸ THUẬT -->
+      <!-- BẢNG BÓC TÁCH ỐNG TRÁI / PHẢI & PHỤ KIỆN ĐẤU NỐI KỸ THUẬT -->
       <div class="linear-spec-card" style="position:absolute; top:70px; left:8px; right:8px; z-index:999; background:rgba(255,255,255,0.95); backdrop-filter:blur(8px); border-radius:12px; padding:10px 12px; box-shadow:0 4px 15px rgba(0,0,0,0.22); border:1px solid #cbd5e1;">
         
         <!-- Hàng 1: Chọn quy cách ống Trái / Phải -->
@@ -321,25 +310,15 @@
           <span id="lineBreadcrumbStatus" style="font-size:11px; color:#16a34a; font-weight:600;">● Vết bánh xe đang bám đường</span>
         </div>
       </div>
-     
-      <!-- Cụm công cụ bản đồ góc dưới phải -->
+
+      <!-- Cụm công cụ bản đồ -->
       <div class="map-tools-bottom">
         <button id="btnLocate" class="tool-circle" title="Vị trí hiện tại">◎</button>
         <button id="btnZoomIn" class="tool-circle">＋</button>
         <button id="btnZoomOut" class="tool-circle">－</button>
       </div>
 
-      <!-- Nút media nổi góc phải -->
-      <div class="line-media-floating-bar" style="position:absolute; top:170px; right:12px; z-index:999; display:flex; flex-direction:column; gap:8px;">
-        <button id="btnLineSnapPhoto" class="tool-circle" title="Chụp ảnh điểm tuyến" style="background:#0284c7; color:#fff; border:none; box-shadow:0 3px 6px rgba(0,0,0,0.25);">📷</button>
-        <button id="btnLineRecordVideo" class="tool-circle" title="Quay video thuyết minh tuyến" style="background:#ea580c; color:#fff; border:none; box-shadow:0 3px 6px rgba(0,0,0,0.25);">🎥</button>
-        <span id="lineMediaCountBadge" class="badge-mini" style="background:rgba(15,23,42,0.85); color:#fff; font-size:11px; padding:2px 6px; border-radius:10px; text-align:center;">0 file</span>
-        
-        <input type="file" id="inputLinePhoto" accept="image/*" capture="environment" style="display:none;">
-        <input type="file" id="inputLineVideo" accept="video/*" capture="environment" style="display:none;">
-      </div>
-
-      <!-- Dải thông số nổi tinh gọn -->
+      <!-- Dải thông số nổi -->
       <div class="floating-metric-pill">
         <div><span>Điểm:</span> <strong id="pointCount">0</strong></div>
         <div><span>Dài thực tế:</span> <strong id="lineLength">0 m</strong></div>
@@ -347,16 +326,14 @@
         <div><span>Sai số:</span> <strong id="gpsAccuracy">± -- m</strong></div>
       </div>
 
-      <!-- Nút Chốt mốc kỹ thuật 20 mẫu vi sai (ngã rẽ, van khóa) -->
+      <!-- Nút Chốt mốc kỹ thuật 20 mẫu vi sai -->
       <button id="btnCaptureGPS" class="btn-giant-gps">
         <span id="captureBtnText">◎ CHỐT MỐC KỸ THUẬT (20 MẪU)</span>
       </button>
     </div>
   </section>
 
-  <!-- ======================================================================= -->
-  <!-- MÀN HÌNH 2B: KHẢO SÁT ĐIỂM HẠNG MỤC (GÓI 3: CAI TIEN KHAO SAT) -->
-  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 2B: KHẢO SÁT ĐIỂM HẠNG MỤC -->
   <section id="screenPoint" class="screen" style="display:none;">
     <header class="nav-header">
       <button id="btnExitPoint" class="back-btn">←</button>
@@ -366,8 +343,7 @@
       </div>
     </header>
 
-    <div class="form-page" style="padding-bottom: 90px;">
-      <!-- 3 TRƯỜNG NGỮ CẢNH BẮT BUỘC -->
+    <div class="form-page">
       <div class="card-section" style="background: #f8fafc; border: 1px solid #cbd5e1; margin-bottom: 12px;">
         <label style="font-weight: 700; color: #0f172a;">1. Tên hạng mục cấu kiện:</label>
         <select id="pointSectionSelect" class="form-select" style="margin-bottom: 8px;">
@@ -397,7 +373,6 @@
         <input id="pointNoteInput" type="text" placeholder="VD: Nứt bê tông chân đài, rỉ mục mặt bích D90, bơm rung lắc...">
       </div>
 
-      <!-- Tọa độ VN-2000 vi sai 20 mẫu -->
       <div class="status-card">
         <div class="status-row">
           <span>Tọa độ VN-2000</span>
@@ -413,7 +388,6 @@
         <span id="btnPointGPSText">◎ Thu nhận Smart GNSS vị trí (20 Mẫu)</span>
       </button>
 
-      <!-- Khung Camera & Video -->
       <div class="camera-card">
         <div class="camera-header">
           <h3>🎥 Camera & Video Hiện trường</h3>
@@ -450,70 +424,57 @@
       </div>
     </div>
 
-    <!-- KHUNG CAMERA PHÓNG TO: ĐẦY ĐỦ PHÍM & NÚT THU NHỎ GÓC PHẢI -->
+    <!-- KHUNG CAMERA PHÓNG TO -->
     <div id="fullscreenCameraOverlay" class="fullscreen-cam-overlay" style="display: none;">
       <video id="cameraPreviewFS" autoplay playsinline muted></video>
-      
       <div class="fs-cam-top-hud">
         <span id="fsRecBadge" class="fs-rec-badge">⚪ SẴN SÀNG</span>
-        <!-- NÚT THU NHỎ VỀ MÀN HÌNH BAN ĐẦU -->
-        <button id="btnCloseFullscreenCam" class="fs-tool-btn" title="Thu nhỏ về màn hình ban đầu">🗗</button>
+        <button id="btnCloseFullscreenCam" class="fs-tool-btn" title="Thu nhỏ">🗗</button>
       </div>
 
-      <!-- CỤM 3 PHÍM ĐIỀU KHIỂN ĐÁY KHI PHÓNG TO -->
       <div class="fs-cam-bottom-hud" style="justify-content: space-around; width: 100%; padding: 16px 20px;">
-        <button id="btnSnapPhotoFS" class="fs-btn-snap" title="Chụp ảnh Watermark">📷</button>
-        <button id="btnRecordVideoFS" class="fs-btn-record" title="Bắt đầu / Dừng quay">
+        <button id="btnSnapPhotoFS" class="fs-btn-snap" title="Chụp ảnh">📷</button>
+        <button id="btnRecordVideoFS" class="fs-btn-record" title="Quay video">
           <span class="fs-rec-circle"></span>
         </button>
-        <button id="btnFlipCam" class="fs-tool-btn" title="Đổi camera trước/sau">🔄</button>
       </div>
     </div>
   </section>
 
-  <!-- ======================================================================= -->
-  <!-- MÀN HÌNH 3: DỮ LIỆU KHẢO SÁT & ĐỒNG BỘ (GÓI 2: DIEU CHINH GIAO DIEN) -->
-  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 3: DỮ LIỆU KHẢO SÁT & ĐỒNG BỘ -->
   <section id="tab-data" class="screen" style="display:none;">
     <header class="topbar">
       <div class="brand"><strong>TGS</strong><span>Dữ Liệu Khảo Sát</span></div>
     </header>
 
-    <div class="page" style="padding-bottom: 80px;">
+    <div class="page">
       <div class="status-card" style="margin-bottom: 14px;">
         <h3 id="dataCurrentProjectTitle" style="margin: 0 0 6px; font-size: 16px;">Chưa chọn công trình</h3>
         <p id="dataCurrentProjectSubtitle" style="margin: 0; font-size: 12px; color: #64748b;">Chọn công trình để đồng bộ hoặc xuất dữ liệu</p>
       </div>
 
-      <!-- NÚT ĐỒNG BỘ TRỌNG TÂM -->
       <button id="btnSyncMaster" class="btn-primary" style="height: 52px; width: 100%; font-size: 15px; margin-bottom: 12px; background: #0284c7;">
         ☁️ ĐỒNG BỘ DỮ LIỆU VỀ MÁY TRẠM / CLOUD
       </button>
       <div id="dataSyncStatus" style="font-size: 12.5px; text-align: center; margin-bottom: 14px; font-weight: 600;" class="hidden"></div>
 
-      <!-- CÁC TÁC VỤ XUẤT DỰ PHÒNG -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
-        <button id="btnExportJSON" class="btn-secondary" style="height: 44px; font-size: 12px;">📤 Xuất File JSON</button>
-        <button id="btnSharePhotos" class="btn-secondary" style="height: 44px; font-size: 12px;">📷 Tải Album Ảnh</button>
+      <div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 16px;">
+        <button id="btnExportJSON" class="btn-secondary" style="height: 44px; font-size: 13px;">📤 Xuất File Tập Dữ Liệu (.JSON)</button>
       </div>
-      <button id="btnShareVideos" class="btn-secondary" style="width: 100%; height: 44px; font-size: 12px; margin-bottom: 16px;">🎥 Tải Video Thuyết Minh (.webm)</button>
 
-      <!-- DANH MỤC HỒ SƠ ĐÃ LƯU TRÊN THIẾT BỊ -->
       <h3 style="font-size: 15px; margin-bottom: 8px;">Danh sách công trình trên máy:</h3>
       <div id="dataLocalProjectsList" class="saved-points-list"></div>
     </div>
   </section>
 
-  <!-- ======================================================================= -->
-  <!-- MÀN HÌNH 4: HỆ THỐNG & CÀI ĐẶT (GÓI 4: CAI DAT DONG BO DU LIEU) -->
-  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 4: HỆ THỐNG & CÀI ĐẶT -->
   <section id="tab-system" class="screen" style="display:none;">
     <div class="screen-header">
       <h2>Hệ Thống & Cài Đặt</h2>
       <span class="badge-role" id="user-role-badge">Kỹ sư</span>
     </div>
 
-    <div class="screen-body" style="padding-bottom: 90px;">
+    <div class="screen-body">
       <!-- 1. ĐỊNH DANH CÁ NHÂN -->
       <div class="card-section">
         <div class="card-title">👤 Định Danh Cán Bộ Khảo Sát</div>
@@ -531,7 +492,7 @@
         </div>
       </div>
 
-      <!-- 2. PHÊ DUYỆT WHITELIST (DÀNH RIÊNG ADMIN) -->
+      <!-- 2. PHÊ DUYỆT WHITELIST -->
       <div class="card-section admin-only" id="admin-whitelist-card" style="display: none;">
         <div class="card-title-flex">
           <span>🛡️ Duyệt Tài Khoản Đồng Nghiệp</span>
@@ -543,11 +504,10 @@
         </div>
       </div>
 
-      <!-- 3. CẤU HÌNH ĐỒNG BỘ LƯU TRỮ KÉP -->
+      <!-- 3. CẤU HÌNH ĐỒNG BỘ LƯU TRỮ -->
       <div class="card-section">
         <div class="card-title">🔄 Cài Đặt Đồng Bộ Lưu Trữ</div>
         
-        <!-- Tùy chọn A: Google Drive -->
         <div class="sync-option-box">
           <div class="sync-info">
             <div class="sync-name">Google Drive Cá Nhân</div>
@@ -558,7 +518,6 @@
           </button>
         </div>
 
-        <!-- Tùy chọn B: Máy tính cá nhân (1-Click .bat) -->
         <div class="sync-option-box mt-10">
           <div class="sync-info">
             <div class="sync-name">Máy Tính Cá Nhân (Local Server)</div>
@@ -575,7 +534,7 @@
         </div>
       </div>
 
-      <!-- 4. TÀI LIỆU & CẨM NANG HƯỚNG DẪN -->
+      <!-- 4. TÀI LIỆU & TRỢ GIÚP -->
       <div class="card-section">
         <div class="card-title">📚 Tài Liệu & Trợ Giúp</div>
         <div class="guide-buttons-grid">
@@ -596,7 +555,7 @@
         </div>
       </div>
 
-      <!-- 5. CẬP NHẬT PHIÊN BẢN SERVICE WORKER PWA -->
+      <!-- 5. CẬP NHẬT PHIÊN BẢN -->
       <div class="card-section">
         <div class="card-title">⚙️ Cập Nhật Phiên Bản Ứng Dụng</div>
         <div class="version-row">
@@ -611,32 +570,27 @@
     </div>
   </section>
 
-  <!-- ======================================================================= -->
-  <!-- BOTTOM NAVIGATION BAR CỐ ĐỊNH (GÓI 2: DIEU CHINH GIAO DIEN) -->
-  <!-- ======================================================================= -->
+  <!-- BOTTOM NAVIGATION BAR CỐ ĐỊNH (GẮN THẲNG ONCLICK) -->
   <nav id="bottomNavBar" class="bottom-nav-bar" style="display:none;">
-    <button class="nav-item active" data-tab="tab-dashboard">
+    <button class="nav-item active" data-tab="tab-dashboard" onclick="TGS.Navigation.show('tab-dashboard')">
       <span class="nav-icon">🏠</span>
       <span class="nav-label">Tổng quan</span>
     </button>
-    <button class="nav-item" data-tab="screenSurveyHome">
+    <button class="nav-item" data-tab="screenSurveyHome" onclick="TGS.Navigation.show('screenSurveyHome')">
       <span class="nav-icon">📍</span>
       <span class="nav-label">Khảo sát</span>
     </button>
-    <button class="nav-item" data-tab="tab-data">
+    <button class="nav-item" data-tab="tab-data" onclick="TGS.Navigation.show('tab-data')">
       <span class="nav-icon">📁</span>
       <span class="nav-label">Dữ liệu</span>
     </button>
-    <button class="nav-item" data-tab="tab-system">
+    <button class="nav-item" data-tab="tab-system" onclick="TGS.Navigation.show('tab-system')">
       <span class="nav-icon">⚙️</span>
       <span class="nav-label">Hệ thống</span>
     </button>
   </nav>
 
-  <!-- ======================================================================= -->
-  <!-- CÁC CỬA SỔ PHỤ (MODALS) -->
-  <!-- ======================================================================= -->
-  <!-- Modal Quét QR máy tính -->
+  <!-- MODAL QUÉT QR MÁY TÍNH -->
   <div id="modal-qr-scan" class="modal-backdrop" style="display: none; z-index: 99999;">
     <div class="modal-content" style="background:#0f172a; color:#fff; border-radius:16px; padding:16px; width:92%; max-width:400px; text-align:center;">
       <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding-bottom:8px; margin-bottom:12px;">
@@ -644,7 +598,6 @@
         <button class="modal-close" onclick="TGS_System.closeQRScanner()" style="color:#fff; font-size:22px; background:none; border:none; cursor:pointer;">✕</button>
       </div>
       
-      <!-- Khung video cố định kích thước chống co rút trên PWA -->
       <div style="position:relative; width:100%; height:280px; background:#000; border-radius:12px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
         <video id="qr-video-preview" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; display:block;"></video>
         <div style="position:absolute; width:200px; height:200px; border:2px dashed #00E5FF; border-radius:12px; pointer-events:none; box-shadow:0 0 0 9999px rgba(0,0,0,0.45);"></div>
@@ -654,7 +607,7 @@
     </div>
   </div>
 
-  <!-- Modal Hướng dẫn chi tiết -->
+  <!-- MODAL HƯỚNG DẪN -->
   <div id="modal-guide" class="modal-backdrop" style="display: none;">
     <div class="modal-content modal-lg">
       <div class="modal-header">
@@ -662,20 +615,6 @@
         <button class="modal-close" onclick="TGS_System.closeGuideModal()">✕</button>
       </div>
       <div class="modal-body" id="modal-guide-body"></div>
-    </div>
-  </div>
-
-  <!-- Modal Chọn công trình lưu trữ -->
-  <div id="modalProjectList" class="modal-overlay hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>Chọn công trình đã lưu</h3>
-        <button id="btnCloseProjectList" class="modal-close-btn">✕</button>
-      </div>
-      <div style="padding: 10px 16px; border-bottom: 1px solid #E2E8F0;">
-        <input id="searchProjectInput" type="text" placeholder="🔍 Tìm theo tên hoặc mã trạm..." style="width: 100%; height: 38px; border-radius: 8px; border: 1px solid #CBD5E1; padding: 0 10px; font-size: 13px;">
-      </div>
-      <div id="projectListItems" class="project-list-items"></div>
     </div>
   </div>
 
