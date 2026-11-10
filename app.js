@@ -516,8 +516,19 @@ const TGS = (() => {
                 async (evaluated) => {
                     if (btnText) btnText.innerText = "◎ CHỐT MỐC KỸ THUẬT (20 MẪU)";
 
-                    const leftPipe = document.getElementById("lineLeftDiameter").value;
-                    const rightPipe = document.getElementById("lineRightDiameter").value;
+                    // Lấy quy cách ống Trái / Phải (có nhận diện mục tự nhập)
+                    let leftPipe = document.getElementById("lineLeftDiameter").value;
+                    if (leftPipe === "KHAC") {
+                        leftPipe = document.getElementById("customLeftPipeInput").value.trim() || "Ống khác";
+                    }
+                    let rightPipe = document.getElementById("lineRightDiameter").value;
+                    if (rightPipe === "KHAC") {
+                        rightPipe = document.getElementById("customRightPipeInput").value.trim() || "Ống khác";
+                    }
+
+                    // Lấy phụ kiện đấu nối
+                    const fittingType = document.getElementById("lineFittingSelect").value;
+                    const fittingNote = document.getElementById("lineFittingNote").value.trim();
 
                     const milestone = {
                         id: Date.now().toString(),
@@ -528,6 +539,10 @@ const TGS = (() => {
                         meterMark: Math.round(LinearModule.totalLength),
                         leftPipe: leftPipe,
                         rightPipe: rightPipe,
+                        fitting: {
+                            type: fittingType,
+                            detail: fittingNote || (fittingType !== "KHONG" ? fittingType : "Không phụ kiện")
+                        },
                         timestamp: Date.now()
                     };
 
@@ -535,17 +550,39 @@ const TGS = (() => {
                     State.currentProject.points.push(milestone);
                     await Persistence.saveProject(State.currentProject);
 
-                    // Vẽ marker mốc trên bản đồ
+                    // Vẽ marker mốc trên bản đồ GIS
                     if (LinearModule.map) {
+                        const markerColor = fittingType !== "KHONG" ? "#f59e0b" : "#00E676";
                         L.circleMarker([evaluated.latitude, evaluated.longitude], {
-                            radius: 7, fillColor: "#00E676", color: "#ffffff", weight: 2, fillOpacity: 1
-                        }).bindPopup(`<b>Mốc #${State.currentProject.points.length} (${milestone.meterMark}m)</b><br>Trái: ${leftPipe} | Phải: ${rightPipe}<br>X:${evaluated.vn2000.x} Y:${evaluated.vn2000.y}`).addTo(LinearModule.markerLayer);
+                            radius: 8, fillColor: markerColor, color: "#ffffff", weight: 2, fillOpacity: 1
+                        }).bindPopup(`
+                            <b>Mốc #${State.currentProject.points.length} (${milestone.meterMark}m)</b><br>
+                            ${milestone.fitting.detail !== "Không phụ kiện" ? `🔧 <b>Phụ kiện:</b> ${milestone.fitting.detail}<br>` : ''}
+                            Trái: <b>${leftPipe}</b> | Phải: <b>${rightPipe}</b><br>
+                            VN2000: X:${evaluated.vn2000.x} Y:${evaluated.vn2000.y}
+                        `).addTo(LinearModule.markerLayer);
                     }
 
+                    // Tự động làm sạch ô ghi chú phụ kiện sau khi chốt để sẵn sàng mốc tiếp theo
+                    document.getElementById("lineFittingSelect").value = "KHONG";
+                    document.getElementById("lineFittingNote").value = "";
+
                     if (navigator.vibrate) navigator.vibrate(150);
-                    alert(`✓ Đã chốt mốc #${State.currentProject.points.length} tại mét thứ ${milestone.meterMark}!\nLề Trái: ${leftPipe} - Lề Phải: ${rightPipe}`);
+                    alert(`✓ Đã chốt mốc #${State.currentProject.points.length} tại mét thứ ${milestone.meterMark}!\n${milestone.fitting.detail !== "Không phụ kiện" ? `Phụ kiện: ${milestone.fitting.detail}\n` : ''}Trái: ${leftPipe} - Phải: ${rightPipe}`);
                 }
             );
+        },
+
+        switchPipeSection() {
+            let left = document.getElementById("lineLeftDiameter").value;
+            if (left === "KHAC") left = document.getElementById("customLeftPipeInput").value.trim() || "Ống khác";
+            let right = document.getElementById("lineRightDiameter").value;
+            if (right === "KHAC") right = document.getElementById("customRightPipeInput").value.trim() || "Ống khác";
+            const fittingNote = document.getElementById("lineFittingNote").value.trim();
+
+            alert(`✓ Đã chốt đổi quy cách tại mét thứ ${Math.round(this.totalLength)}m!\n` +
+                  `${fittingNote ? `Phụ kiện: ${fittingNote}\n` : ''}` +
+                  `Quy cách đoạn tiếp theo: Trái [${left}] - Phải [${right}]`);
         },
 
         switchPipeSection() {
