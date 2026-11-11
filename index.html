@@ -206,7 +206,16 @@
         </div>
         <p>Ngữ cảnh kỹ thuật · Bộ lọc 20 mẫu · Chụp Watermark & Video</p>
       </div>
-
+      
+      <!-- THẺ 3: KHẢO SÁT ĐỒNG HỒ KHÁCH HÀNG (MỚI) -->
+      <div id="btnCustomerMeterSurvey" class="survey-card" style="border-left: 5px solid #8b5cf6;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="color:#6d28d9;">Khảo sát đồng hồ khách hàng</h3>
+          <span id="badgeMeterSummary" class="badge-mini">0 hộ</span>
+        </div>
+        <p>Thu thập tọa độ hộp đồng hồ · Mã danh bạ KH · Chụp ảnh đối soát CSDL tỉnh</p>
+      </div>
+      
       <div id="btnFinishProject" class="survey-card" style="border: 2px dashed #0284c7;">
         <h3>Kết thúc & Đóng gói hồ sơ</h3>
         <p>Khóa số liệu · Đẩy vào phân hệ Dữ liệu để đồng bộ</p>
@@ -477,8 +486,93 @@
       </div>
     </div>
   </section>
+  
+  <!-- ======================================================================= -->
+  <!-- MÀN HÌNH 2C: KHẢO SÁT ĐỒNG HỒ KHÁCH HÀNG (screenCustomerMeter) -->
+  <!-- ======================================================================= -->
+  <section id="screenCustomerMeter" class="screen" style="display:none;">
+    <header class="nav-header">
+      <button id="btnExitMeter" class="back-btn">←</button>
+      <div>
+        <h2 id="meterProjectTitle">Tên công trình</h2>
+        <p id="meterProjectSubtitle">Số hóa điểm đấu nối khách hàng</p>
+      </div>
+    </header>
 
- <!-- ======================================================================= -->
+    <div class="form-page">
+      <div class="card-section" style="background:#f8fafc; border:1px solid #cbd5e1; margin-bottom:12px;">
+        <label style="font-weight:700; color:#0f172a;">1. Mã khách hàng / Danh bạ (Khớp CSDL tỉnh):</label>
+        <input id="meterCustCode" type="text" placeholder="VD: KH-024810 hoặc Số đồng hồ">
+
+        <label style="font-weight:700; color:#0f172a; margin-top:8px;">2. Tên chủ hộ (Theo Hợp đồng cấp nước):</label>
+        <input id="meterCustName" type="text" placeholder="VD: Huỳnh Văn Khen">
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <div style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Số điện thoại:</label>
+            <input id="meterCustPhone" type="tel" placeholder="09xxxxxxx" style="height:42px;">
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:12px; font-weight:600;">Cỡ đồng hồ / Ống:</label>
+            <select id="meterPipeSize" class="form-select" style="height:42px; font-size:13px;">
+              <option value="D15_D21" selected>ĐH D15 - Nhánh D21</option>
+              <option value="D20_D27">ĐH D20 - Nhánh D27</option>
+              <option value="D25_D34">ĐH D25 - Nhánh D34</option>
+              <option value="KHAC">Cỡ khác...</option>
+            </select>
+          </div>
+        </div>
+
+        <label style="font-weight:700; color:#0f172a; margin-top:8px;">3. Địa chỉ hộ dân (Ấp / Khóm):</label>
+        <input id="meterAddress" type="text" placeholder="VD: Ấp Tích Phước, Xã Thới Hòa">
+
+        <label style="font-weight:700; color:#0f172a; margin-top:8px;">4. Ghi chú hiện trạng đồng hồ:</label>
+        <input id="meterNote" type="text" placeholder="VD: Đồng hồ mờ số, đặt âm đất, có van khóa...">
+      </div>
+
+      <!-- Tọa độ định vị đồng hồ -->
+      <div class="status-card">
+        <div class="status-row">
+          <span>Tọa độ VN-2000 Đồng hồ</span>
+          <strong id="meterVN2000Text">Chưa thu nhận</strong>
+        </div>
+        <div class="status-row">
+          <span>Độ chính xác GNSS</span>
+          <strong id="meterAccuracyText">± -- m</strong>
+        </div>
+      </div>
+
+      <button id="btnGetMeterGPS" class="btn-secondary" style="width:100%; height:46px; margin: 10px 0;">
+        <span id="btnMeterGPSText">◎ Lấy vị trí đồng hồ (Smart GNSS)</span>
+      </button>
+
+      <!-- Chụp ảnh hiện trường đồng hồ -->
+      <div class="card-section" style="margin-bottom:12px;">
+        <label style="font-weight:700; color:#0f172a; margin-bottom:8px; display:block;">📷 Ảnh đồng hồ & Hộp bảo vệ:</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="btnSnapMeterPhoto" class="btn btn-outline" style="flex:1; height:44px; font-size:13px;">
+            📷 Chụp ảnh đồng hồ
+          </button>
+          <input type="file" id="inputMeterPhoto" accept="image/*" capture="environment" style="display:none;">
+          <span id="meterPhotoBadge" style="font-size:12px; color:#16a34a; font-weight:700;">Chưa có ảnh</span>
+        </div>
+        <div id="meterPhotoPreviewBox" style="margin-top:8px; display:none;">
+          <img id="meterPhotoImg" src="" style="width:100%; max-height:180px; object-fit:cover; border-radius:8px;">
+        </div>
+      </div>
+
+      <button id="btnSaveCustomerMeter" class="btn-primary" style="height:52px; width:100%; margin-top:6px; background:#6d28d9;">
+        💾 Lưu hồ sơ khách hàng vào CSDL
+      </button>
+
+      <div style="margin-top:20px;">
+        <h3 style="font-size:15px; margin-bottom:10px;">Danh sách hộ đã đo (<span id="savedMetersCount">0</span>)</h3>
+        <div id="savedMetersList" class="saved-points-list"></div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- ======================================================================= -->
   <!-- MÀN HÌNH 3: DỮ LIỆU KHẢO SÁT & ĐỒNG BỘ (tab-data) -->
   <!-- ======================================================================= -->
   <section id="tab-data" class="screen" style="display:none;">
@@ -667,7 +761,26 @@
       <div class="modal-body" id="modal-guide-body"></div>
     </div>
   </div>
+<!-- MODAL TÁC VỤ KHI CHỌN CÔNG TRÌNH ĐÃ LƯU -->
+  <div id="modalProjectActions" class="modal-backdrop" style="display:none; z-index:10010;">
+    <div class="modal-content" style="max-width:360px; padding:20px; text-align:center;">
+      <h3 id="actionProjTitle" style="margin:0 0 4px; font-size:17px; color:#0f172a;">Tên công trình</h3>
+      <p id="actionProjSubtitle" style="margin:0 0 16px; font-size:12px; color:#64748b;">Mã công trình</p>
 
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button id="btnActionContinueSurvey" class="btn btn-primary" style="height:46px; font-size:14px;">
+          📍 Tiếp tục khảo sát bổ sung
+        </button>
+        <button id="btnActionExportGeo" class="btn btn-outline" style="height:44px; font-size:13px; color:#0284c7; border-color:#0284c7;">
+          🗺️ Xuất GeoJSON nạp GIS tỉnh
+        </button>
+        <button id="btnActionCloseModal" class="btn btn-secondary" style="height:40px; font-size:13px;">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+  
 </div> <!-- KẾT THÚC #app -->
 
 <!-- DEPENDENCIES -->
