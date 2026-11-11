@@ -231,14 +231,9 @@ const TGS = (() => {
                 State.activeScreenId = screenId;
             }
 
-            // Ẩn thanh Bottom Bar khi vào khảo sát tuyến/điểm để bản đồ tràn viền 100%
+            // Ẩn thanh Bottom Bar khi vào các chế độ đo thực địa để bản đồ/form tràn viền 100%
             const bNav = document.getElementById("bottomNavBar");
             if (bNav) {
-                if (screenId === "screenLinear" || screenId === "screenPoint") {
-                    bNav.style.display = "none";
-                } else {
-                    bNav.style.display = "flex";
-                }
                 if (screenId === "screenLinear" || screenId === "screenPoint" || screenId === "screenCustomerMeter") {
                     bNav.style.display = "none";
                 } else {
@@ -274,6 +269,10 @@ const TGS = (() => {
             } catch (e) { console.warn("Lỗi Point:", e); }
 
             try {
+                if (screenId === "screenCustomerMeter") CustomerMeterModule.init();
+            } catch (e) { console.warn("Lỗi Meter:", e); }
+
+            try {
                 if (screenId === "screenLinear") LinearModule.startTracking();
                 else LinearModule.stopTracking();
             } catch (e) { console.warn("Lỗi Linear:", e); }
@@ -282,7 +281,8 @@ const TGS = (() => {
             window.scrollTo(0, 0);
         }
     };
-   /* =========================================================================
+
+    /* =========================================================================
        TRỤ CỘT 3C: KHẢO SÁT ĐỒNG HỒ KHÁCH HÀNG (CustomerMeterModule)
        ========================================================================= */
     const CustomerMeterModule = {
@@ -303,16 +303,25 @@ const TGS = (() => {
         resetForm() {
             this.observedGNSS = null;
             this.capturedPhoto = null;
-            document.getElementById("meterCustCode").value = "";
-            document.getElementById("meterCustName").value = "";
-            document.getElementById("meterCustPhone").value = "";
-            document.getElementById("meterAddress").value = State.currentProject?.hamlet || "";
-            document.getElementById("meterNote").value = "";
-            document.getElementById("meterVN2000Text").innerText = "Chưa thu nhận";
-            document.getElementById("meterAccuracyText").innerText = "± -- m";
-            document.getElementById("meterPhotoBadge").innerText = "Chưa có ảnh";
-            document.getElementById("meterPhotoBadge").style.color = "#64748b";
-            document.getElementById("meterPhotoPreviewBox").style.display = "none";
+            const cCode = document.getElementById("meterCustCode");
+            const cName = document.getElementById("meterCustName");
+            const cPhone = document.getElementById("meterCustPhone");
+            const cAddr = document.getElementById("meterAddress");
+            const cNote = document.getElementById("meterNote");
+            const vnEl = document.getElementById("meterVN2000Text");
+            const accEl = document.getElementById("meterAccuracyText");
+            const badge = document.getElementById("meterPhotoBadge");
+            const box = document.getElementById("meterPhotoPreviewBox");
+
+            if (cCode) cCode.value = "";
+            if (cName) cName.value = "";
+            if (cPhone) cPhone.value = "";
+            if (cAddr) cAddr.value = State.currentProject?.hamlet || "";
+            if (cNote) cNote.value = "";
+            if (vnEl) vnEl.innerText = "Chưa thu nhận";
+            if (accEl) accEl.innerText = "± -- m";
+            if (badge) { badge.innerText = "Chưa có ảnh"; badge.style.color = "#64748b"; }
+            if (box) box.style.display = "none";
         },
 
         captureGNSS() {
@@ -322,8 +331,10 @@ const TGS = (() => {
                 (evaluated) => {
                     if (btnText) btnText.innerText = "◎ Lấy vị trí đồng hồ (Smart GNSS)";
                     CustomerMeterModule.observedGNSS = evaluated;
-                    document.getElementById("meterVN2000Text").innerText = `X:${evaluated.vn2000.x} | Y:${evaluated.vn2000.y}`;
-                    document.getElementById("meterAccuracyText").innerText = `± ${evaluated.accuracy} m (Smart 20/20)`;
+                    const vnEl = document.getElementById("meterVN2000Text");
+                    const accEl = document.getElementById("meterAccuracyText");
+                    if (vnEl) vnEl.innerText = `X:${evaluated.vn2000.x} | Y:${evaluated.vn2000.y}`;
+                    if (accEl) accEl.innerText = `± ${evaluated.accuracy} m (Smart 20/20)`;
                     if (navigator.vibrate) navigator.vibrate(100);
                 }
             );
@@ -406,7 +417,7 @@ const TGS = (() => {
             });
         }
     };
-   
+    
     /* =========================================================================
        VÒNG ĐỜI DỰ ÁN & DASHBOARD (Lifecycle)
        ========================================================================= */
@@ -451,7 +462,8 @@ const TGS = (() => {
                     if (draftInfo) {
                         const pts = draft.points ? draft.points.length : 0;
                         const fts = draft.pointFeatures ? draft.pointFeatures.length : 0;
-                        draftInfo.innerHTML = `Đang làm: <b>${draft.name}</b> (${draft.code})<br><small style="color:#64748b;">${pts} điểm tuyến · ${fts} cấu kiện trạm</small>`;
+                        const mts = draft.customerMeters ? draft.customerMeters.length : 0;
+                        draftInfo.innerHTML = `Đang làm: <b>${draft.name}</b> (${draft.code})<br><small style="color:#64748b;">${pts} điểm tuyến · ${fts} cấu kiện · ${mts} đồng hồ KH</small>`;
                     }
                     if (draftBanner) draftBanner.classList.remove("hidden");
                 } else {
@@ -463,9 +475,23 @@ const TGS = (() => {
         },
 
         async createNewProject() {
-            const name = document.getElementById("projectName").value.trim();
-            const code = document.getElementById("projectCode").value.trim();
-            const location = document.getElementById("projectLocation").value.trim();
+            const nameEl = document.getElementById("projectName");
+            const codeEl = document.getElementById("projectCode");
+            const commEl = document.getElementById("projectCommune");
+            const hamEl = document.getElementById("projectHamlet");
+            const locEl = document.getElementById("projectLocation");
+            const capEl = document.getElementById("projectCapacity");
+            const yearEl = document.getElementById("projectYear");
+            const mgrEl = document.getElementById("projectManager");
+
+            const name = nameEl ? nameEl.value.trim() : "";
+            const code = codeEl ? codeEl.value.trim() : "";
+            const commune = commEl ? commEl.value.trim() : "";
+            const hamlet = hamEl ? hamEl.value.trim() : "";
+            const location = locEl ? locEl.value.trim() : "";
+            const capacity = capEl ? capEl.value.trim() : "";
+            const opYear = yearEl ? yearEl.value.trim() : "";
+            const manager = mgrEl ? mgrEl.value.trim() : "";
             const user = TGS_Auth.getCurrentUser();
 
             if (!name || !code) {
@@ -476,22 +502,18 @@ const TGS = (() => {
             const newProj = {
                 name: name,
                 code: code,
-                
-                // Định danh địa lý 3 cấp phẳng: Tỉnh -> Xã/Phường -> Ấp/Khóm
                 province: "Tỉnh Vĩnh Long",
-                commune: commune || "Chưa xác định", // Xã hoặc Phường
-                hamlet: hamlet || "Chưa xác định",   // Ấp hoặc Khóm
+                commune: commune || "Chưa xác định",
+                hamlet: hamlet || "Chưa xác định",
                 location: location || `${hamlet}, ${commune}`,
-                
-                // Thuộc tính kỹ thuật & Quản trị tài sản
                 capacity_m3_day: capacity ? Number(capacity) : 0,
                 operationYear: opYear ? Number(opYear) : new Date().getFullYear(),
                 manager: manager || "Chưa phân công",
-                
                 centralMeridian: 105.5,
                 status: "draft",
                 points: [],
                 pointFeatures: [],
+                customerMeters: [],
                 createdAt: Date.now(),
                 updatedAt: Date.now(),
                 author: user ? `${user.name} (${user.email})` : "Kỹ sư khảo sát"
@@ -511,11 +533,14 @@ const TGS = (() => {
 
             const pts = State.currentProject.points || [];
             const fts = State.currentProject.pointFeatures || [];
+            const mts = State.currentProject.customerMeters || [];
             const badgeLinear = document.getElementById("badgeLinearSummary");
             const badgePoint = document.getElementById("badgePointSummary");
+            const badgeMeter = document.getElementById("badgeMeterSummary");
 
             if (badgeLinear) badgeLinear.innerText = `${pts.length} điểm`;
             if (badgePoint) badgePoint.innerText = `${fts.length} cấu kiện`;
+            if (badgeMeter) badgeMeter.innerText = `${mts.length} hộ`;
 
             Navigation.show("screenSurveyHome");
         }
@@ -991,7 +1016,7 @@ const TGS = (() => {
        MÀN HÌNH 3: DỮ LIỆU KHẢO SÁT & ĐỒNG BỘ TRỌNG TÂM (DataHub)
        ========================================================================= */
     const DataHub = {
-async renderDataScreen() {
+        async renderDataScreen() {
             const titleEl = document.getElementById("dataCurrentProjectTitle");
             const subEl = document.getElementById("dataCurrentProjectSubtitle");
             const listEl = document.getElementById("dataLocalProjectsList");
@@ -1104,6 +1129,7 @@ async renderDataScreen() {
                     pointSurvey: {
                         features: State.currentProject.pointFeatures || []
                     },
+                    customerMeters: State.currentProject.customerMeters || [],
                     exportedAt: new Date().toISOString()
                 };
 
@@ -1208,6 +1234,25 @@ async renderDataScreen() {
             link.download = `GIS_FULL_${proj.code}_${proj.commune || 'VinhLong'}.geojson`;
             link.click();
             alert(`✓ Đã xuất trọn gói dữ liệu GIS gồm Trạm, Tuyến ống và ${proj.customerMeters ? proj.customerMeters.length : 0} đồng hồ hộ dân!`);
+        },
+
+        exportJSON() {
+            if (!State.currentProject) {
+                alert("Chưa chọn công trình.");
+                return;
+            }
+            const user = TGS_Auth.getCurrentUser();
+            const dataset = {
+                platform: "TGS Platform Genesis 2.0",
+                surveyor: user ? `${user.name} (${user.email})` : "Kỹ sư",
+                project: State.currentProject
+            };
+            const blob = new Blob([JSON.stringify(dataset, null, 2)], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `DATASET_${State.currentProject.code}_${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            alert("✓ Đã xuất tập dữ liệu JSON về máy!");
         }
     };
 
@@ -1217,9 +1262,23 @@ async renderDataScreen() {
     function bindEvents() {
         const btnNew = document.getElementById("btnNewProject");
         if (btnNew) btnNew.onclick = async () => {
-            document.getElementById("projectName").value = "";
-            document.getElementById("projectLocation").value = "";
-            document.getElementById("projectCode").value = await Lifecycle.generateNextCode();
+            const pName = document.getElementById("projectName");
+            const pComm = document.getElementById("projectCommune");
+            const pHam = document.getElementById("projectHamlet");
+            const pLoc = document.getElementById("projectLocation");
+            const pCap = document.getElementById("projectCapacity");
+            const pYear = document.getElementById("projectYear");
+            const pMgr = document.getElementById("projectManager");
+            const pCode = document.getElementById("projectCode");
+
+            if (pName) pName.value = "";
+            if (pComm) pComm.value = "";
+            if (pHam) pHam.value = "";
+            if (pLoc) pLoc.value = "";
+            if (pCap) pCap.value = "";
+            if (pYear) pYear.value = new Date().getFullYear();
+            if (pMgr) pMgr.value = "";
+            if (pCode) pCode.value = await Lifecycle.generateNextCode();
             Navigation.show("screenProject");
         };
 
@@ -1357,10 +1416,7 @@ async renderDataScreen() {
         const btnSyncM = document.getElementById("btnSyncMaster");
         if (btnSyncM) btnSyncM.onclick = () => DataHub.executeMasterSync();
 
-        const btnExpJ = document.getElementById("btnExportJSON");
-        if (btnExpJ) btnExpJ.onclick = () => DataHub.exportJSON();
-
-       // Nút mở form khảo sát đồng hồ từ Survey Home
+        // Nút mở form khảo sát đồng hồ từ Survey Home
         const btnCustMeter = document.getElementById("btnCustomerMeterSurvey");
         if (btnCustMeter) btnCustMeter.onclick = () => {
             Navigation.show("screenCustomerMeter");
@@ -1386,11 +1442,15 @@ async renderDataScreen() {
                     const reader = new FileReader();
                     reader.onload = (evt) => {
                         CustomerMeterModule.capturedPhoto = evt.target.result;
-                        document.getElementById("meterPhotoBadge").innerText = "✓ Đã chụp ảnh";
-                        document.getElementById("meterPhotoBadge").style.color = "#16a34a";
+                        const badge = document.getElementById("meterPhotoBadge");
                         const img = document.getElementById("meterPhotoImg");
-                        img.src = evt.target.result;
-                        document.getElementById("meterPhotoPreviewBox").style.display = "block";
+                        const box = document.getElementById("meterPhotoPreviewBox");
+                        if (badge) {
+                            badge.innerText = "✓ Đã chụp ảnh";
+                            badge.style.color = "#16a34a";
+                        }
+                        if (img) img.src = evt.target.result;
+                        if (box) box.style.display = "block";
                     };
                     reader.readAsDataURL(e.target.files[0]);
                 }
@@ -1421,7 +1481,8 @@ async renderDataScreen() {
             }
             Navigation.show("tab-dashboard");
         },
-        Navigation: Navigation
+        Navigation: Navigation,
+        DataHub: DataHub // ĐÃ XUẤT RA NGOÀI ĐỂ NÚT BẤM ONCLICK GỌI CHÍNH XÁC
     };
 })();
 
