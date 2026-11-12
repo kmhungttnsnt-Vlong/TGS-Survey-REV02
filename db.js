@@ -44,6 +44,11 @@ const DB = (() => {
 
         async saveProject(project) {
             const db = await this.init();
+            if (!project.id) {
+                project.id = "PROJ_" + Date.now();
+            }
+            project.updatedAt = Date.now();
+
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(STORE_PROJECTS, "readwrite");
                 const store = tx.objectStore(STORE_PROJECTS);
@@ -89,18 +94,38 @@ const DB = (() => {
 
         async createProject(meta) {
             const newProj = {
-                id: "PROJ_" + Date.now(),
+                id: meta.id || ("PROJ_" + Date.now()),
                 name: meta.name,
                 code: meta.code,
-                location: meta.location,
-                status: "draft",
-                createdAt: Date.now(),
+                province: meta.province || "Tỉnh Vĩnh Long",
+                commune: meta.commune || "Chưa xác định",
+                hamlet: meta.hamlet || "Chưa xác định",
+                location: meta.location || "",
+                capacity_m3_day: meta.capacity_m3_day || 0,
+                operationYear: meta.operationYear || new Date().getFullYear(),
+                manager: meta.manager || "Chưa phân công",
+                author: meta.author || "Kỹ sư khảo sát",
+                status: meta.status || "draft",
+                createdAt: meta.createdAt || Date.now(),
                 updatedAt: Date.now(),
                 meta: { centralMeridian: meta.centralMeridian || 105.5 },
-                points: [],
-                pointFeatures: []
+                points: meta.points || [],
+                pointFeatures: meta.pointFeatures || [],
+                customerMeters: meta.customerMeters || []
             };
             return this.saveProject(newProj);
+        },
+
+        async deleteProject(id) {
+            const db = await this.init();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_PROJECTS, "readwrite");
+                const store = tx.objectStore(STORE_PROJECTS);
+                const req = store.delete(id);
+
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
         }
     };
 })();
