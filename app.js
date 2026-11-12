@@ -1,6 +1,6 @@
 /* =========================================================================
    TGS PLATFORM GENESIS 2.0 - PROFESSIONAL FIELD ENGINE
-   BASELINE B11: COMPREHENSIVE 4-PILLAR UPGRADE ENGINE (OPTIMIZED)
+   BASELINE B12: INTEGRATED REVIEW, AUDIT & 3-LAYER SURVEY ENGINE
    ========================================================================= */
 
 /* =========================================================================
@@ -204,7 +204,7 @@ const TGS = (() => {
     };
 
     /* =========================================================================
-       TRỤ CỘT 2: ĐIỀU HƯỚNG GIAO DIỆN 4 MÀN HÌNH (A2_Navigation)
+       TRỤ CỘT 2: ĐIỀU HƯỚNG GIAO DIỆN (Navigation)
        ========================================================================= */
     const Navigation = {
         screens: [
@@ -214,6 +214,11 @@ const TGS = (() => {
         ],
         
         show(screenId) {
+            if (screenId === "screenSurveyHome" && !State.currentProject) {
+                alert("Chưa có công trình nào được chọn. Vui lòng tạo mới hoặc mở một công trình đã lưu.");
+                screenId = "tab-data";
+            }
+
             // 1. Ẩn tất cả các màn hình
             this.screens.forEach(id => {
                 const el = document.getElementById(id);
@@ -234,7 +239,7 @@ const TGS = (() => {
             // Ẩn thanh Bottom Bar khi vào các chế độ đo thực địa để bản đồ/form tràn viền 100%
             const bNav = document.getElementById("bottomNavBar");
             if (bNav) {
-                if (screenId === "screenLinear" || screenId === "screenPoint" || screenId === "screenCustomerMeter") {
+                if (screenId === "screenLinear" || screenId === "screenPoint" || screenId === "screenCustomerMeter" || screenId === "screenAuth") {
                     bNav.style.display = "none";
                 } else {
                     bNav.style.display = "flex";
@@ -251,10 +256,14 @@ const TGS = (() => {
                 }
             });
 
-            // 4. Kích hoạt logic tương ứng bằng try...catch an toàn
+            // 4. Kích hoạt logic tương ứng an toàn
             try {
                 if (screenId === "tab-dashboard") Lifecycle.updateDashboard();
             } catch (e) { console.warn("Lỗi Dashboard:", e); }
+
+            try {
+                if (screenId === "screenSurveyHome") Lifecycle.refreshSurveyBadges();
+            } catch (e) { console.warn("Lỗi SurveyHome:", e); }
 
             try {
                 if (screenId === "tab-data") DataHub.renderDataScreen();
@@ -266,6 +275,7 @@ const TGS = (() => {
 
             try {
                 if (screenId === "screenPoint") PointModule.init();
+                else PointModule.stopCamera();
             } catch (e) { console.warn("Lỗi Point:", e); }
 
             try {
@@ -499,7 +509,7 @@ const TGS = (() => {
                 return;
             }
 
-            const newProj = {
+            const projData = {
                 name: name,
                 code: code,
                 province: "Tỉnh Vĩnh Long",
@@ -519,12 +529,12 @@ const TGS = (() => {
                 author: user ? `${user.name} (${user.email})` : "Kỹ sư khảo sát"
             };
 
-            await Persistence.createProject(newProj);
-            State.currentProject = newProj;
+            const savedProj = await Persistence.createProject(projData);
+            State.currentProject = savedProj;
             this.enterSurveyHome();
         },
 
-        enterSurveyHome() {
+        refreshSurveyBadges() {
             if (!State.currentProject) return;
             const titleEl = document.getElementById("surveyProjectTitle");
             const subEl = document.getElementById("surveyProjectSubtitle");
@@ -541,13 +551,17 @@ const TGS = (() => {
             if (badgeLinear) badgeLinear.innerText = `${pts.length} điểm`;
             if (badgePoint) badgePoint.innerText = `${fts.length} cấu kiện`;
             if (badgeMeter) badgeMeter.innerText = `${mts.length} hộ`;
+        },
 
+        enterSurveyHome() {
+            if (!State.currentProject) return;
+            this.refreshSurveyBadges();
             Navigation.show("screenSurveyHome");
         }
     };
 
     /* =========================================================================
-       BỘ LỌC SMART GNSS 20 MẪU ĐỘC LẬP (L3_SmartGNSS)
+       BỘ LỌC SMART GNSS 20 MẪU ĐỘC LẬP (SmartGNSS)
        ========================================================================= */
     const SmartGNSS = {
         sampleTarget: 20,
@@ -645,6 +659,29 @@ const TGS = (() => {
                 nameEl.innerText = `${State.currentProject.name} (${State.currentProject.code})`;
             }
 
+            // Vẽ lại các mốc đã lưu của công trình hiện tại
+            if (this.markerLayer && this.polyline && State.currentProject) {
+                this.markerLayer.clearLayers();
+                const pts = State.currentProject.points || [];
+                const coords = pts.map(p => [p.lat, p.lng]);
+                this.polyline.setLatLngs(coords);
+
+                pts.forEach((pt, idx) => {
+                    const markerColor = pt.fitting?.type && pt.fitting.type !== "KHONG" ? "#f59e0b" : "#00E676";
+                    L.circleMarker([pt.lat, pt.lng], {
+                        radius: 8, fillColor: markerColor, color: "#ffffff", weight: 2, fillOpacity: 1
+                    }).bindPopup(`
+                        <b>Mốc #${idx + 1} (${pt.meterMark}m)</b><br>
+                        ${pt.fitting?.detail !== "Không phụ kiện" ? `🔧 <b>Phụ kiện:</b> ${pt.fitting?.detail}<br>` : ''}
+                        Trái: <b>${pt.leftPipe}</b> | Phải: <b>${pt.rightPipe}</b><br>
+                        VN2000: X:${pt.vn2000?.x} Y:${pt.vn2000?.y}
+                    `).addTo(this.markerLayer);
+                });
+
+                const ptEl = document.getElementById("pointCount");
+                if (ptEl) ptEl.innerText = pts.length;
+            }
+
             if (!navigator.geolocation || State.breadcrumbWatchId) return;
 
             State.breadcrumbWatchId = navigator.geolocation.watchPosition(
@@ -666,6 +703,7 @@ const TGS = (() => {
                     } else {
                         State.lastBreadcrumbPos = curLatLng;
                         this.polyline.addLatLng(curLatLng);
+                        this.updateLinearHUD(curLatLng, accuracy);
                     }
                 },
                 err => console.warn(err),
@@ -734,6 +772,9 @@ const TGS = (() => {
                     if (!State.currentProject.points) State.currentProject.points = [];
                     State.currentProject.points.push(milestone);
                     await Persistence.saveProject(State.currentProject);
+
+                    const ptEl = document.getElementById("pointCount");
+                    if (ptEl) ptEl.innerText = State.currentProject.points.length;
 
                     if (LinearModule.map) {
                         const markerColor = fittingType !== "KHONG" ? "#f59e0b" : "#00E676";
@@ -1013,7 +1054,7 @@ const TGS = (() => {
     };
 
     /* =========================================================================
-       MÀN HÌNH 3: DỮ LIỆU KHẢO SÁT & ĐỒNG BỘ TRỌNG TÂM (DataHub)
+       MÀN HÌNH 3: DỮ LIỆU KHẢO SÁT, HẬU KIỂM & ĐỒNG BỘ (DataHub)
        ========================================================================= */
     const DataHub = {
         async renderDataScreen() {
@@ -1040,7 +1081,7 @@ const TGS = (() => {
                     const pts = p.points ? p.points.length : 0;
                     const fts = p.pointFeatures ? p.pointFeatures.length : 0;
                     const mts = p.customerMeters ? p.customerMeters.length : 0;
-                    const isCur = State.currentProject?.code === p.code;
+                    const isCur = State.currentProject?.id === p.id;
 
                     const div = document.createElement("div");
                     div.style.cssText = `padding:12px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:${isCur ? '#f0f9ff' : 'transparent'}; cursor:pointer;`;
@@ -1054,7 +1095,6 @@ const TGS = (() => {
                         <button class="btn btn-sm ${isCur ? 'btn-primary' : 'btn-outline'}">Tác vụ</button>
                     `;
                     
-                    // KHI CLICK VÀO CÔNG TRÌNH: BẬT MODAL LỰA CHỌN TÁC VỤ
                     div.onclick = () => {
                         State.currentProject = p;
                         DataHub.openProjectActionsModal(p);
@@ -1076,6 +1116,15 @@ const TGS = (() => {
             if (sEl) sEl.innerText = `Mã: ${proj.code} · Địa bàn: ${proj.commune || "Vĩnh Long"}`;
             modal.style.display = "flex";
 
+            // Nút 0: Xem lại & Hậu kiểm dữ liệu
+            const btnRev = document.getElementById("btnActionReviewData");
+            if (btnRev) {
+                btnRev.onclick = () => {
+                    modal.style.display = "none";
+                    DataHub.openReviewModal(proj);
+                };
+            }
+
             // Nút 1: Tiếp tục khảo sát bổ sung
             document.getElementById("btnActionContinueSurvey").onclick = () => {
                 modal.style.display = "none";
@@ -1088,11 +1137,153 @@ const TGS = (() => {
                 DataHub.exportGeoJSON();
             };
 
-            // Nút 3: Đóng
+            // Nút 3: Xuất gói sao lưu JSON
+            const btnJsonModal = document.getElementById("btnActionExportJsonModal");
+            if (btnJsonModal) {
+                btnJsonModal.onclick = () => {
+                    modal.style.display = "none";
+                    DataHub.exportJSON();
+                };
+            }
+
+            // Nút 4: Đóng
             document.getElementById("btnActionCloseModal").onclick = () => {
                 modal.style.display = "none";
                 DataHub.renderDataScreen();
             };
+        },
+
+        openReviewModal(proj) {
+            const modal = document.getElementById("modalReviewProject");
+            if (!modal) return;
+
+            document.getElementById("revProjTitle").innerText = proj.name;
+            document.getElementById("revProjSub").innerText = `Mã: ${proj.code} · Xã: ${proj.commune || 'Chưa rõ'} · Công suất: ${proj.capacity_m3_day || 0} m³/ngđ`;
+
+            const pts = proj.points || [];
+            const fts = proj.pointFeatures || [];
+            const mts = proj.customerMeters || [];
+
+            document.getElementById("revTabPoints").innerText = `Hạng mục (${fts.length})`;
+            document.getElementById("revTabLinear").innerText = `Tuyến ống (${pts.length})`;
+            document.getElementById("revTabMeters").innerText = `Đồng hồ (${mts.length})`;
+
+            // Hậu kiểm tự động phát hiện thiếu sót
+            const warnings = [];
+            if (fts.length === 0 && pts.length === 0 && mts.length === 0) {
+                warnings.push("Hồ sơ hiện đang trống, chưa có dữ liệu thực địa nào.");
+            }
+            const noPhotoPts = fts.filter(f => !f.photos || f.photos.length === 0).length;
+            if (noPhotoPts > 0) warnings.push(`Có ${noPhotoPts} hạng mục trạm chưa chụp ảnh hiện trường.`);
+            
+            const noNotePts = fts.filter(f => !f.note || f.note.trim() === "").length;
+            if (noNotePts > 0) warnings.push(`Có ${noNotePts} hạng mục trạm chưa ghi chú hiện trạng hư hỏng.`);
+
+            const noPhotoMeters = mts.filter(m => !m.photo).length;
+            if (noPhotoMeters > 0) warnings.push(`Có ${noPhotoMeters} đồng hồ khách hàng thiếu ảnh chụp đối soát.`);
+
+            const auditBox = document.getElementById("revAuditBox");
+            if (warnings.length > 0) {
+                auditBox.style.background = "#fffbeb";
+                auditBox.style.color = "#92400e";
+                auditBox.innerHTML = `<strong>⚠️ Phát hiện thiếu sót cần lưu ý:</strong><ul style="margin:4px 0 0 18px; padding:0;">${warnings.map(w => `<li>${w}</li>`).join("")}</ul>`;
+            } else {
+                auditBox.style.background = "#f0fdf4";
+                auditBox.style.color = "#166534";
+                auditBox.innerHTML = `<strong>✅ Dữ liệu đạt chuẩn:</strong> Tất cả hạng mục đã có đủ tọa độ VN-2000 và hình ảnh đối soát.`;
+            }
+
+            modal.style.display = "flex";
+            this.switchReviewTab("points");
+        },
+
+        switchReviewTab(tab) {
+            const proj = State.currentProject;
+            if (!proj) return;
+
+            const tabs = { points: "revTabPoints", linear: "revTabLinear", meters: "revTabMeters" };
+            Object.keys(tabs).forEach(k => {
+                const btn = document.getElementById(tabs[k]);
+                if (btn) {
+                    btn.style.background = (k === tab) ? "#fff" : "transparent";
+                    btn.style.color = (k === tab) ? "#0284c7" : "#475569";
+                }
+            });
+
+            const body = document.getElementById("revBodyContent");
+            if (!body) return;
+            body.innerHTML = "";
+
+            if (tab === "points") {
+                const fts = proj.pointFeatures || [];
+                if (fts.length === 0) {
+                    body.innerHTML = "<p style='text-align:center; color:#64748b; font-size:13px; margin-top:20px;'>Chưa có dữ liệu khảo sát hạng mục trạm.</p>";
+                    return;
+                }
+                fts.forEach((it, idx) => {
+                    const hasImg = it.photos && it.photos.length > 0;
+                    const card = document.createElement("div");
+                    card.style.cssText = "background:#fff; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-bottom:10px;";
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <strong style="font-size:13.5px; color:#0f172a;">${idx + 1}. ${it.section}</strong>
+                            <span style="font-size:11px; padding:2px 6px; border-radius:4px; background:${hasImg ? '#dcfce7' : '#fee2e2'}; color:${hasImg ? '#166534' : '#991b1b'}; font-weight:600;">
+                                ${hasImg ? `📷 ${it.photos.length} ảnh` : '⚠️ Thiếu ảnh'}
+                            </span>
+                        </div>
+                        <div style="font-size:12px; color:#475569; margin-top:4px;">Loại: ${it.objectType}</div>
+                        <div style="font-size:11.5px; color:#0284c7; margin-top:2px; font-family:monospace;">VN2000: X:${it.coordinates?.vn2000?.x} | Y:${it.coordinates?.vn2000?.y} (±${it.coordinates?.accuracy}m)</div>
+                        <div style="font-size:12px; color:${it.note ? '#ea580c' : '#94a3b8'}; margin-top:4px;">Ghi chú: ${it.note || 'Chưa nhập ghi chú'}</div>
+                        ${hasImg ? `<div style="display:flex; gap:6px; overflow-x:auto; margin-top:8px;">${it.photos.map(src => `<img src="${src}" style="height:70px; border-radius:6px; border:1px solid #e2e8f0;">`).join("")}</div>` : ''}
+                    `;
+                    body.appendChild(card);
+                });
+            } else if (tab === "linear") {
+                const pts = proj.points || [];
+                if (pts.length === 0) {
+                    body.innerHTML = "<p style='text-align:center; color:#64748b; font-size:13px; margin-top:20px;'>Chưa có điểm mốc tuyến ống nào.</p>";
+                    return;
+                }
+                pts.forEach((pt, idx) => {
+                    const card = document.createElement("div");
+                    card.style.cssText = "background:#fff; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-bottom:8px;";
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong style="font-size:13px; color:#0f172a;">Mốc #${idx + 1} · Lý trình: ${pt.meterMark} m</strong>
+                            <span style="font-size:11px; color:#64748b;">±${pt.accuracy}m</span>
+                        </div>
+                        <div style="font-size:12px; color:#334155; margin-top:4px;">Ống Trái: <b>${pt.leftPipe}</b> | Ống Phải: <b>${pt.rightPipe}</b></div>
+                        <div style="font-size:12px; color:#0369a1; margin-top:2px;">Phụ kiện: ${pt.fitting?.detail || 'Không phụ kiện'}</div>
+                        <div style="font-size:11px; color:#64748b; margin-top:2px; font-family:monospace;">VN2000: X:${pt.vn2000?.x} | Y:${pt.vn2000?.y}</div>
+                    `;
+                    body.appendChild(card);
+                });
+            } else if (tab === "meters") {
+                const mts = proj.customerMeters || [];
+                if (mts.length === 0) {
+                    body.innerHTML = "<p style='text-align:center; color:#64748b; font-size:13px; margin-top:20px;'>Chưa có đồng hồ khách hàng nào.</p>";
+                    return;
+                }
+                mts.forEach((m, idx) => {
+                    const card = document.createElement("div");
+                    card.style.cssText = "background:#fff; border:1px solid #cbd5e1; border-radius:10px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;";
+                    card.innerHTML = `
+                        <div style="flex:1;">
+                            <strong style="font-size:13px; color:#0f172a;">${idx + 1}. ${m.custName} (${m.custCode})</strong>
+                            <div style="font-size:12px; color:#475569;">Cỡ: ${m.pipeSize} · ĐC: ${m.address}</div>
+                            <div style="font-size:11px; color:#0284c7; font-family:monospace;">VN2000: X:${m.coordinates?.vn2000?.x} | Y:${m.coordinates?.vn2000?.y}</div>
+                            ${m.note ? `<div style="font-size:11.5px; color:#ea580c;">Ghi chú: ${m.note}</div>` : ''}
+                        </div>
+                        ${m.photo ? `<img src="${m.photo}" style="width:60px; height:60px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1;">` : `<span style="font-size:11px; color:#dc2626;">Thiếu ảnh</span>`}
+                    `;
+                    body.appendChild(card);
+                });
+            }
+        },
+
+        closeReviewModal() {
+            const modal = document.getElementById("modalReviewProject");
+            if (modal) modal.style.display = "none";
         },
 
         async executeMasterSync() {
@@ -1114,25 +1305,6 @@ const TGS = (() => {
             const isGDrive = localStorage.getItem("tgs_gdrive_linked") === "true";
 
             try {
-                const user = TGS_Auth.getCurrentUser();
-                const dataset = {
-                    platform: "TGS Platform Genesis 2.0",
-                    contract: "TGS-HO-301 REV02",
-                    surveyor: user ? `${user.name} (${user.email})` : "Kỹ sư",
-                    dept: user?.dept || "Phòng QLKT",
-                    project: State.currentProject,
-                    linearSurvey: {
-                        points: State.currentProject.points || [],
-                        leftPipeSpecs: State.currentProject.leftPipeSpecs || [],
-                        rightPipeSpecs: State.currentProject.rightPipeSpecs || []
-                    },
-                    pointSurvey: {
-                        features: State.currentProject.pointFeatures || []
-                    },
-                    customerMeters: State.currentProject.customerMeters || [],
-                    exportedAt: new Date().toISOString()
-                };
-
                 if (statusEl) statusEl.innerText = isGDrive ? "☁️ Đang đồng bộ lên Google Drive..." : `💻 Đang đẩy về máy trạm: ${targetUrl}...`;
 
                 await new Promise(r => setTimeout(r, 1200));
@@ -1245,7 +1417,8 @@ const TGS = (() => {
             const dataset = {
                 platform: "TGS Platform Genesis 2.0",
                 surveyor: user ? `${user.name} (${user.email})` : "Kỹ sư",
-                project: State.currentProject
+                project: State.currentProject,
+                exportedAt: new Date().toISOString()
             };
             const blob = new Blob([JSON.stringify(dataset, null, 2)], { type: "application/json" });
             const link = document.createElement("a");
@@ -1257,30 +1430,34 @@ const TGS = (() => {
     };
 
     /* =========================================================================
-       KHỞI TẠO SỰ KIỆN GIAO DIỆN (Binding Events)
+       KHỞI TẠO SỰ KIỆN GIAO DIỆN TẬP TRUNG (Binding Events)
        ========================================================================= */
     function bindEvents() {
+        // 1. Điều hướng thanh Bottom Nav Bar
+        document.querySelectorAll(".nav-item").forEach(btn => {
+            btn.onclick = () => {
+                const targetTab = btn.getAttribute("data-tab");
+                if (targetTab) Navigation.show(targetTab);
+            };
+        });
+
+        // 2. Nút Dashboard
         const btnNew = document.getElementById("btnNewProject");
         if (btnNew) btnNew.onclick = async () => {
-            const pName = document.getElementById("projectName");
-            const pComm = document.getElementById("projectCommune");
-            const pHam = document.getElementById("projectHamlet");
-            const pLoc = document.getElementById("projectLocation");
-            const pCap = document.getElementById("projectCapacity");
+            const fields = ["projectName", "projectCommune", "projectHamlet", "projectLocation", "projectCapacity", "projectManager"];
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = "";
+            });
             const pYear = document.getElementById("projectYear");
-            const pMgr = document.getElementById("projectManager");
             const pCode = document.getElementById("projectCode");
-
-            if (pName) pName.value = "";
-            if (pComm) pComm.value = "";
-            if (pHam) pHam.value = "";
-            if (pLoc) pLoc.value = "";
-            if (pCap) pCap.value = "";
             if (pYear) pYear.value = new Date().getFullYear();
-            if (pMgr) pMgr.value = "";
             if (pCode) pCode.value = await Lifecycle.generateNextCode();
             Navigation.show("screenProject");
         };
+
+        const btnOpenProj = document.getElementById("btnOpenProject");
+        if (btnOpenProj) btnOpenProj.onclick = () => Navigation.show("tab-data");
 
         const btnCreate = document.getElementById("btnCreateProject");
         if (btnCreate) btnCreate.onclick = () => Lifecycle.createNewProject();
@@ -1294,20 +1471,22 @@ const TGS = (() => {
         const btnCont = document.getElementById("btnContinueDraft");
         if (btnCont) btnCont.onclick = () => Lifecycle.enterSurveyHome();
 
+        // 3. Trung tâm tác nghiệp khảo sát
         const btnLin = document.getElementById("btnLinearSurvey");
         if (btnLin) btnLin.onclick = () => Navigation.show("screenLinear");
 
         const btnPt = document.getElementById("btnPointSurvey");
         if (btnPt) btnPt.onclick = () => Navigation.show("screenPoint");
 
+        const btnCustMeter = document.getElementById("btnCustomerMeterSurvey");
+        if (btnCustMeter) btnCustMeter.onclick = () => Navigation.show("screenCustomerMeter");
+
         const btnFin = document.getElementById("btnFinishProject");
         if (btnFin) btnFin.onclick = () => Navigation.show("tab-data");
 
+        // 4. Khảo sát tuyến ống (Linear)
         const btnExitLin = document.getElementById("btnExitLinear");
         if (btnExitLin) btnExitLin.onclick = () => Navigation.show("screenSurveyHome");
-
-        const btnExitPt = document.getElementById("btnExitPoint");
-        if (btnExitPt) btnExitPt.onclick = () => Navigation.show("screenSurveyHome");
 
         const btnCapLin = document.getElementById("btnCaptureGPS");
         if (btnCapLin) btnCapLin.onclick = () => LinearModule.captureTechnicalMilestone();
@@ -1315,7 +1494,19 @@ const TGS = (() => {
         const btnSwitchSec = document.getElementById("btnSwitchSection");
         if (btnSwitchSec) btnSwitchSec.onclick = () => LinearModule.switchPipeSection();
 
-        // Kích hoạt camera chụp ảnh & quay video trên tuyến
+        const btnLocate = document.getElementById("btnLocate");
+        if (btnLocate) btnLocate.onclick = () => {
+            if (LinearModule.map && State.lastBreadcrumbPos) {
+                LinearModule.map.setView(State.lastBreadcrumbPos, 18);
+            }
+        };
+
+        const btnZoomIn = document.getElementById("btnZoomIn");
+        if (btnZoomIn) btnZoomIn.onclick = () => { if (LinearModule.map) LinearModule.map.zoomIn(); };
+
+        const btnZoomOut = document.getElementById("btnZoomOut");
+        if (btnZoomOut) btnZoomOut.onclick = () => { if (LinearModule.map) LinearModule.map.zoomOut(); };
+
         const btnLineSnap = document.getElementById("btnLineSnapPhoto");
         const inLinePhoto = document.getElementById("inputLinePhoto");
         if (btnLineSnap && inLinePhoto) {
@@ -1364,6 +1555,10 @@ const TGS = (() => {
             };
         }
 
+        // 5. Khảo sát hạng mục điểm (Point)
+        const btnExitPt = document.getElementById("btnExitPoint");
+        if (btnExitPt) btnExitPt.onclick = () => Navigation.show("screenSurveyHome");
+
         const btnGetPtGPS = document.getElementById("btnGetPointGPS");
         if (btnGetPtGPS) btnGetPtGPS.onclick = () => PointModule.capturePointGNSS();
 
@@ -1396,9 +1591,7 @@ const TGS = (() => {
         }
 
         if (btnCloseFS && overlayFS) {
-            btnCloseFS.onclick = () => {
-                overlayFS.style.display = "none";
-            };
+            btnCloseFS.onclick = () => { overlayFS.style.display = "none"; };
         }
 
         if (btnSnapFS) btnSnapFS.onclick = () => PointModule.takeSnapshot();
@@ -1413,16 +1606,7 @@ const TGS = (() => {
             };
         }
 
-        const btnSyncM = document.getElementById("btnSyncMaster");
-        if (btnSyncM) btnSyncM.onclick = () => DataHub.executeMasterSync();
-
-        // Nút mở form khảo sát đồng hồ từ Survey Home
-        const btnCustMeter = document.getElementById("btnCustomerMeterSurvey");
-        if (btnCustMeter) btnCustMeter.onclick = () => {
-            Navigation.show("screenCustomerMeter");
-            CustomerMeterModule.init();
-        };
-
+        // 6. Khảo sát đồng hồ khách hàng (Customer Meter)
         const btnExitM = document.getElementById("btnExitMeter");
         if (btnExitM) btnExitM.onclick = () => Navigation.show("screenSurveyHome");
 
@@ -1432,7 +1616,6 @@ const TGS = (() => {
         const btnSaveM = document.getElementById("btnSaveCustomerMeter");
         if (btnSaveM) btnSaveM.onclick = () => CustomerMeterModule.saveMeter();
 
-        // Xử lý chụp ảnh đồng hồ
         const btnSnapM = document.getElementById("btnSnapMeterPhoto");
         const inSnapM = document.getElementById("inputMeterPhoto");
         if (btnSnapM && inSnapM) {
@@ -1456,6 +1639,37 @@ const TGS = (() => {
                 }
             };
         }
+
+        // 7. Màn hình Dữ liệu & Hậu kiểm (DataHub & Review Modal)
+        const btnSyncM = document.getElementById("btnSyncMaster");
+        if (btnSyncM) btnSyncM.onclick = () => DataHub.executeMasterSync();
+
+        const btnExpGeo = document.getElementById("btnExportGeoJSON");
+        if (btnExpGeo) btnExpGeo.onclick = () => DataHub.exportGeoJSON();
+
+        const btnExpJson = document.getElementById("btnExportJSON");
+        if (btnExpJson) btnExpJson.onclick = () => DataHub.exportJSON();
+
+        const btnCloseRev = document.getElementById("btnCloseReviewModal");
+        if (btnCloseRev) btnCloseRev.onclick = () => DataHub.closeReviewModal();
+
+        const revTabPt = document.getElementById("revTabPoints");
+        if (revTabPt) revTabPt.onclick = () => DataHub.switchReviewTab("points");
+
+        const revTabLin = document.getElementById("revTabLinear");
+        if (revTabLin) revTabLin.onclick = () => DataHub.switchReviewTab("linear");
+
+        const revTabMt = document.getElementById("revTabMeters");
+        if (revTabMt) revTabMt.onclick = () => DataHub.switchReviewTab("meters");
+
+        const btnRevCont = document.getElementById("btnRevContinueSurvey");
+        if (btnRevCont) btnRevCont.onclick = () => {
+            DataHub.closeReviewModal();
+            Lifecycle.enterSurveyHome();
+        };
+
+        const btnRevExp = document.getElementById("btnRevExportJSON");
+        if (btnRevExp) btnRevExp.onclick = () => DataHub.exportJSON();
     }
 
     return {
@@ -1465,13 +1679,8 @@ const TGS = (() => {
 
             if (!activeUser) {
                 Navigation.show("screenAuth");
-                const bNav = document.getElementById("bottomNavBar");
-                if (bNav) bNav.style.display = "none";
                 return;
             }
-
-            const bNav = document.getElementById("bottomNavBar");
-            if (bNav) bNav.style.display = "flex";
 
             bindEvents();
             try {
@@ -1482,7 +1691,7 @@ const TGS = (() => {
             Navigation.show("tab-dashboard");
         },
         Navigation: Navigation,
-        DataHub: DataHub // ĐÃ XUẤT RA NGOÀI ĐỂ NÚT BẤM ONCLICK GỌI CHÍNH XÁC
+        DataHub: DataHub
     };
 })();
 
@@ -1586,7 +1795,7 @@ echo =====================================================================
 echo    MÁY TRẠM TỰ ĐỘNG NHẬN DỮ LIỆU KHẢO SÁT TGS (ONE-CLICK)
 echo =====================================================================
 echo.
-if exist D:\\ (set TARGET_DIR=D:\\TGS_Server\\survey_data) else (set TARGET_DIR=C:\\TGS_Server\\survey_data)
+if exist E:\\ (set TARGET_DIR=E:\\TGS_Server\\survey_data) else (if exist D:\\ (set TARGET_DIR=D:\\TGS_Server\\survey_data) else (set TARGET_DIR=C:\\TGS_Server\\survey_data))
 if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
 netsh advfirewall firewall add rule name="TGS_Survey_Server" dir=in action=allow protocol=TCP localport=8000 >nul 2>&1
 python -m http.server 8000 --directory "%TARGET_DIR%"
